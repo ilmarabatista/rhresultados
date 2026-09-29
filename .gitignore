@@ -1,0 +1,20 @@
+node_modules
+.next
+out
+build
+.env
+.env*.local
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+.localdb
+logs
+
+# Segredos e dados locais: nunca vão para o GitHub.
+.env.*
+!.env.example
+.claude
+logs
+.localdb

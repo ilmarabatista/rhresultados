@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/**
+ * Paleta: azul escuro e branco.
+ *
+ * O azul carrega a hierarquia — o mais escuro é o cabeçalho de tabela e a
+ * barra fixa, o médio é o botão e o link, o mais claro é o fundo de destaque.
+ * Fora dele só entram cinzas, e cor com significado: verde para o que foi
+ * feito, âmbar para o que pede atenção, vermelho para o que apaga.
+ */
+@theme {
+  --color-brand-50: #eff5fb;
+  --color-brand-100: #dbe8f6;
+  --color-brand-200: #bcd4ed;
+  --color-brand-300: #8fb6df;
+  --color-brand-400: #5b90cd;
+  --color-brand-500: #3872b6;
+  --color-brand-600: #275a99;
+  --color-brand-700: #1f477b;
+  --color-brand-800: #1b3a63;
+  --color-brand-900: #14293f;
+  --color-brand-950: #0d1b2a;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  /* Branco levemente azulado: separa os cartões do fundo sem sujar a tela. */
+  background-color: #f4f7fa;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars discretos nas colunas do quadro */
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Impressão: o relatório vira PDF pelo "Salvar como PDF" do navegador.
+   Some tudo que é navegação e controle, deixando só o conteúdo. */
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  /* O conteúdo fica deslocado pela barra lateral fixa; no papel, não. */
+  .print-full {
+    padding-left: 0 !important;
+  }
+
+  .print-break {
+    break-inside: avoid;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}

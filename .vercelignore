@@ -1,0 +1,13 @@
+# O que nunca sobe para a Vercel: o banco local, as senhas e o que é gerado.
+.localdb
+.env
+.env.*
+!.env.example
+logs
+node_modules
+.next
+tests
+scripts
+tsconfig.tsbuildinfo
+*.bat
+.claude

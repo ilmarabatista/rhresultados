@@ -1,0 +1,1266 @@
+// Sistema de Controle Operacional - Empresa de RH
+// Banco: PostgreSQL (local embarcado na 5433, ou Neon / Supabase na nuvem)
+//
+// Em 2026-09-29 saíram as tabelas dos módulos que já não tinham tela (etapas
+// de serviço, escopo contratado, planos e calendários de cultura antigos,
+// recrutamento antigo, admissão, anotações, NPS, análise de cargo). O backup
+// completo delas está em rhresultados-backup\antes-revisao-geral-2026-09-29.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------- Usuários
+
+enum Role {
+  ADMIN
+  MEMBRO
+}
+
+/// Quem usa o sistema pela consultoria. Não confundir com Employee, que é a
+/// equipe da empresa cliente.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(MEMBRO)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  companiesCreated Company[]        @relation("CompanyCreatedBy")
+  activities       Activity[]
+  meetingsCreated  Meeting[]        @relation("MeetingCreatedBy")
+  recordsCreated   EmployeeRecord[] @relation("RecordCreatedBy")
+  visits           Visit[]          @relation("VisitConsultant")
+  visitsCreated    Visit[]          @relation("VisitCreatedBy")
+  examsCreated     HealthExam[]     @relation("ExamCreatedBy")
+  expensesCreated  ExpenseEntry[]   @relation("ExpenseCreatedBy")
+  scriptsCreated   Script[]         @relation("ScriptCreatedBy")
+}
+
+// ---------------------------------------------------------------- Empresas
+
+enum ContractStatus {
+  /// Ainda não é cliente: entrou pela agenda, na reunião de briefing.
+  PROSPECTO
+  ATIVO
+  PAUSADO
+  ENCERRADO
+}
+
+/// A empresa cliente. Tudo o que é de um cliente pende daqui e cai junto se
+/// ela for excluída.
+model Company {
+  id        String  @id @default(cuid())
+  name      String
+  legalName String? // razão social
+  cnpj      String? @unique
+
+  // Perfil
+  industry      String? // ramo / nicho
+  tone          String? // tom da empresa
+  employeeCount Int?
+  website       String?
+  description   String?
+
+  // Contato
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+
+  // Contrato
+  contractService String?
+  contractValue   Decimal?       @db.Decimal(12, 2)
+  contractDate    DateTime?
+  contractEndDate DateTime?
+  contractStatus  ContractStatus @default(ATIVO)
+  paymentDay      Int?
+
+  notes String?
+
+  /// Briefing da primeira reunião, digitado na ficha durante a conversa.
+  briefing   String?   @db.Text
+  briefingAt DateTime?
+
+  createdById String?
+  createdBy   User?   @relation("CompanyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches    Branch[]
+  activities  Activity[]
+  meetings    Meeting[]
+  employees   Employee[]
+  visits      Visit[]
+  exams       HealthExam[]
+  jobOpenings JobOpening[]
+  candidates  Candidate[]
+
+  pontoConfig      PontoConfig?
+  planos           PlanoDeTreinamento[]
+  testesEnviados   TesteEnviado[]
+  pontoMarcacoes   PontoMarcacao[]
+  pontoOcorrencias PontoOcorrencia[]
+  pontoLancamentos PontoLancamento[]
+
+  @@index([name])
+}
+
+model Branch {
+  id             String  @id @default(cuid())
+  companyId      String
+  company        Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name           String
+  isHeadquarters Boolean @default(false)
+
+  street     String?
+  number     String?
+  complement String?
+  district   String?
+  city       String?
+  state      String?
+  zipCode    String?
+
+  employeeCount Int?
+  phone         String?
+
+  employees Employee[]
+
+  createdAt        DateTime          @default(now())
+  encontrosDePlano EncontroDoPlano[]
+
+  @@index([companyId])
+}
+
+// --------------------------------------------------- Fluxo de atividades
+
+model Activity {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action      String // CRIOU, CONCLUIU, ATUALIZOU...
+  entityType  String // REUNIAO, PLANO, AGENDA, COLABORADOR, PONTO, SELECAO, EMPRESA...
+  entityId    String?
+  description String
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
+}
+
+// ------------------------------------------------------ Catálogo de produtos
+
+/// O catálogo de produtos da consultoria: o que ela oferece. É a lista que o
+/// plano de treinamento, a reunião e a agenda oferecem para escolher.
+model Service {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  /// O que fazemos pela empresa, em poucas linhas.
+  description String?
+  order       Int     @default(0)
+  active      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  planos   PlanoDeTreinamento[]
+  reunioes Meeting[]
+  visitas  Visit[]
+}
+
+// ---------------------------------------------------- Proteção de acesso
+
+/// Cada tentativa de login, para travar ataque de força bruta.
+/// Fica no banco (e não em memória) para valer também quando a aplicação
+/// roda em várias instâncias, como na Vercel. O ponto eletrônico usa a mesma
+/// tabela para travar o PIN, com a chave "ponto:<empresa>:<cpf>".
+model LoginAttempt {
+  id      String  @id @default(cuid())
+  email   String
+  ip      String?
+  success Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+}
+
+// ------------------------------------------------------------ Configuração
+
+/// Configuração da instalação. Linha única, identificada por id = "app".
+/// Guarda a identidade de quem presta o serviço, usada no relatório entregue
+/// ao cliente.
+model Settings {
+  id String @id @default("app")
+
+  orgName      String  @default("RH Resultados")
+  orgDocument  String?
+  orgContact   String?
+  /// Texto do rodapé do relatório.
+  reportFooter String?
+
+  updatedAt DateTime @updatedAt
+}
+
+// --------------------------------------------------------------- Reuniões
+
+/// Reunião com o cliente: pauta escrita antes, ata escrita depois
+/// (conversado, decidido, combinado), participantes e apresentação usada.
+model Meeting {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// O número da reunião na empresa, que aparece como REU-0001.
+  number Int @default(0)
+
+  title      String
+  /// Dia da reunião, em UTC 00:00 como a agenda. Vazio enquanto está "a agendar".
+  date       DateTime?
+  /// Hora no formato "HH:MM", como na agenda.
+  startTime  String?
+  /// PLANEJADA (em preparação no plano), AGENDADA, REALIZADA (encerrada) ou ARQUIVADA.
+  status     String    @default("AGENDADA")
+  /// O setor da equipe a que a reunião diz respeito.
+  department String?
+  /// A unidade da empresa. Vazio é a rede toda. Só o id: a unidade apagada
+  /// deixa a reunião na rede, sem apagar a reunião.
+  branchId   String?
+  /// Tipo livre: equipe, gestores, dentistas…
+  kind       String?
+  location   String?
+  /// A pauta: o que vai ser conversado, escrita antes e completada durante a semana.
+  agenda     String?   @db.Text
+  /// O compromisso que a reunião tem na agenda, enquanto tem data.
+  visitId    String?   @unique
+
+  /// O produto do catálogo a que a reunião se refere — qualquer um, contratado
+  /// ou não. Na reunião de plano, vazio quer dizer o produto do plano.
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  /// O plano de treinamento a que a reunião pertence, e a posição dela nele.
+  planoId      String?
+  plano        PlanoDeTreinamento? @relation(fields: [planoId], references: [id], onDelete: SetNull)
+  ordemNoPlano Int?
+
+  createdById String?
+  createdBy   User?   @relation("MeetingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  encontroDoPlano EncontroDoPlano?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// A ata: o conversado, o decidido e o combinado.
+  items        MeetingItem[]
+  participants MeetingParticipant[]
+  /// As apresentações usadas na reunião.
+  files        MeetingFile[]
+
+  @@index([companyId, date])
+}
+
+/// Um arquivo da reunião: a apresentação usada nela, como veio.
+///
+/// Fica no banco porque o sistema publicado não tem disco próprio. Mais de um
+/// por reunião: às vezes a apresentação vem em partes.
+model MeetingFile {
+  id        String  @id @default(cuid())
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  name     String
+  mimeType String
+  size     Int
+  data     Bytes
+
+  createdAt DateTime @default(now())
+
+  @@index([meetingId])
+}
+
+/// Um item da ata: o que foi conversado, decidido ou combinado.
+///
+/// Cada tipo pede uma coisa: o conversado é contexto, sem responsável nem
+/// prazo; o decidido vale desde uma data e tem um porquê; o combinado tem um
+/// responsável e uma data — e é cobrado por ela.
+model MeetingItem {
+  id        String  @id @default(cuid())
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  /// CONVERSADO, DECIDIDO ou COMBINADO.
+  kind String
+  text String @db.Text
+
+  /// No decidido: por quê.
+  reason    String?   @db.Text
+  /// No decidido: vale desde quando.
+  validFrom DateTime?
+
+  /// No combinado: quem faz.
+  responsible String?
+  /// No combinado: a data combinada da entrega, em UTC 00:00.
+  dueDate     DateTime?
+  done        Boolean   @default(false)
+  doneAt      DateTime?
+
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([meetingId])
+  @@index([kind, done, dueDate])
+}
+
+/// Quem foi convocado para a reunião.
+model MeetingParticipant {
+  id        String  @id @default(cuid())
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  /// O colaborador da empresa, quando veio da equipe. Só o id, com o nome
+  /// guardado ao lado: quem sai da equipe continua na ata de quando estava.
+  employeeId String?
+  name       String
+  /// Convocado é quem foi chamado; presente é marcado depois, por quem conduziu.
+  present    Boolean @default(false)
+
+  @@index([meetingId])
+}
+
+// ------------------------------------------------- Equipe da empresa cliente
+
+enum EmployeeStatus {
+  ATIVO
+  AFASTADO
+  DESLIGADO
+}
+
+/// Colaborador da empresa cliente — não confundir com User, que é quem
+/// acessa este sistema pela consultoria de RH.
+model Employee {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Unidade onde trabalha, quando a empresa tem mais de uma.
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  name       String
+  document   String?
+  role       String?
+  department String?
+  email      String?
+  phone      String?
+
+  birthDate    DateTime?
+  hiredAt      DateTime?
+  terminatedAt DateTime?
+
+  status EmployeeStatus @default(ATIVO)
+  /// Observações gerais e permanentes sobre a pessoa.
+  notes  String?        @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  records     EmployeeRecord[]
+  plans       DevelopmentPlan[]
+  assessments SkillAssessment[]
+  exams       HealthExam[]
+
+  /// PIN do ponto eletrônico, guardado como hash. Sem PIN a pessoa não bate ponto.
+  pontoPin     String?
+  /// Minutos previstos de domingo (0) a sábado (6). Vazio: usa a jornada da empresa.
+  pontoJornada Int[]   @default([])
+
+  pontoMarcacoes   PontoMarcacao[]
+  pontoOcorrencias PontoOcorrencia[]
+  pontoLancamentos PontoLancamento[]
+
+  @@index([companyId, name])
+}
+
+enum RecordKind {
+  OBSERVACAO
+  ADVERTENCIA
+  FALTA
+  ATESTADO
+}
+
+enum WarningSeverity {
+  VERBAL
+  ESCRITA
+  SUSPENSAO
+}
+
+/// Linha do tempo do colaborador: observações, advertências, faltas e
+/// atestados num registro só, para serem lidos em ordem cronológica.
+///
+/// Atestado é dado de saúde: aqui guardamos apenas período e afastamento.
+/// Não existe campo de diagnóstico ou CID de propósito — é dado sensível e o
+/// acompanhamento de RH não precisa dele.
+model EmployeeRecord {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  kind        RecordKind
+  date        DateTime
+  /// Fim do período, em atestado ou suspensão de vários dias.
+  endDate     DateTime?
+  description String     @db.Text
+
+  /// Só em ADVERTENCIA.
+  severity  WarningSeverity?
+  /// Só em FALTA: se foi abonada.
+  justified Boolean?
+
+  createdById String?
+  createdBy   User?   @relation("RecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId, date])
+}
+
+enum PlanStatus {
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+}
+
+/// Plano de Desenvolvimento Individual.
+model DevelopmentPlan {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  title     String
+  objective String?    @db.Text
+  startDate DateTime?
+  endDate   DateTime?
+  status    PlanStatus @default(EM_ANDAMENTO)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Autoavaliação que originou o plano, quando veio de uma.
+  assessmentId String?          @unique
+  assessment   SkillAssessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+
+  actions DevelopmentAction[]
+
+  @@index([employeeId])
+}
+
+/// Ação do PDI, marcada conforme é cumprida.
+model DevelopmentAction {
+  id     String          @id @default(cuid())
+  planId String
+  plan   DevelopmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?   @db.Text
+  order       Int       @default(0)
+  done        Boolean   @default(false)
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([planId])
+}
+
+/// Autoavaliação técnica respondida pelo colaborador. É a base do plano de
+/// desenvolvimento técnico (um PDI), montado à mão ou com a ajuda da IA.
+model SkillAssessment {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  roleTasks       String? @db.Text
+  strengths       String? @db.Text
+  difficulties    String? @db.Text
+  toolsAndSystems String? @db.Text
+  blockers        String? @db.Text
+  wantsToDevelop  String? @db.Text
+  supportNeeded   String? @db.Text
+  other           String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  plan DevelopmentPlan?
+
+  @@index([employeeId])
+}
+
+// ------------------------------------------------------------------ Agenda
+
+enum VisitKind {
+  /// Primeira reunião: briefing e fechamento.
+  BRIEFING
+  ACOMPANHAMENTO
+  ENTREGA
+  OUTRO
+}
+
+enum VisitStatus {
+  AGENDADA
+  REALIZADA
+  CANCELADA
+}
+
+/// Um compromisso na empresa cliente: o dia, a hora e o produto trabalhado.
+///
+/// Pode nascer à mão, de uma reunião (Meeting.visitId) ou de um encontro do
+/// plano de treinamento ("Mandar para a agenda"). Quando tem reunião ligada,
+/// dia, hora, local e situação andam juntos.
+model Visit {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// O produto do catálogo trabalhado no dia. Opcional: nem todo compromisso
+  /// é de um produto só.
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  /// Dia da visita, sempre em UTC 00:00 — como o resto do sistema.
+  date      DateTime
+  /// Hora no formato "HH:MM". Texto, e não DateTime, para não arrastar fuso:
+  /// 09:00 na empresa é 09:00 em qualquer servidor.
+  startTime String
+  endTime   String?
+
+  /// Assunto, quando não é o nome do produto que descreve o dia.
+  subject  String?
+  /// Onde: filial, endereço ou "online".
+  location String?
+  notes    String? @db.Text
+
+  kind   VisitKind   @default(ACOMPANHAMENTO)
+  status VisitStatus @default(AGENDADA)
+
+  /// Série de repetição: todas as ocorrências compartilham este id.
+  ///
+  /// As ocorrências são criadas de uma vez, e não calculadas na hora de
+  /// mostrar. Assim cada uma pode ser remarcada ou cancelada sozinha, que é
+  /// o que acontece na prática com reunião de cliente.
+  seriesId   String?
+  frequencia String?
+
+  /// Quem da consultoria vai.
+  consultantId String?
+  consultant   User?   @relation("VisitConsultant", fields: [consultantId], references: [id], onDelete: SetNull)
+
+  createdById String?
+  createdBy   User?   @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// O encontro do plano de treinamento que gerou este compromisso.
+  encontroDoPlano EncontroDoPlano?
+  /// A pauta: os assuntos combinados para este compromisso.
+  topics          VisitTopic[]
+
+  @@index([date])
+  @@index([companyId, date])
+  @@index([seriesId])
+}
+
+/// Assunto da pauta de um compromisso.
+model VisitTopic {
+  id      String @id @default(cuid())
+  visitId String
+  visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  title String
+  order Int     @default(0)
+  done  Boolean @default(false)
+
+  @@index([visitId])
+}
+
+// -------------------------------------------------- Exames ocupacionais
+
+enum ExamKind {
+  ADMISSIONAL
+  PERIODICO
+  RETORNO_AO_TRABALHO
+  MUDANCA_DE_FUNCAO
+  DEMISSIONAL
+}
+
+enum ExamStatus {
+  A_AGENDAR
+  AGENDADO
+  REALIZADO
+  CANCELADO
+}
+
+enum ExamResult {
+  APTO
+  APTO_COM_RESTRICAO
+  INAPTO
+}
+
+/// Exame ocupacional a agendar, agendado ou já realizado.
+///
+/// O admissional é o caso comum de exame sem ficha de colaborador: o exame
+/// vem antes da contratação. Por isso `employeeId` é opcional e existe
+/// `candidateName` para o período em que a pessoa ainda é candidata.
+model HealthExam {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  /// Nome de quem vai fazer o exame enquanto não há ficha de colaborador.
+  candidateName String?
+  /// Cargo para o qual a pessoa está sendo avaliada.
+  jobTitle      String?
+
+  kind   ExamKind   @default(ADMISSIONAL)
+  status ExamStatus @default(A_AGENDAR)
+
+  /// Até quando o exame precisa acontecer. No admissional, é o dia anterior
+  /// ao início do trabalho: a lei não admite começar sem o exame.
+  dueDate DateTime?
+
+  /// Dia marcado, em UTC 00:00, e a hora como texto — mesma escolha da agenda.
+  scheduledAt   DateTime?
+  scheduledTime String?
+
+  clinic      String?
+  clinicPhone String?
+
+  performedAt  DateTime?
+  result       ExamResult?
+  /// Restrições descritas no ASO, quando o resultado é apto com restrição.
+  restrictions String?     @db.Text
+  /// Até quando o ASO vale — é o que dispara o próximo periódico.
+  validUntil   DateTime?
+
+  notes String? @db.Text
+
+  createdById String?
+  createdBy   User?   @relation("ExamCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, status])
+  @@index([employeeId])
+  @@index([dueDate])
+}
+
+// ------------------------------------------------- Gestão da consultoria
+
+/// Linha do plano de contas de despesa da consultoria.
+///
+/// É editável de propósito: cada consultoria organiza o gasto do seu jeito, e
+/// mudar a linha depois de meses de histórico dá retrabalho. Por isso a linha
+/// é arquivada, e não apagada, quando já tem lançamento.
+model ExpenseLine {
+  id     String  @id @default(cuid())
+  name   String
+  /// Agrupamento na tabela: PESSOAS, ENTREGA, ESTRUTURA, IMPOSTOS, FUNDOS.
+  group  String?
+  order  Int     @default(0)
+  active Boolean @default(true)
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries ExpenseEntry[]
+
+  @@index([order])
+}
+
+/// Quanto foi pago numa linha, num mês.
+///
+/// Um lançamento por linha e por mês: o painel é de fechamento mensal, não de
+/// contas a pagar. O mês é gravado sempre no dia 1 em UTC, como o resto do
+/// sistema faz com data.
+model ExpenseEntry {
+  id     String      @id @default(cuid())
+  lineId String
+  line   ExpenseLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+
+  month  DateTime
+  amount Decimal  @db.Decimal(12, 2)
+  notes  String?
+
+  createdById String?
+  createdBy   User?   @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([lineId, month])
+  @@index([month])
+}
+
+// ------------------------------------------------------------- Roteiros
+
+enum ScriptStatus {
+  RASCUNHO
+  APROVADO
+  GRAVADO
+  PUBLICADO
+  DESCARTADO
+}
+
+enum ScriptFramework {
+  PASTOR
+  HVC
+}
+
+/// Roteiro de vídeo curto, escrito no método de Ray Edwards.
+///
+/// Pode ser escrito à mão ou gerado pela IA. Guarda o que foi entregue e o
+/// que ficou depois da edição — cada bloco mudado vira um exemplo em
+/// `ScriptEdit`.
+model Script {
+  id String @id @default(cuid())
+
+  // Os INPUTS do método.
+  tema            String
+  publico         String
+  objetivo        String
+  plataforma      String?
+  duracaoSegundos Int     @default(30)
+  tom             String?
+  oferta          String?
+  provaSocial     String?
+  objecoes        String?
+  cta             String?
+  restricoes      String?
+
+  /// Por qual lado este roteiro ataca o tema.
+  angulo     String?
+  framework  ScriptFramework
+  copyThesis String          @db.Text
+  dsi        String          @db.Text
+
+  /// Blocos como estão hoje: [{ rotulo, texto }].
+  blocos              Json
+  /// Blocos como nasceram, para comparar com o editado.
+  blocosOriginais     Json
+  /// Ganchos alternativos para teste.
+  ganchosAlternativos Json
+
+  status           ScriptStatus @default(RASCUNHO)
+  /// Por que foi descartado — alimenta o aprendizado tanto quanto a edição.
+  descartadoPorque String?
+
+  createdById String?
+  createdBy   User?   @relation("ScriptCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  edits ScriptEdit[]
+
+  @@index([status, createdAt])
+}
+
+/// Uma correção feita à mão num bloco do roteiro.
+///
+/// É o material de aprendizado: as edições recentes entram no pedido à IA
+/// como exemplo de como esta pessoa escreve. Pode ser desligada, para um
+/// exemplo ruim não contaminar as próximas gerações.
+model ScriptEdit {
+  id       String @id @default(cuid())
+  scriptId String
+  script   Script @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  bloco  String
+  antes  String @db.Text
+  depois String @db.Text
+
+  /// Falso quando a pessoa manda o sistema esquecer este exemplo.
+  usarComoExemplo Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([scriptId])
+  @@index([usarComoExemplo, createdAt])
+}
+
+// ------------------------------------------------------- Processo seletivo
+
+enum JobOpeningStatus {
+  ABERTA
+  PAUSADA
+  ENCERRADA
+}
+
+/// O que a etapa cobra do candidato. O tipo não muda o nome que ela escreve:
+/// serve para o sistema saber o que cobrar e o que mostrar como pendência.
+enum EtapaTipo {
+  /// Leitura do currículo pela consultoria, sem nada a cobrar do candidato.
+  TRIAGEM
+  /// Ficha de solicitação de emprego.
+  FICHA
+  /// Um ou mais testes enviados por link (aba Testes).
+  TESTE
+  /// Conversa marcada.
+  ENTREVISTA
+  /// Qualquer etapa da consultoria: dinâmica, visita, prova prática.
+  LIVRE
+  /// A decisão final: aprovar, reprovar ou encaminhar ao cliente.
+  DECISAO
+}
+
+/// O que aconteceu com o candidato em uma etapa.
+enum MovimentoResultado {
+  /// Chegou na etapa.
+  ENTROU
+  /// Passou para a próxima.
+  APROVADO
+  /// Parou aqui.
+  REPROVADO
+  /// Saiu por conta própria.
+  DESISTIU
+}
+
+enum CandidateOutcome {
+  EM_ANDAMENTO
+  APROVADO
+  REPROVADO
+  DESISTIU
+}
+
+/// Uma vaga aberta de um cliente, com as etapas e os candidatos dela. A mesma
+/// vaga aberta de novo é uma vaga nova, com os seus candidatos.
+model JobOpening {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// O cargo, como aparece no anúncio: "Recepcionista".
+  title  String
+  status JobOpeningStatus @default(ABERTA)
+  notes  String?          @db.Text
+
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// As etapas desta vaga, copiadas do modelo escolhido e editáveis aqui:
+  /// mexer no modelo depois não mexe nas vagas já abertas.
+  etapas     EtapaDaVaga[]
+  candidates Candidate[]
+
+  @@index([companyId, status])
+}
+
+/// Um modelo de processo seletivo: a lista de etapas que ela costuma usar.
+///
+/// É dela, não da empresa: o mesmo modelo serve a vários clientes. Ao abrir
+/// uma vaga as etapas são copiadas para lá, e dali em diante andam sozinhas.
+model ProcessoModelo {
+  id        String  @id @default(cuid())
+  nome      String
+  descricao String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  etapas EtapaDoModelo[]
+}
+
+model EtapaDoModelo {
+  id       String         @id @default(cuid())
+  modeloId String
+  modelo   ProcessoModelo @relation(fields: [modeloId], references: [id], onDelete: Cascade)
+
+  nome  String
+  ordem Int
+  tipo  EtapaTipo @default(LIVRE)
+  /// Quantos dias o candidato pode ficar aqui antes de virar pendência.
+  prazoDias Int?
+
+  @@index([modeloId])
+}
+
+/// Uma etapa da vaga: a coluna onde os candidatos ficam.
+model EtapaDaVaga {
+  id     String     @id @default(cuid())
+  vagaId String
+  vaga   JobOpening @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+
+  nome      String
+  ordem     Int
+  tipo      EtapaTipo @default(LIVRE)
+  prazoDias Int?
+
+  candidatos Candidate[]
+
+  @@index([vagaId])
+}
+
+/// Cada passo do candidato pelo processo, com o motivo.
+///
+/// É o histórico da ficha e, somado, o funil da vaga: quantos chegaram em cada
+/// etapa, quantos passaram e por que os outros pararam.
+model MovimentoDoCandidato {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  /// O nome da etapa no dia do movimento: renomear a etapa não reescreve o
+  /// histórico.
+  etapaNome String
+  etapaId   String?
+
+  resultado MovimentoResultado
+  motivo    String?            @db.Text
+
+  criadoEm    DateTime @default(now())
+  criadoPorId String?
+
+  @@index([candidateId, criadoEm])
+}
+
+/// Um candidato de uma vaga, da chegada à decisão.
+model Candidate {
+  id        String   @id @default(cuid())
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  jobOpeningId String?
+  jobOpening   JobOpening? @relation(fields: [jobOpeningId], references: [id], onDelete: SetNull)
+
+  name  String
+  email String?
+  phone String?
+
+  /// Por onde chegou: EMAIL ou MANUAL.
+  source String @default("MANUAL")
+
+  /// Em que etapa da vaga ele está. Vazio: a vaga ainda não tem etapas.
+  etapaId    String?
+  etapa      EtapaDaVaga? @relation(fields: [etapaId], references: [id], onDelete: SetNull)
+  /// Desde quando está nesta etapa — é daqui que sai o "parado há X dias".
+  etapaDesde DateTime     @default(now())
+
+  outcome    CandidateOutcome @default(EM_ANDAMENTO)
+  /// A observação de cada etapa: { "<id da etapa>": "..." }.
+  stageNotes Json?
+  /// Observações finais da ficha do candidato.
+  finalNotes String?          @db.Text
+
+  /// Quando ela cobrou pela última vez a ficha ou o teste que não voltou.
+  cobradoEm DateTime?
+  /// Quando o candidato foi avisado do resultado. Sem isso, ninguém sabe se o
+  /// retorno foi dado — e é o que mais some no meio do processo.
+  avisadoEm DateTime?
+
+  /// O texto do currículo, quando vier de um arquivo ou da caixa de e-mail.
+  resumeText String? @db.Text
+
+  /// O e-mail de origem, para quando a caixa do recrutamento for ligada. O
+  /// Message-ID impede o mesmo e-mail de virar dois candidatos.
+  emailMessageId String?   @unique
+  emailFrom      String?
+  emailTo        String?
+  emailSubject   String?
+  receivedAt     DateTime?
+
+  /// A ficha de solicitação de emprego, respondida pelo link.
+  applicationToken      String    @unique
+  applicationAnswers    Json?
+  applicationSentAt     DateTime?
+  applicationAnsweredAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movimentos MovimentoDoCandidato[]
+  /// Os testes mandados a ele pela aba Testes, direto do quadro da vaga.
+  testes     TesteEnviado[]
+
+  @@index([companyId, jobOpeningId])
+  @@index([jobOpeningId, etapaId])
+}
+
+// ------------------------------------------------------ Testes cadastrados
+
+/// Um teste cadastrado pela consultoria, que vale para qualquer empresa.
+///
+/// A estrutura é dela: as questões, as alternativas com a chave de cada uma
+/// (o fator que a alternativa soma), os fatores e os pares que formam o tipo.
+/// Quem responde recebe uma cópia no envio, para editar o teste depois não
+/// mudar o que foi respondido.
+model CustomTest {
+  id String @id @default(cuid())
+
+  name         String
+  /// O que a pessoa lê antes de começar.
+  instructions String? @db.Text
+  /// ESCOLHA (uma alternativa por questão) ou NOTAS (ordenar as alternativas).
+  mode         String  @default("ESCOLHA")
+  /// [{ codigo, nome, descricao }]
+  factors      Json
+  /// [["E", "I"], ["S", "N"]]: cada par dá uma letra do tipo.
+  pairs        Json?
+  /// [{ enunciado, opcoes: [{ texto, fator }] }]
+  questions    Json
+  active       Boolean @default(true)
+
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  testeEnviados TesteEnviado[]
+}
+
+// ------------------------------------------------------------ ponto eletrônico
+
+enum RegimePonto {
+  BANCO_DE_HORAS
+  HORAS_EXTRAS
+}
+
+/// As regras do ponto de uma empresa: cada cliente tem as suas.
+model PontoConfig {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  regime             RegimePonto @default(BANCO_DE_HORAS)
+  /// Minutos previstos de domingo (0) a sábado (6). O padrão é 44h: 8h de
+  /// segunda a sexta e 4h no sábado.
+  jornada            Int[]       @default([0, 480, 480, 480, 480, 480, 240])
+  /// Variação diária que não conta nem como extra nem como atraso (CLT art. 58, §1º).
+  tolerancia         Int         @default(10)
+  /// Intervalo mínimo para quem trabalha mais de 6h (CLT art. 71).
+  intervaloMinimo    Int         @default(60)
+  /// Prazo para compensar o banco de horas.
+  validadeBancoMeses Int         @default(6)
+  /// O saldo do banco começa a contar deste dia.
+  inicio             DateTime
+
+  /// O endereço do registro: /ponto/<token>.
+  token String  @unique
+  ativo Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum OrigemMarcacao {
+  RELOGIO
+  MANUAL
+  /// Veio do relógio próprio da empresa, pelo arquivo AFD.
+  IMPORTADA
+}
+
+/// Uma batida de ponto. Nunca é apagada: quando está errada, é anulada com
+/// motivo, e a marcação incluída pelo RH fica identificada como manual.
+model PontoMarcacao {
+  id  String @id @default(cuid())
+  /// Número sequencial do registro, impresso no comprovante.
+  nsr Int    @unique @default(autoincrement())
+
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  /// A jornada a que a batida pertence (UTC 00:00). Quem entra às 22h e sai
+  /// às 6h tem as duas batidas no mesmo dia de trabalho.
+  dia     DateTime
+  momento DateTime
+  origem  OrigemMarcacao @default(RELOGIO)
+  /// Por que o RH incluiu a marcação à mão.
+  motivo  String?
+  ip      String?
+
+  anuladaEm     DateTime?
+  anuladaMotivo String?
+  criadoPor     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId, dia])
+  @@index([companyId, dia])
+}
+
+enum TipoOcorrenciaPonto {
+  FERIADO
+  FOLGA
+  FERIAS
+  ABONO
+  ATESTADO
+}
+
+/// O que muda a jornada prevista de um dia. Sem pessoa, vale para a empresa
+/// toda (feriado).
+model PontoOcorrencia {
+  id         String    @id @default(cuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  dia       DateTime
+  tipo      TipoOcorrenciaPonto
+  descricao String?
+  criadoPor String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId, dia])
+}
+
+/// Movimento no banco de horas fora do dia a dia: saldo trazido de antes,
+/// horas pagas em folha, ajuste combinado.
+model PontoLancamento {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  dia       DateTime
+  /// Positivo soma ao banco, negativo desconta.
+  minutos   Int
+  descricao String
+  criadoPor String?
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId, dia])
+}
+
+// ------------------------------------------------------ plano de treinamento
+
+/// O plano de treinamento de uma empresa, sempre dentro de um produto do
+/// catálogo: o objetivo, a periodicidade e os encontros que cumprem o plano.
+model PlanoDeTreinamento {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  titulo        String
+  objetivo      String   @db.Text
+  /// SEMANAL, QUINZENAL, MENSAL ou LIVRE (sem data fixa).
+  periodicidade String   @default("MENSAL")
+  /// A hora de costume das reuniões, "14:00".
+  horario       String?
+  inicio        DateTime
+  /// ATIVO, PAUSADO ou CONCLUIDO.
+  status        String   @default("ATIVO")
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reunioes  Meeting[]
+  encontros EncontroDoPlano[]
+
+  @@index([companyId])
+}
+
+// ------------------------------------------------------------------- testes
+
+/// Um teste mandado por link para alguém responder: candidato, colaborador ou
+/// qualquer pessoa. O link é a credencial e aceita uma resposta só.
+model TesteEnviado {
+  id    String @id @default(cuid())
+  token String @unique
+
+  /// DISC (o da consultoria) ou CADASTRADO (um CustomTest).
+  tipo         String
+  customTestId String?
+  customTest   CustomTest? @relation(fields: [customTestId], references: [id], onDelete: SetNull)
+  /// Cópia do teste cadastrado no dia do envio: editar o teste depois não muda o que foi respondido.
+  estrutura    Json?
+  nomeDoTeste  String
+
+  pessoa    String
+  telefone  String?
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  /// O candidato de uma vaga, quando o teste foi mandado pelo quadro da Seleção.
+  candidateId String?
+  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+
+  /// ENVIADO ou RESPONDIDO.
+  status    String @default("ENVIADO")
+  respostas Json?
+  resultado Json?
+
+  enviadoPor   String?
+  enviadoEm    DateTime  @default(now())
+  respondidoEm DateTime?
+
+  @@index([enviadoEm])
+  @@index([candidateId])
+}
+
+/// Um encontro do plano de treinamento, numa filial (ou na empresa toda).
+///
+/// O plano só planeja: o encontro vai para a agenda quando se aperta
+/// "Mandar para a agenda", e vira reunião (pauta e ata) quando, na agenda, se
+/// aperta "Mandar para reunião". Assim a aba Reuniões só tem o que vai
+/// acontecer de fato.
+model EncontroDoPlano {
+  id       String             @id @default(cuid())
+  planoId  String
+  plano    PlanoDeTreinamento @relation(fields: [planoId], references: [id], onDelete: Cascade)
+  /// A filial onde acontece. Vazio: a empresa toda (ou a que não tem filial).
+  branchId String?
+  branch   Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  ordem Int
+  tema  String
+  /// O dia planejado (UTC 00:00) e a hora. Sem dia: a agendar.
+  data  DateTime?
+  hora  String?
+  /// A pauta, escrita já no planejamento. Quando o encontro vira reunião,
+  /// vai para a pauta dela (e dali em diante as duas andam juntas).
+  pauta String?   @db.Text
+
+  visitId   String?  @unique
+  visit     Visit?   @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  meetingId String?  @unique
+  meeting   Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planoId])
+}
