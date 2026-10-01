@@ -4,7 +4,6 @@ out
 build
 .env
 .env*.local
-.vercel
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
@@ -12,9 +11,10 @@ next-env.d.ts
 .localdb
 logs
 
-# Segredos e dados locais: nunca vão para o GitHub.
+# Segredos e dados locais: nunca vÃ£o para o GitHub.
 .env.*
 !.env.example
 .claude
 logs
 .localdb
+.vercel
