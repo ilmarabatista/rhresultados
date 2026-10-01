@@ -39,7 +39,8 @@ export default async function AgendaScreen({
   const hoje = todayKey();
   const [anoHoje, mesHoje] = hoje.split("-").map(Number);
 
-  const vista = vistaParam === "semana" ? "semana" : "mes";
+  // A semana é a vista principal: cada hora é uma célula para agendar.
+  const vista = vistaParam === "mes" ? "mes" : "semana";
   const { ano, mes } = lerMesKey(mesParam) ?? { ano: anoHoje, mes: mesHoje };
   const segunda = inicioDaSemana(
     semanaParam && diaValido(semanaParam) ? semanaParam : hoje,

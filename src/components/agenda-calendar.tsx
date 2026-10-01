@@ -558,15 +558,15 @@ function EscolhaRapida({
 }) {
   const [busca, setBusca] = useState("");
   const [produto, setProduto] = useState("");
+  const [inicio, setInicio] = useState(hora);
+  const [termino, setTermino] = useState(fimDaHora(hora) ?? "");
   const [erro, setErro] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
-
-  const fim = fimDaHora(hora);
 
   const agendar = (companyId: string) => {
     setErro(undefined);
     startTransition(async () => {
-      const r = await agendarRapido(companyId, produto || null, dia, hora);
+      const r = await agendarRapido(companyId, produto || null, dia, inicio, termino || null);
       if (r.error) setErro(r.error);
       else aoConcluir();
     });
@@ -584,9 +584,30 @@ function EscolhaRapida({
       <p className="mb-3 text-xs text-slate-500">
         <span className="first-letter:uppercase">{rotuloDoDia(dia)}</span> ·{" "}
         <span className="font-medium text-slate-700">
-          {faixaHoraria(hora, fim)}
+          {faixaHoraria(inicio, termino || null)}
         </span>
       </p>
+
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        <label className="block text-xs text-slate-500">
+          Início
+          <input
+            type="time"
+            value={inicio}
+            onChange={(e) => setInicio(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          />
+        </label>
+        <label className="block text-xs text-slate-500">
+          Término
+          <input
+            type="time"
+            value={termino}
+            onChange={(e) => setTermino(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          />
+        </label>
+      </div>
 
       <label className="mb-2 block text-xs text-slate-500">
         Produto do dia (opcional)
@@ -641,7 +662,7 @@ function EscolhaRapida({
         onClick={aoAbrirFormulario}
         className="mt-3 text-xs text-brand-700 transition hover:text-brand-800"
       >
-        Preencher tudo (local, quem vai, observações)
+        Preencher tudo (assunto, local, quem vai, repetir)
       </button>
     </div>
   );
@@ -1123,10 +1144,10 @@ export default function AgendaCalendar({
 
   const linkAnterior = semanal
     ? `${base}?vista=semana&semana=${semanaVizinha(segunda, -1)}`
-    : `${base}?mes=${mesKey(mesAnterior.ano, mesAnterior.mes)}`;
+    : `${base}?vista=mes&mes=${mesKey(mesAnterior.ano, mesAnterior.mes)}`;
   const linkSeguinte = semanal
     ? `${base}?vista=semana&semana=${semanaVizinha(segunda, 1)}`
-    : `${base}?mes=${mesKey(mesSeguinte.ano, mesSeguinte.mes)}`;
+    : `${base}?vista=mes&mes=${mesKey(mesSeguinte.ano, mesSeguinte.mes)}`;
 
   const noPeriodoAtual = semanal
     ? segunda === semanaAtual
@@ -1184,7 +1205,7 @@ export default function AgendaCalendar({
 
         {noPeriodoAtual ? null : (
           <Link
-            href={semanal ? `${base}?vista=semana` : base}
+            href={semanal ? base : `${base}?vista=mes`}
             className="text-xs text-brand-700 transition hover:text-brand-800"
           >
             {semanal ? "voltar para esta semana" : "voltar para o mês atual"}
@@ -1197,24 +1218,24 @@ export default function AgendaCalendar({
           </span>
           <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-white">
             <Link
-              href={base}
-              className={`px-2.5 py-1 text-xs transition ${
-                semanal
-                  ? "text-slate-500 hover:text-slate-900"
-                  : "bg-brand-600 font-medium text-white"
-              }`}
-            >
-              Mês
-            </Link>
-            <Link
               href={`${base}?vista=semana&semana=${segunda}`}
-              className={`border-l border-slate-200 px-2.5 py-1 text-xs transition ${
+              className={`px-2.5 py-1 text-xs transition ${
                 semanal
                   ? "bg-brand-600 font-medium text-white"
                   : "text-slate-500 hover:text-slate-900"
               }`}
             >
               Semana
+            </Link>
+            <Link
+              href={`${base}?vista=mes`}
+              className={`border-l border-slate-200 px-2.5 py-1 text-xs transition ${
+                semanal
+                  ? "text-slate-500 hover:text-slate-900"
+                  : "bg-brand-600 font-medium text-white"
+              }`}
+            >
+              Mês
             </Link>
           </div>
         </div>

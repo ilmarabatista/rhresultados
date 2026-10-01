@@ -226,13 +226,15 @@ export async function agendarRapido(
   serviceId: string | null,
   dia: string,
   hora: string,
+  termino: string | null = null,
 ): Promise<AgendaState> {
   const session = await requireSession();
 
   if (!companyId) return { error: "Escolha a empresa." };
   if (!diaValido(dia)) return { error: "Escolha uma data válida." };
 
-  const fim = fimDaHora(hora);
+  // O término é opcional; sem ele, o compromisso dura uma hora.
+  const fim = termino && termino.trim() ? termino.trim() : fimDaHora(hora);
   const erroHora = conferirHorario(hora, fim);
   if (erroHora) return { error: erroHora };
 
