@@ -11,6 +11,8 @@ import {
 } from "@/lib/reunioes";
 import { opcoesDaReuniao } from "@/lib/reunioes-dados";
 import MeetingRecord from "@/components/meeting-record";
+import { quemPrecisa } from "@/lib/treinamentos-dados";
+import { escreverHoras, lerCategoria, nomeDoTreinamento, ROTULO_DA_CATEGORIA } from "@/lib/treinamentos";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Reunião — RH Resultados" };
@@ -38,6 +40,7 @@ export default async function ReuniaoPage({
         participants: { orderBy: { name: "asc" } },
         files: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, size: true } },
         plano: { select: { titulo: true, serviceId: true, service: { select: { name: true } } } },
+        turma: { include: { treinamento: { select: { codigo: true, nome: true, categoria: true } } } },
       },
     }),
     opcoesDaReuniao(id),
@@ -45,6 +48,13 @@ export default async function ReuniaoPage({
   if (!r || r.companyId !== id) notFound();
 
   const situacao: SituacaoDaReuniao = lerSituacao(r.status);
+
+  // Na turma de treinamento: quem a matriz diz que precisa e ainda não está convocado.
+  const turma = r.turma;
+  const convocados = new Set(r.participants.map((p) => p.employeeId));
+  const faltaConvocar = turma
+    ? (await quemPrecisa(id, turma.treinamentoId)).filter((p) => !convocados.has(p.id)).map((p) => p.name)
+    : [];
 
   // Sem produto escolhido, a reunião de plano mostra o produto do plano.
   const produtoId = r.serviceId ?? r.plano?.serviceId ?? null;
@@ -76,6 +86,22 @@ export default async function ReuniaoPage({
                 naAgenda: Boolean(r.visitId),
               }
             : null,
+        turma: turma
+          ? {
+              id: turma.id,
+              treinamento: nomeDoTreinamento(turma.treinamento),
+              categoria: ROTULO_DA_CATEGORIA[lerCategoria(turma.treinamento.categoria)],
+              mes: !r.date && turma.mesPrevisto ? dateToDayKey(turma.mesPrevisto).slice(0, 7) : null,
+              instrutor: turma.instrutor ?? "",
+              modalidade: turma.modalidade,
+              horas: turma.horas == null ? "" : escreverHoras(Number(turma.horas)),
+              investimento: turma.investimento == null ? "" : Number(turma.investimento).toFixed(2).replace(".", ","),
+              material: turma.material ?? "",
+              justificativa: turma.justificativa,
+              situacao: r.status,
+              faltaConvocar,
+            }
+          : null,
         apresentacoes: r.files.map((f) => ({ id: f.id, nome: f.name, tamanho: f.size })),
         participantes: r.participants.map((p) => ({ id: p.id, nome: p.name, presente: p.present })),
         itens: r.items

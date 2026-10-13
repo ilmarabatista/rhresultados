@@ -60,6 +60,7 @@ export default async function AgendaScreen({
         startTime: true,
         endTime: true,
         kind: true,
+        natureza: true,
         subject: true,
         location: true,
         notes: true,
@@ -150,7 +151,7 @@ export default async function AgendaScreen({
   }
 
   return (
-    <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
       <AgendaCalendar
         vista={vista}
         ano={ano}
@@ -165,6 +166,7 @@ export default async function AgendaScreen({
           startTime: v.startTime,
           endTime: v.endTime,
           tipo: v.kind,
+          natureza: v.natureza,
           subject: v.subject,
           location: v.location,
           notes: v.notes,

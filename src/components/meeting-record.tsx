@@ -31,6 +31,7 @@ import {
 import type { OpcoesDaReuniao } from "@/lib/reunioes-dados";
 import { SmallSubmitButton } from "./form";
 import MeetingSlides, { type Apresentacao } from "./meeting-slides";
+import TurmaPainel, { type TurmaDaReuniao } from "./turma-painel";
 
 /**
  * A página de uma reunião, no jeito de uma folha: o título e quando no alto, o
@@ -83,6 +84,8 @@ export type ReuniaoCompleta = {
     naAgenda: boolean;
   } | null;
   apresentacoes: Apresentacao[];
+  /** Quando a reunião é uma turma de treinamento. */
+  turma: TurmaDaReuniao | null;
   participantes: { id: string; nome: string; presente: boolean }[];
   itens: ItemDaAta[];
 };
@@ -744,8 +747,11 @@ export default function MeetingRecord({
     startTransition(async () => avisarSeErro(await mudarCampoDaReuniao(reuniao.id, qual, valor)));
 
   const plano = reuniao.plano;
+  const turma = reuniao.turma;
   // O encontro do plano sendo preparado: fica fora da aba Reuniões até ir para reunião.
   const emPreparacao = reuniao.situacao === "PLANEJADA";
+  // Para onde voltar depois de excluir: a turma volta para a aba Treinamentos.
+  const origem = turma ? "treinamentos" : emPreparacao ? "planejamento" : "reunioes";
   const produto = opcoes.produtos.find((p) => p.id === reuniao.produtoId) ?? null;
   const unidade = opcoes.unidades.find((u) => u.id === reuniao.unidadeId)?.nome ?? "Rede";
   const setorNoTitulo =
@@ -774,7 +780,11 @@ export default function MeetingRecord({
         ))}
       </datalist>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        {emPreparacao ? (
+        {turma ? (
+          <Link href={`/empresas/${companyId}/treinamentos`} className="text-slate-500 transition hover:text-slate-900">
+            ← Treinamentos
+          </Link>
+        ) : emPreparacao ? (
           <Link href={`/empresas/${companyId}/planejamento`} className="text-slate-500 transition hover:text-slate-900">
             ← Planejamento
           </Link>
@@ -790,7 +800,12 @@ export default function MeetingRecord({
         ) : null}
       </div>
 
-      {emPreparacao ? (
+      {emPreparacao && turma ? (
+        <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[12px] text-sky-800">
+          Treinamento programado, ainda sem dia. Já dá para convocar e preparar a pauta; ao marcar o dia (no alto, à
+          direita) ele vai para a agenda e para a aba Reuniões.
+        </p>
+      ) : emPreparacao ? (
         <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[12px] text-sky-800">
           Em preparação no plano. Tudo o que escrever aqui (pauta, participantes, apresentação) segue junto quando o
           encontro for para a agenda e, lá, para reunião; só então ele aparece na aba Reuniões.
@@ -846,7 +861,7 @@ export default function MeetingRecord({
                 onClick={() => startTransition(async () => avisarSeErro(await encerrarReuniao(reuniao.id, true)))}
                 className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700"
               >
-                Encerrar reunião
+                {turma ? "Encerrar treinamento" : "Encerrar reunião"}
               </button>
             ) : null}
             {reuniao.situacao === "REALIZADA" ? (
@@ -859,7 +874,7 @@ export default function MeetingRecord({
                 Reabrir
               </button>
             ) : null}
-            {plano ? null : (
+            {plano || turma ? null : (
               <button
                 type="button"
                 disabled={pending}
@@ -879,12 +894,14 @@ export default function MeetingRecord({
               onClick={() => {
                 const pergunta = plano
                   ? `Tirar a reunião ${reuniao.codigo} do plano e da agenda, com a pauta e a ata?`
-                  : `Excluir a reunião ${reuniao.codigo}, com a pauta e a ata?`;
+                  : turma
+                    ? `Excluir esta turma de treinamento (${reuniao.codigo}), com convocados, presença e ata? Quem esteve presente perde este treinamento do histórico.`
+                    : `Excluir a reunião ${reuniao.codigo}, com a pauta e a ata?`;
                 if (!confirm(pergunta)) return;
                 startTransition(async () => {
                   const r = await excluirReuniao(reuniao.id);
                   if (r.error) alert(r.error);
-                  else router.push(`/empresas/${companyId}/${emPreparacao ? "planejamento" : "reunioes"}`);
+                  else router.push(`/empresas/${companyId}/${origem}`);
                 });
               }}
               className="inline-flex items-center gap-1 text-[11px] text-slate-400 transition hover:text-red-600"
@@ -976,6 +993,8 @@ export default function MeetingRecord({
 
         <Participantes reuniao={reuniao} pessoas={opcoes.pessoas} />
       </header>
+
+      {turma ? <TurmaPainel companyId={companyId} turma={turma} /> : null}
 
       <section className="space-y-1.5">
         <CabecalhoDaParte titulo="Apresentação usada" dica="o slide que você apresentou nesta reunião" />

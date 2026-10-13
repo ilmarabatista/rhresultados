@@ -50,6 +50,7 @@ const visitaSchema = z.object({
   kind: z
     .enum(["BRIEFING", "ACOMPANHAMENTO", "ENTREGA", "OUTRO"])
     .default("ACOMPANHAMENTO"),
+  natureza: z.enum(["REUNIAO", "TAREFA"]).default("REUNIAO"),
   frequencia: z
     .enum(["NENHUMA", ...VALORES_DE_FREQUENCIA])
     .default("NENHUMA"),
@@ -70,6 +71,7 @@ function lerFormulario(formData: FormData) {
     notes: formData.get("notes") ?? undefined,
     status: formData.get("status") || "AGENDADA",
     kind: formData.get("kind") || "ACOMPANHAMENTO",
+    natureza: formData.get("natureza") || "REUNIAO",
     frequencia: formData.get("frequencia") || "NENHUMA",
     vezes: formData.get("vezes") || 1,
     pauta: formData.get("pauta") ?? "",
@@ -177,6 +179,7 @@ export async function criarVisita(
           notes: d.notes,
           status: d.status,
           kind: d.kind,
+          natureza: d.natureza,
           seriesId,
           frequencia: repete ? d.frequencia : null,
           createdById: session.userId,
@@ -227,6 +230,7 @@ export async function agendarRapido(
   dia: string,
   hora: string,
   termino: string | null = null,
+  natureza: "REUNIAO" | "TAREFA" = "REUNIAO",
 ): Promise<AgendaState> {
   const session = await requireSession();
 
@@ -248,6 +252,7 @@ export async function agendarRapido(
       date: dayKeyToDate(dia),
       startTime: hora,
       endTime: fim,
+      natureza: natureza === "TAREFA" ? "TAREFA" : "REUNIAO",
       createdById: session.userId,
     },
     select: { id: true, date: true },
@@ -397,6 +402,7 @@ export async function atualizarVisita(
       notes: d.notes,
       status: d.status,
       kind: d.kind,
+      natureza: d.natureza,
     },
     select: { date: true, startTime: true, location: true, status: true },
   });
@@ -448,6 +454,58 @@ export async function mudarStatusVisita(
   );
 
   refresh(visita.companyId);
+}
+
+/**
+ * Leva para outro dia e horário o compromisso que passou sem ser feito.
+ *
+ * Só esta ocorrência muda — numa série, as outras continuam onde estão. A
+ * reunião e o encontro do plano ligados vão junto, como na edição.
+ */
+export async function reagendarVisita(
+  id: string,
+  dia: string,
+  inicio: string,
+  fim: string | null,
+): Promise<AgendaState> {
+  const session = await requireSession();
+
+  if (!diaValido(dia)) return { error: "Escolha uma data válida." };
+  const termino = fim && fim.trim() ? fim.trim() : null;
+  const erroHora = conferirHorario(inicio.trim(), termino);
+  if (erroHora) return { error: erroHora };
+
+  const antes = await prisma.visit.findUnique({
+    where: { id },
+    select: { date: true, startTime: true, endTime: true },
+  });
+  if (!antes) return { error: "Agendamento não encontrado." };
+
+  const visita = await prisma.visit.update({
+    where: { id },
+    data: {
+      date: dayKeyToDate(dia),
+      startTime: inicio.trim(),
+      endTime: termino,
+      status: "AGENDADA",
+    },
+    select: { companyId: true, date: true, startTime: true, location: true, status: true },
+  });
+  await acompanharReuniao(id, visita);
+
+  await log(
+    visita.companyId,
+    session.userId,
+    "ATUALIZOU",
+    id,
+    `Reagendou de ${formatFullDate(antes.date)}, ${faixaHoraria(
+      antes.startTime,
+      antes.endTime,
+    )} para ${formatFullDate(visita.date)}, ${faixaHoraria(inicio.trim(), termino)}.`,
+  );
+
+  refresh(visita.companyId);
+  return { ok: true };
 }
 
 /**

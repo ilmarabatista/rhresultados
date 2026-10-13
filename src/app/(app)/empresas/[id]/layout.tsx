@@ -62,7 +62,7 @@ export default async function CompanyLayout({
     meeting: { companyId: id, status: { notIn: ["ARQUIVADA", "PLANEJADA"] as string[] } },
   } as const;
 
-  const [agenda, semMarcar, atrasados, semData, examesAbertos, encontrosPerdidos] = await Promise.all([
+  const [agenda, semMarcar, atrasados, semData, examesAbertos, encontrosPerdidos, pdiAtrasados, acoesAtrasadas] = await Promise.all([
     prisma.visit.findMany({
       where: { companyId: id, status: "AGENDADA", date: { gte: hoje } },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
@@ -91,6 +91,14 @@ export default async function CompanyLayout({
         OR: [{ meetingId: null }, { meeting: { status: "PLANEJADA" } }],
       },
     }),
+    // PDI em andamento cuja conversa marcada já passou.
+    prisma.developmentPlan.count({
+      where: { status: "EM_ANDAMENTO", employee: { companyId: id }, proximaConversa: { lt: hoje } },
+    }),
+    // Ação de PDI é combinado: passou do prazo sem chegar a 100%, está atrasada.
+    prisma.developmentAction.count({
+      where: { done: false, dueDate: { lt: hoje }, plan: { status: "EM_ANDAMENTO", employee: { companyId: id } } },
+    }),
   ]);
 
   const pendencias: Pendencia[] = [
@@ -117,6 +125,12 @@ export default async function CompanyLayout({
             tom: "atencao" as const,
           },
         ]
+      : []),
+    ...(acoesAtrasadas > 0
+      ? [{ href: `/empresas/${id}/pdi`, texto: vezes(acoesAtrasadas, "ação de PDI atrasada", "ações de PDI atrasadas"), tom: "ruim" as const }]
+      : []),
+    ...(pdiAtrasados > 0
+      ? [{ href: `/empresas/${id}/pdi`, texto: vezes(pdiAtrasados, "conversa de PDI atrasada", "conversas de PDI atrasadas"), tom: "atencao" as const }]
       : []),
     ...(examesAbertos > 0
       ? [{ href: `/empresas/${id}/equipe`, texto: vezes(examesAbertos, "exame por fazer", "exames por fazer"), tom: "atencao" as const }]

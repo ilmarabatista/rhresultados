@@ -6,7 +6,7 @@
  * qualquer servidor, inclusive quando o sistema sair daqui para a Vercel.
  */
 
-import { addDaysUTC, dateToDayKey, dayKeyToDate } from "./dates";
+import { addDaysUTC, dateToDayKey, dayKeyToDate, FUSO, momentDayKey } from "./dates";
 import { linhasComoItens } from "./text";
 
 export const DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
@@ -140,6 +140,36 @@ export function faixaHoraria(
   fim: string | null | undefined,
 ): string {
   return fim ? `${inicio} – ${fim}` : inicio;
+}
+
+/** O instante de agora no fuso do escritório: o dia e os minutos do dia. */
+export type Agora = { dia: string; minutos: number };
+
+export function agoraNoEscritorio(instante: Date = new Date()): Agora {
+  const partes = new Intl.DateTimeFormat("en-GB", {
+    timeZone: FUSO,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(instante);
+  const h = Number(partes.find((p) => p.type === "hour")?.value ?? 0);
+  const m = Number(partes.find((p) => p.type === "minute")?.value ?? 0);
+  return { dia: momentDayKey(instante), minutos: h * 60 + m };
+}
+
+/**
+ * O compromisso ainda agendado cujo horário já passou sem ninguém marcar
+ * que foi feito. Conta o término; sem término, o início.
+ */
+export function passouSemCheck(
+  v: { dia: string; startTime: string; endTime: string | null; status: string },
+  agora: Agora | null,
+): boolean {
+  if (!agora || v.status !== "AGENDADA") return false;
+  if (v.dia !== agora.dia) return v.dia < agora.dia;
+
+  const fim = (v.endTime ? emMinutos(v.endTime) : null) ?? emMinutos(v.startTime);
+  return fim !== null && fim <= agora.minutos;
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   saveEmployee,
   type EquipeState,
@@ -12,6 +12,7 @@ export type ColaboradorDados = {
   name: string;
   document: string | null;
   role: string | null;
+  cargoId: string | null;
   department: string | null;
   email: string | null;
   phone: string | null;
@@ -26,11 +27,14 @@ export type ColaboradorDados = {
 export default function EmployeeForm({
   companyId,
   unidades,
+  cargos,
   colaborador,
   onClose,
 }: {
   companyId: string;
   unidades: { id: string; nome: string }[];
+  /** A lista de cargos da empresa. */
+  cargos: { id: string; nome: string }[];
   colaborador: ColaboradorDados | null;
   onClose: () => void;
 }) {
@@ -42,6 +46,9 @@ export default function EmployeeForm({
   useEffect(() => {
     if (state.ok) onClose();
   }, [state.ok, onClose]);
+
+  // Sem cargos na lista, o campo já abre para escrever o primeiro.
+  const [cargoNovo, setCargoNovo] = useState(cargos.length === 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
@@ -74,8 +81,41 @@ export default function EmployeeForm({
               <Input name="document" defaultValue={colaborador?.document ?? ""} />
             </Field>
 
-            <Field label="Cargo" className="sm:col-span-3">
-              <Input name="role" defaultValue={colaborador?.role ?? ""} />
+            <Field
+              label="Cargo"
+              hint={cargoNovo ? "Entra na lista de cargos da empresa." : "Da lista de cargos da empresa."}
+              className="sm:col-span-3"
+            >
+              {cargoNovo ? (
+                <div className="flex gap-2">
+                  <Input name="novoCargo" autoFocus={!colaborador} placeholder="Nome do cargo novo" />
+                  {cargos.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setCargoNovo(false)}
+                      className="shrink-0 text-xs text-slate-500 transition hover:text-slate-800"
+                    >
+                      da lista
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <Select
+                  name="cargoId"
+                  defaultValue={colaborador?.cargoId ?? ""}
+                  onChange={(e) => {
+                    if (e.target.value === "__novo") setCargoNovo(true);
+                  }}
+                >
+                  <option value="">Sem cargo</option>
+                  {cargos.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                  <option value="__novo">+ Novo cargo…</option>
+                </Select>
+              )}
             </Field>
             <Field label="Setor" className="sm:col-span-3">
               <Input

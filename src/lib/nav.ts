@@ -101,5 +101,7 @@ export const FICHA_TABS: FichaTab[] = [
   { label: "Evolução", slug: "evolucao" },
   { label: "Seleção", slug: "selecao" },
   { label: "Equipe", slug: "equipe" },
+  { label: "Treinamentos", slug: "treinamentos" },
+  { label: "PDI", slug: "pdi" },
   { label: "Ponto", slug: "ponto" },
 ];

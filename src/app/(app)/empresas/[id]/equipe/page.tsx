@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import EmployeesList from "@/components/employees-list";
+import { pendenciasDaEmpresa } from "@/lib/treinamentos-dados";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Equipe — RH Resultados" };
@@ -13,7 +14,7 @@ export default async function EquipeEmpresaPage({
   await requireSession();
   const { id } = await params;
 
-  const [colaboradores, unidades] = await Promise.all([
+  const [colaboradores, unidades, cargos, { porPessoa }] = await Promise.all([
     prisma.employee.findMany({
       where: { companyId: id },
       orderBy: [{ status: "asc" }, { name: "asc" }],
@@ -21,6 +22,7 @@ export default async function EquipeEmpresaPage({
         branch: { select: { name: true } },
         _count: { select: { plans: true } },
         records: { select: { kind: true } },
+        integracao: { select: { feito: true } },
       },
     }),
     prisma.branch.findMany({
@@ -28,6 +30,8 @@ export default async function EquipeEmpresaPage({
       orderBy: [{ isHeadquarters: "desc" }, { name: "asc" }],
       select: { id: true, name: true },
     }),
+    prisma.cargo.findMany({ where: { companyId: id }, orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
+    pendenciasDaEmpresa(id),
   ]);
 
   return (
@@ -35,6 +39,7 @@ export default async function EquipeEmpresaPage({
       <EmployeesList
         companyId={id}
         unidades={unidades.map((u) => ({ id: u.id, nome: u.name }))}
+        cargos={cargos}
         colaboradores={colaboradores.map((c) => ({
           id: c.id,
           nome: c.name,
@@ -46,6 +51,9 @@ export default async function EquipeEmpresaPage({
           advertencias: c.records.filter((r) => r.kind === "ADVERTENCIA").length,
           faltas: c.records.filter((r) => r.kind === "FALTA").length,
           atestados: c.records.filter((r) => r.kind === "ATESTADO").length,
+          integracaoFeita: c.integracao.filter((e) => e.feito).length,
+          integracaoTotal: c.integracao.length,
+          treinamentosPendentes: porPessoa.get(c.id)?.length ?? 0,
         }))}
       />
     </main>

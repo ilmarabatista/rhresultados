@@ -297,9 +297,18 @@ export async function mudarDataDaReuniao(_prev: ReuniaoState, formData: FormData
     if (!horaValida(hora)) return { error: "Diga a hora." };
   }
 
+  // A turma de treinamento sem dia fica no planejamento (PLANEJADA); ao ganhar
+  // dia, vai para a agenda e para a aba Reuniões — e volta se perder o dia.
+  const ehTurma = (await prisma.turmaDeTreinamento.count({ where: { meetingId: reuniaoId } })) > 0;
+  const status =
+    ehTurma && r.status === "PLANEJADA" && !aAgendar
+      ? "AGENDADA"
+      : ehTurma && r.status === "AGENDADA" && aAgendar
+        ? "PLANEJADA"
+        : r.status;
   await prisma.meeting.update({
     where: { id: reuniaoId },
-    data: aAgendar ? { date: null, startTime: null } : { date: dayKeyToDate(dia), startTime: hora },
+    data: aAgendar ? { date: null, startTime: null, status } : { date: dayKeyToDate(dia), startTime: hora, status },
   });
   // Na reunião de um plano, o encontro do plano acompanha a data.
   if (!aAgendar) {

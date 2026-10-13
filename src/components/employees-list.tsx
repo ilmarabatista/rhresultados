@@ -16,6 +16,11 @@ export type ColaboradorItem = {
   advertencias: number;
   faltas: number;
   atestados: number;
+  /** Integração: itens feitos e total; total 0 quando a pessoa não tem checklist. */
+  integracaoFeita: number;
+  integracaoTotal: number;
+  /** Treinamentos que o cargo pede e a pessoa ainda não fez. */
+  treinamentosPendentes: number;
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -27,10 +32,12 @@ const STATUS_STYLE: Record<string, string> = {
 export default function EmployeesList({
   companyId,
   unidades,
+  cargos,
   colaboradores,
 }: {
   companyId: string;
   unidades: { id: string; nome: string }[];
+  cargos: { id: string; nome: string }[];
   colaboradores: ColaboradorItem[];
 }) {
   const [novo, setNovo] = useState(false);
@@ -128,6 +135,16 @@ export default function EmployeesList({
                     </span>
 
                     <span className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      {c.integracaoTotal > 0 && c.integracaoFeita < c.integracaoTotal ? (
+                        <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
+                          integração {c.integracaoFeita}/{c.integracaoTotal}
+                        </span>
+                      ) : null}
+                      {c.treinamentosPendentes > 0 ? (
+                        <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                          {c.treinamentosPendentes} trein. pendente{c.treinamentosPendentes > 1 ? "s" : ""}
+                        </span>
+                      ) : null}
                       {c.planos > 0 ? (
                         <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">
                           {c.planos} PDI
@@ -168,6 +185,7 @@ export default function EmployeesList({
         <EmployeeForm
           companyId={companyId}
           unidades={unidades}
+          cargos={cargos}
           colaborador={null}
           onClose={() => setNovo(false)}
         />

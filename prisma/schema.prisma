@@ -35,15 +35,17 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  companiesCreated Company[]        @relation("CompanyCreatedBy")
+  companiesCreated Company[]                 @relation("CompanyCreatedBy")
   activities       Activity[]
-  meetingsCreated  Meeting[]        @relation("MeetingCreatedBy")
-  recordsCreated   EmployeeRecord[] @relation("RecordCreatedBy")
-  visits           Visit[]          @relation("VisitConsultant")
-  visitsCreated    Visit[]          @relation("VisitCreatedBy")
-  examsCreated     HealthExam[]     @relation("ExamCreatedBy")
-  expensesCreated  ExpenseEntry[]   @relation("ExpenseCreatedBy")
-  scriptsCreated   Script[]         @relation("ScriptCreatedBy")
+  meetingsCreated  Meeting[]                 @relation("MeetingCreatedBy")
+  recordsCreated   EmployeeRecord[]          @relation("RecordCreatedBy")
+  visits           Visit[]                   @relation("VisitConsultant")
+  visitsCreated    Visit[]                   @relation("VisitCreatedBy")
+  conversasDePdi   ConversaDoPdi[]           @relation("ConversaDoPdiCriadaPor")
+  avaliacoesDePdi  AvaliacaoDeCompetencias[] @relation("AvaliacaoCriadaPor")
+  examsCreated     HealthExam[]              @relation("ExamCreatedBy")
+  expensesCreated  ExpenseEntry[]            @relation("ExpenseCreatedBy")
+  scriptsCreated   Script[]                  @relation("ScriptCreatedBy")
 }
 
 // ---------------------------------------------------------------- Empresas
@@ -107,6 +109,10 @@ model Company {
 
   pontoConfig      PontoConfig?
   planos           PlanoDeTreinamento[]
+  cargos           Cargo[]
+  treinamentos     Treinamento[]
+  turmas           TurmaDeTreinamento[]
+  modeloIntegracao ItemDoModeloDeIntegracao[]
   testesEnviados   TesteEnviado[]
   pontoMarcacoes   PontoMarcacao[]
   pontoOcorrencias PontoOcorrencia[]
@@ -263,6 +269,8 @@ model Meeting {
   createdBy   User?   @relation("MeetingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   encontroDoPlano EncontroDoPlano?
+  /// Quando a reunião é uma turma de treinamento: o que é próprio dela.
+  turma           TurmaDeTreinamento?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -366,7 +374,11 @@ model Employee {
 
   name       String
   document   String?
+  /// O nome do cargo, sempre igual ao cargo escolhido da lista da empresa.
+  /// Fica aqui também porque exames e telas antigas leem o texto.
   role       String?
+  cargoId    String?
+  cargo      Cargo?  @relation(fields: [cargoId], references: [id], onDelete: SetNull)
   department String?
   email      String?
   phone      String?
@@ -383,8 +395,10 @@ model Employee {
   updatedAt DateTime @updatedAt
 
   records     EmployeeRecord[]
+  integracao  EtapaDeIntegracao[]
   plans       DevelopmentPlan[]
   assessments SkillAssessment[]
+  avaliacoes  AvaliacaoDeCompetencias[]
   exams       HealthExam[]
 
   /// PIN do ponto eletrônico, guardado como hash. Sem PIN a pessoa não bate ponto.
@@ -449,6 +463,11 @@ enum PlanStatus {
 }
 
 /// Plano de Desenvolvimento Individual.
+///
+/// O caminho: a descrição do cargo diz as competências esperadas; a avaliação
+/// feita junto com a pessoa mostra os gaps; cada gap que se decide trabalhar
+/// vira uma meta SMART, com as ações para chegar lá; e as conversas de
+/// acompanhamento registram o avanço de cada meta até o plano fechar.
 model DevelopmentPlan {
   id         String   @id @default(cuid())
   employeeId String
@@ -463,13 +482,61 @@ model DevelopmentPlan {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  /// Autoavaliação que originou o plano, quando veio de uma.
+  /// Autoavaliação antiga (texto livre) que originou o plano, quando veio de uma.
   assessmentId String?          @unique
   assessment   SkillAssessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
 
-  actions DevelopmentAction[]
+  /// A avaliação de competências de onde saíram as metas.
+  avaliacaoId String?
+  avaliacao   AvaliacaoDeCompetencias? @relation(fields: [avaliacaoId], references: [id], onDelete: SetNull)
+
+  /// A próxima conversa de acompanhamento, que também está na agenda.
+  proximaConversa DateTime?
+  visitId         String?   @unique
+  visit           Visit?    @relation(fields: [visitId], references: [id], onDelete: SetNull)
+
+  /// Como terminou: o balanço escrito ao encerrar o plano.
+  balanco String? @db.Text
+
+  actions   DevelopmentAction[]
+  metas     MetaDoPdi[]
+  conversas ConversaDoPdi[]
 
   @@index([employeeId])
+}
+
+/// Uma meta SMART do PDI: específica (titulo), mensurável (indicador),
+/// atingível (recursos), relevante (relevancia) e temporal (prazo).
+model MetaDoPdi {
+  id     String          @id @default(cuid())
+  planId String
+  plan   DevelopmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  /// O gap que a meta trabalha, quando veio da avaliação.
+  notaId      String?
+  nota        NotaDeCompetencia? @relation(fields: [notaId], references: [id], onDelete: SetNull)
+  /// O nome da competência, guardado para não depender da avaliação.
+  competencia String?
+
+  titulo     String
+  indicador  String?   @db.Text
+  recursos   String?   @db.Text
+  relevancia String?   @db.Text
+  prazo      DateTime?
+
+  /// NAO_INICIADA, EM_ANDAMENTO, ATINGIDA, NAO_ATINGIDA ou CANCELADA.
+  status    String @default("NAO_INICIADA")
+  /// 0 a 100, atualizado nas conversas de acompanhamento.
+  progresso Int    @default(0)
+  ordem     Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  acoes      DevelopmentAction[]
+  progressos ProgressoDaMeta[]
+
+  @@index([planId])
 }
 
 /// Ação do PDI, marcada conforme é cumprida.
@@ -478,16 +545,148 @@ model DevelopmentAction {
   planId String
   plan   DevelopmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
+  /// A meta que a ação serve. Vazio nas ações dos planos antigos, sem metas.
+  metaId String?
+  meta   MetaDoPdi? @relation(fields: [metaId], references: [id], onDelete: Cascade)
+
+  /// PRATICA (no dia a dia), TROCA (mentoria, feedback, acompanhar alguém)
+  /// ou FORMAL (curso, leitura, treinamento) — o 70-20-10.
+  tipo          String       @default("PRATICA")
+  /// Quem garante que acontece: a pessoa, o líder, o RH.
+  responsavel   String?
+  /// Treinamento do catálogo: presente numa turma realizada, a ação se cumpre.
+  treinamentoId String?
+  treinamento   Treinamento? @relation(fields: [treinamentoId], references: [id], onDelete: SetNull)
+
   title       String
   description String?   @db.Text
   order       Int       @default(0)
+  /// Feita por inteiro (quantoFeito = 100). Fica para quem só lê feito/não feito.
   done        Boolean   @default(false)
+  /// Como um combinado, mas medido: 0, 25, 50, 75 ou 100%.
+  quantoFeito Int       @default(0)
+  /// Como foi: o que se fez, o que faltou.
+  observacao  String?   @db.Text
   dueDate     DateTime?
   completedAt DateTime?
 
   createdAt DateTime @default(now())
 
   @@index([planId])
+  @@index([metaId])
+  @@index([done, dueDate])
+}
+
+/// Uma conversa de acompanhamento do PDI: o que foi conversado, o que ficou
+/// combinado e onde cada meta estava naquele dia.
+model ConversaDoPdi {
+  id     String          @id @default(cuid())
+  planId String
+  plan   DevelopmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  data       DateTime
+  resumo     String   @db.Text
+  combinados String?  @db.Text
+
+  createdById String?
+  createdBy   User?    @relation("ConversaDoPdiCriadaPor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  progressos ProgressoDaMeta[]
+
+  @@index([planId, data])
+}
+
+/// Onde a meta estava numa conversa: é a linha do tempo do avanço.
+model ProgressoDaMeta {
+  id         String        @id @default(cuid())
+  conversaId String
+  conversa   ConversaDoPdi @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+  metaId     String
+  meta       MetaDoPdi     @relation(fields: [metaId], references: [id], onDelete: Cascade)
+
+  progresso  Int
+  status     String
+  comentario String? @db.Text
+
+  @@index([metaId])
+}
+
+/// Uma competência da descrição de cargo, com o nível que o cargo pede.
+model CompetenciaDoCargo {
+  id      String @id @default(cuid())
+  cargoId String
+  cargo   Cargo  @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+
+  nome          String
+  /// TECNICA ou COMPORTAMENTAL.
+  tipo          String  @default("TECNICA")
+  /// O que se espera ver no dia a dia de quem domina a competência.
+  descricao     String? @db.Text
+  /// 1 a 5.
+  nivelEsperado Int     @default(3)
+  ordem         Int     @default(0)
+
+  notas NotaDeCompetencia[]
+
+  @@index([cargoId])
+}
+
+/// A avaliação de competências feita junto com a pessoa: o diagnóstico do PDI.
+/// Repetida mais tarde, mostra o quanto cada gap fechou.
+model AvaliacaoDeCompetencias {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// O cargo da pessoa no dia, e o nome dele, para a avaliação não mudar se o
+  /// cargo mudar depois.
+  cargoId    String?
+  cargo      Cargo?   @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+  cargoNome  String?
+
+  data DateTime
+
+  /// A parte aberta da conversa.
+  pontosFortes    String? @db.Text
+  querDesenvolver String? @db.Text
+  apoio           String? @db.Text
+  carreira        String? @db.Text
+
+  createdById String?
+  createdBy   User?    @relation("AvaliacaoCriadaPor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  notas  NotaDeCompetencia[]
+  planos DevelopmentPlan[]
+
+  @@index([employeeId, data])
+}
+
+/// A nota de uma competência numa avaliação: como a pessoa se vê, como o
+/// avaliador vê, e o nível em que os dois concordaram. O gap é o esperado
+/// menos o acordado.
+model NotaDeCompetencia {
+  id            String                  @id @default(cuid())
+  avaliacaoId   String
+  avaliacao     AvaliacaoDeCompetencias @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+  competenciaId String?
+  competencia   CompetenciaDoCargo?     @relation(fields: [competenciaId], references: [id], onDelete: SetNull)
+
+  /// Copiados da competência no dia da avaliação.
+  nome     String
+  tipo     String @default("TECNICA")
+  esperado Int
+
+  pessoa     Int?
+  avaliador  Int?
+  acordado   Int?
+  comentario String? @db.Text
+  ordem      Int     @default(0)
+
+  metas MetaDoPdi[]
+
+  @@index([avaliacaoId])
 }
 
 /// Autoavaliação técnica respondida pelo colaborador. É a base do plano de
@@ -521,6 +720,13 @@ enum VisitKind {
   ACOMPANHAMENTO
   ENTREGA
   OUTRO
+}
+
+/// Reunião é conversa com gente (pauta, ata); tarefa é trabalho a fazer
+/// naquele horário.
+enum VisitNatureza {
+  REUNIAO
+  TAREFA
 }
 
 enum VisitStatus {
@@ -557,8 +763,9 @@ model Visit {
   location String?
   notes    String? @db.Text
 
-  kind   VisitKind   @default(ACOMPANHAMENTO)
-  status VisitStatus @default(AGENDADA)
+  kind     VisitKind     @default(ACOMPANHAMENTO)
+  natureza VisitNatureza @default(REUNIAO)
+  status   VisitStatus   @default(AGENDADA)
 
   /// Série de repetição: todas as ocorrências compartilham este id.
   ///
@@ -580,6 +787,8 @@ model Visit {
 
   /// O encontro do plano de treinamento que gerou este compromisso.
   encontroDoPlano EncontroDoPlano?
+  /// O PDI cuja próxima conversa é este compromisso.
+  pdi             DevelopmentPlan?
   /// A pauta: os assuntos combinados para este compromisso.
   topics          VisitTopic[]
 
@@ -901,9 +1110,9 @@ model EtapaDoModelo {
   modeloId String
   modelo   ProcessoModelo @relation(fields: [modeloId], references: [id], onDelete: Cascade)
 
-  nome  String
-  ordem Int
-  tipo  EtapaTipo @default(LIVRE)
+  nome      String
+  ordem     Int
+  tipo      EtapaTipo @default(LIVRE)
   /// Quantos dias o candidato pode ficar aqui antes de virar pendência.
   prazoDias Int?
 
@@ -1263,4 +1472,131 @@ model EncontroDoPlano {
   updatedAt DateTime @updatedAt
 
   @@index([planoId])
+}
+
+// ------------------------------------------- treinamento e desenvolvimento
+
+/// Um cargo da empresa cliente. A lista é da empresa: o colaborador escolhe
+/// dela, e a matriz de treinamento diz o que cada cargo precisa fazer.
+model Cargo {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  nome      String
+
+  createdAt DateTime @default(now())
+
+  /// A descrição do cargo: para que ele existe, o que faz e o que exige.
+  missao            String? @db.Text
+  /// Uma por linha.
+  responsabilidades String? @db.Text
+  /// Formação, experiência e conhecimentos.
+  requisitos        String? @db.Text
+
+  colaboradores Employee[]
+  treinamentos  TreinamentoDoCargo[]
+  competencias  CompetenciaDoCargo[]
+  avaliacoes    AvaliacaoDeCompetencias[]
+
+  @@unique([companyId, nome])
+}
+
+/// Um treinamento do catálogo da empresa: o procedimento, a norma ou o tema
+/// comportamental que se ensina. Cada vez que acontece é uma turma.
+model Treinamento {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// O código do procedimento, "DP-01". Opcional.
+  codigo       String?
+  nome         String
+  /// TECNICO, COMPORTAMENTAL, INTEGRACAO ou SEGURANCA.
+  categoria    String   @default("TECNICO")
+  /// Horas previstas por turma.
+  cargaHoraria Decimal? @db.Decimal(6, 2)
+  descricao    String?  @db.Text
+  /// Fora de uso: sai das listas de escolha, mas o histórico continua.
+  ativo        Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// A matriz: os cargos que precisam deste treinamento.
+  cargos     TreinamentoDoCargo[]
+  turmas     TurmaDeTreinamento[]
+  /// Ações de PDI que pedem este treinamento.
+  acoesDePdi DevelopmentAction[]
+
+  @@index([companyId])
+}
+
+/// Uma marca da matriz de treinamento: este cargo precisa deste treinamento.
+model TreinamentoDoCargo {
+  treinamentoId String
+  treinamento   Treinamento @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
+  cargoId       String
+  cargo         Cargo       @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+
+  @@id([treinamentoId, cargoId])
+}
+
+/// Uma turma: o treinamento acontecendo numa data, para um grupo de pessoas.
+///
+/// A turma é uma reunião (Meeting) com estes dados a mais: assim tem a mesma
+/// página, os mesmos convocados e presentes, a mesma agenda e a mesma ata.
+/// Enquanto só tem o mês previsto, a reunião fica PLANEJADA (fora da aba
+/// Reuniões e da agenda); com dia, vira AGENDADA; encerrada, REALIZADA. Quem
+/// esteve presente numa turma realizada tem o treinamento no histórico.
+model TurmaDeTreinamento {
+  id            String      @id @default(cuid())
+  companyId     String
+  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  treinamentoId String
+  treinamento   Treinamento @relation(fields: [treinamentoId], references: [id], onDelete: NoAction)
+  meetingId     String      @unique
+  meeting       Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  /// O mês planejado (dia 1, UTC), enquanto a turma não tem dia marcado.
+  mesPrevisto   DateTime?
+  instrutor     String?
+  /// INTERNO ou EXTERNO.
+  modalidade    String    @default("INTERNO")
+  /// Horas desta turma; vazio usa a carga horária do treinamento.
+  horas         Decimal?  @db.Decimal(6, 2)
+  investimento  Decimal?  @db.Decimal(12, 2)
+  material      String?   @db.Text
+  /// Por que não aconteceu. Preenchida, a turma conta como "justificada".
+  justificativa String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([treinamentoId])
+}
+
+/// Um item do checklist de integração da empresa. É copiado para a ficha de
+/// cada pessoa nova da equipe.
+model ItemDoModeloDeIntegracao {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  texto     String
+  ordem     Int     @default(0)
+
+  @@index([companyId])
+}
+
+/// Um item do checklist de integração de uma pessoa, marcado quando é feito.
+model EtapaDeIntegracao {
+  id         String    @id @default(cuid())
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  texto      String
+  ordem      Int       @default(0)
+  feito      Boolean   @default(false)
+  feitoEm    DateTime?
+
+  @@index([employeeId])
 }

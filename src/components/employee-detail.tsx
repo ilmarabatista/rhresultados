@@ -1,21 +1,18 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import {
   addRecord,
-  createPlan,
   deleteEmployee,
-  deletePlan,
   deleteRecord,
-  togglePlanAction,
   type EquipeState,
 } from "@/app/(app)/empresas/[id]/equipe/actions";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import EmployeeForm, { type ColaboradorDados } from "./employee-form";
 import EmployeeExams, { type ExameDaFicha } from "./employee-exams";
-import SkillAssessment from "./skill-assessment";
 
 export type RegistroItem = {
   id: string;
@@ -29,15 +26,15 @@ export type RegistroItem = {
   autor: string | null;
 };
 
-export type PlanoItem = {
-  id: string;
+/** O resumo do PDI na ficha; o PDI inteiro mora na aba PDI. */
+export type ResumoDoPdi = {
   titulo: string;
-  objetivo: string | null;
-  status: string;
-  inicio: string | null;
-  fim: string | null;
-  acoes: { id: string; title: string; done: boolean }[];
-};
+  progresso: number | null;
+  metas: number;
+  atingidas: number;
+  proxima: string | null;
+  atrasada: boolean;
+} | null;
 
 const TIPOS = [
   { key: "OBSERVACAO", label: "Observação", cor: "bg-slate-100 text-slate-600" },
@@ -174,190 +171,6 @@ function FormularioRegistro({
   );
 }
 
-function FormularioPlano({
-  employeeId,
-  onClose,
-}: {
-  employeeId: string;
-  onClose: () => void;
-}) {
-  const [state, formAction] = useActionState<EquipeState, FormData>(
-    createPlan,
-    {},
-  );
-
-  useEffect(() => {
-    if (state.ok) onClose();
-  }, [state.ok, onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
-        <div className="mb-5 flex items-start justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">Novo PDI</h3>
-            <p className="text-xs text-slate-500">
-              Plano de Desenvolvimento Individual.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700"
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-
-        <form action={formAction} className="space-y-4">
-          <input type="hidden" name="employeeId" value={employeeId} />
-
-          <Field label="Nome do plano *">
-            <Input
-              name="title"
-              required
-              placeholder="Ex.: Desenvolvimento em atendimento ao cliente"
-            />
-          </Field>
-
-          <Field label="Objetivo">
-            <Textarea
-              name="objective"
-              rows={3}
-              placeholder="O que se espera que a pessoa alcance ao fim do plano."
-            />
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Início">
-              <Input name="startDate" type="date" />
-            </Field>
-            <Field label="Prazo">
-              <Input name="endDate" type="date" />
-            </Field>
-          </div>
-
-          <Field label="Ações *" hint="Uma por linha, na ordem de execução.">
-            <Textarea
-              name="acoes"
-              rows={7}
-              required
-              placeholder={
-                "Participar do treinamento de atendimento\nAcompanhar um colega experiente por duas semanas\nApresentar o que aprendeu para a equipe"
-              }
-            />
-          </Field>
-
-          <FormError message={state.error} />
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
-            >
-              Cancelar
-            </button>
-            <SubmitButton pendingLabel="Criando…">Criar PDI</SubmitButton>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function CardPlano({ plano }: { plano: PlanoItem }) {
-  const [pending, startTransition] = useTransition();
-  const [acoes, setAcoes] = useState(plano.acoes);
-
-  const feitas = acoes.filter((a) => a.done).length;
-  const pct = acoes.length ? Math.round((feitas / acoes.length) * 100) : 0;
-
-  return (
-    <section
-      className={`overflow-hidden rounded-xl border border-slate-200 ${
-        pending ? "opacity-60" : ""
-      }`}
-    >
-      <div className="border-b border-slate-100 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h4 className="text-sm font-medium text-slate-800">
-              {plano.titulo}
-            </h4>
-            {plano.objetivo ? (
-              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                {plano.objetivo}
-              </p>
-            ) : null}
-            {plano.inicio || plano.fim ? (
-              <p className="mt-1 text-[11px] text-slate-400">
-                {plano.inicio ?? "—"} a {plano.fim ?? "—"}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-xs text-slate-500">
-              {feitas}/{acoes.length}
-            </span>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                if (!confirm(`Excluir o PDI "${plano.titulo}"?`)) return;
-                startTransition(() => {
-                  void deletePlan(plano.id);
-                });
-              }}
-              className="text-slate-300 transition hover:text-red-600"
-              aria-label="Excluir PDI"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        </div>
-        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full rounded-full bg-emerald-500 transition-all"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-
-      <ul className="divide-y divide-slate-50">
-        {acoes.map((a) => (
-          <li key={a.id} className="flex items-start gap-3 px-4 py-2">
-            <input
-              type="checkbox"
-              checked={a.done}
-              disabled={pending}
-              onChange={() => {
-                const novo = !a.done;
-                setAcoes((atual) =>
-                  atual.map((x) => (x.id === a.id ? { ...x, done: novo } : x)),
-                );
-                startTransition(() => {
-                  void togglePlanAction(a.id, novo);
-                });
-              }}
-              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-brand-600"
-              aria-label={a.title}
-            />
-            <span
-              className={`text-sm leading-snug ${
-                a.done ? "text-slate-400 line-through" : "text-slate-700"
-              }`}
-            >
-              {a.title}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 function CardRegistro({ registro }: { registro: RegistroItem }) {
   const [pending, startTransition] = useTransition();
   const tipo = TIPOS.find((t) => t.key === registro.kind);
@@ -425,25 +238,31 @@ function CardRegistro({ registro }: { registro: RegistroItem }) {
 export default function EmployeeDetail({
   companyId,
   unidades,
+  cargos,
+  treinamento,
   pessoa,
   registros,
-  planos,
-  avaliacoes,
+  pdi,
+  planosConcluidos,
+  avaliadaEm,
   exames,
   hoje,
 }: {
   companyId: string;
   unidades: { id: string; nome: string }[];
+  cargos: { id: string; nome: string }[];
+  /** Integração e treinamentos, montados pela página. */
+  treinamento: ReactNode;
   pessoa: ColaboradorDados & { unidade: string | null; admissao: string | null };
   registros: RegistroItem[];
-  planos: PlanoItem[];
-  avaliacoes: { id: string; data: string; temPlano: boolean }[];
+  pdi: ResumoDoPdi;
+  planosConcluidos: number;
+  avaliadaEm: string | null;
   exames: ExameDaFicha[];
   hoje: string;
 }) {
   const [editando, setEditando] = useState(false);
   const [novoRegistro, setNovoRegistro] = useState(false);
-  const [novoPlano, setNovoPlano] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -509,6 +328,8 @@ export default function EmployeeDetail({
         ) : null}
       </header>
 
+      {treinamento}
+
       <EmployeeExams
         companyId={companyId}
         employeeId={pessoa.id}
@@ -518,38 +339,49 @@ export default function EmployeeDetail({
         hoje={hoje}
       />
 
-      <SkillAssessment employeeId={pessoa.id} avaliacoes={avaliacoes} />
-
       <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">
-              Plano de Desenvolvimento Individual
-            </h2>
-            <p className="mt-0.5 text-xs text-slate-500">
-              O que a pessoa vai desenvolver, e o que já foi cumprido.
-            </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900">Plano de Desenvolvimento Individual</h2>
+            {pdi ? (
+              <>
+                <p className="mt-0.5 text-sm text-slate-700">{pdi.titulo}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                  <span className="flex items-center gap-2">
+                    <span className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                      <span
+                        className="block h-full rounded-full bg-emerald-500"
+                        style={{ width: `${pdi.progresso ?? 0}%` }}
+                      />
+                    </span>
+                    {pdi.progresso ?? 0}%
+                  </span>
+                  <span>
+                    {pdi.atingidas}/{pdi.metas} metas atingidas
+                  </span>
+                  <span className={pdi.atrasada ? "font-medium text-red-700" : ""}>
+                    {pdi.proxima
+                      ? `próxima conversa ${pdi.proxima}${pdi.atrasada ? " (atrasada)" : ""}`
+                      : "sem próxima conversa"}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="mt-0.5 text-xs text-slate-500">
+                {avaliadaEm
+                  ? `Avaliada em ${avaliadaEm}, ainda sem plano em andamento.`
+                  : "Nenhum PDI em andamento."}
+                {planosConcluidos > 0 ? ` ${planosConcluidos} plano(s) encerrado(s).` : ""}
+              </p>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => setNovoPlano(true)}
+          <Link
+            href={`/empresas/${companyId}/pdi/${pessoa.id}`}
             className="shrink-0 rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
           >
-            + PDI
-          </button>
+            {pdi ? "Abrir PDI" : "Começar PDI"}
+          </Link>
         </div>
-
-        {planos.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
-            Nenhum PDI para esta pessoa.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {planos.map((p) => (
-              <CardPlano key={p.id} plano={p} />
-            ))}
-          </div>
-        )}
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -589,7 +421,7 @@ export default function EmployeeDetail({
         <h2 className="text-sm font-semibold text-red-900">Zona de risco</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-red-800/80">
           Excluir o colaborador apaga junto os {registros.length} registro(s) da
-          linha do tempo e {planos.length} PDI(s). Não há como desfazer.
+          linha do tempo, as avaliações e os PDIs. Não há como desfazer.
         </p>
         <button
           type="button"
@@ -617,6 +449,7 @@ export default function EmployeeDetail({
         <EmployeeForm
           companyId={companyId}
           unidades={unidades}
+          cargos={cargos}
           colaborador={pessoa}
           onClose={() => setEditando(false)}
         />
@@ -625,12 +458,6 @@ export default function EmployeeDetail({
         <FormularioRegistro
           employeeId={pessoa.id}
           onClose={() => setNovoRegistro(false)}
-        />
-      ) : null}
-      {novoPlano ? (
-        <FormularioPlano
-          employeeId={pessoa.id}
-          onClose={() => setNovoPlano(false)}
         />
       ) : null}
     </>

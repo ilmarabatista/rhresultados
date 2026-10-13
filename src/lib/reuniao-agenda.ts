@@ -22,6 +22,7 @@ export async function acertarAgenda(reuniaoId: string, userId: string) {
       visitId: true,
       serviceId: true,
       plano: { select: { titulo: true, serviceId: true } },
+      turma: { select: { id: true } },
     },
   });
   if (!r) return;
@@ -35,7 +36,11 @@ export async function acertarAgenda(reuniaoId: string, userId: string) {
   }
 
   // A reunião de um plano leva o nome do plano: é o que se lê na agenda.
-  const assunto = r.plano ? `${r.plano.titulo}: ${r.title}` : `Reunião: ${r.title}`;
+  const assunto = r.plano
+    ? `${r.plano.titulo}: ${r.title}`
+    : r.turma
+      ? `Treinamento: ${r.title}`
+      : `Reunião: ${r.title}`;
   const produto = r.serviceId ?? r.plano?.serviceId ?? null;
 
   // Em preparação, a reunião não põe nada na agenda: só acompanha o

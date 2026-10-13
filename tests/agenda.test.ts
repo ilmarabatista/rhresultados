@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  agoraNoEscritorio,
   agruparPorDia,
   colunasDoDia,
   conferirHorario,
@@ -20,6 +21,7 @@ import {
   mesKey,
   mesVizinho,
   nomeDoMes,
+  passouSemCheck,
   rotuloDaSemana,
   rotuloDoDia,
   semanaVizinha,
@@ -329,4 +331,35 @@ test("rotuloDoDia escreve o dia da semana por extenso", () => {
   assert.equal(rotuloDoDia("2026-09-09"), "quarta-feira, 9 de setembro");
   assert.equal(rotuloDoDia("2026-09-07"), "segunda-feira, 7 de setembro");
   assert.equal(rotuloDoDia("2026-09-13"), "domingo, 13 de setembro");
+});
+
+test("agoraNoEscritorio usa o fuso de São Paulo", () => {
+  // 02:30 em UTC do dia 4 ainda é 23:30 do dia 3 em São Paulo.
+  assert.deepEqual(agoraNoEscritorio(new Date("2026-10-04T02:30:00Z")), {
+    dia: "2026-10-03",
+    minutos: 23 * 60 + 30,
+  });
+});
+
+test("passouSemCheck: só o agendado cujo horário já acabou", () => {
+  const agora = { dia: "2026-10-03", minutos: 14 * 60 };
+  const v = (dia: string, startTime: string, endTime: string | null, status = "AGENDADA") => ({
+    dia,
+    startTime,
+    endTime,
+    status,
+  });
+
+  assert.equal(passouSemCheck(v("2026-10-02", "16:00", "17:00"), agora), true);
+  assert.equal(passouSemCheck(v("2026-10-04", "08:00", "09:00"), agora), false);
+  // No dia de hoje vale o término: em andamento ainda não passou.
+  assert.equal(passouSemCheck(v("2026-10-03", "13:00", "15:00"), agora), false);
+  assert.equal(passouSemCheck(v("2026-10-03", "12:00", "14:00"), agora), true);
+  // Sem término, vale o início.
+  assert.equal(passouSemCheck(v("2026-10-03", "13:30", null), agora), true);
+  // Feito ou cancelado nunca fica vermelho.
+  assert.equal(passouSemCheck(v("2026-10-02", "09:00", null, "REALIZADA"), agora), false);
+  assert.equal(passouSemCheck(v("2026-10-02", "09:00", null, "CANCELADA"), agora), false);
+  // Antes de saber a hora (no servidor), nada fica vermelho.
+  assert.equal(passouSemCheck(v("2026-10-02", "09:00", null), null), false);
 });
