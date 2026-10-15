@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { requireAdmin } from "@/lib/session";
+import { createSession, requireAdmin } from "@/lib/session";
 import { clearFailures } from "@/lib/rate-limit";
 
 export type UserFormState = { error?: string; ok?: string };
@@ -100,7 +100,7 @@ export async function updateUser(
     return { error: "Já existe um usuário com esse e-mail." };
   }
 
-  await prisma.user.update({
+  const salvo = await prisma.user.update({
     where: { id: userId },
     data: {
       name,
@@ -108,9 +108,24 @@ export async function updateUser(
       // Um administrador não tira o próprio perfil de administrador, para o
       // sistema não ficar sem ninguém que gerencie os acessos.
       role: admin.userId === userId ? atual.role : role,
-      ...(password ? { passwordHash: await hashPassword(password) } : {}),
+      // Senha nova derruba as sessões abertas com a senha antiga.
+      ...(password
+        ? { passwordHash: await hashPassword(password), sessionVersion: { increment: 1 } }
+        : {}),
     },
+    select: { id: true, email: true, name: true, role: true, sessionVersion: true },
   });
+
+  // Quem trocou a própria senha continua logado neste navegador.
+  if (password && admin.userId === userId) {
+    await createSession({
+      userId: salvo.id,
+      email: salvo.email,
+      name: salvo.name,
+      role: salvo.role,
+      sessionVersion: salvo.sessionVersion,
+    });
+  }
 
   // O nome também aparece no menu lateral, que vem do layout.
   revalidatePath("/", "layout");

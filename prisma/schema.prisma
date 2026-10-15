@@ -26,14 +26,16 @@ enum Role {
 /// Quem usa o sistema pela consultoria. Não confundir com Employee, que é a
 /// equipe da empresa cliente.
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         Role     @default(MEMBRO)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String
+  role           Role     @default(MEMBRO)
+  active         Boolean  @default(true)
+  /// Sobe a cada troca de senha: os cookies emitidos antes deixam de valer.
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   companiesCreated Company[]                 @relation("CompanyCreatedBy")
   activities       Activity[]
