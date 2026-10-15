@@ -7,6 +7,7 @@ import {
   removerApresentacao,
 } from "@/app/(app)/empresas/[id]/reunioes/actions";
 import { EXTENSOES_ACEITAS, TAMANHO_MAXIMO, TAMANHO_MAXIMO_TEXTO } from "@/lib/apresentacao";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * A apresentação usada na reunião, anexada como veio: o slide que foi
@@ -48,11 +49,11 @@ export default function MeetingSlides({
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!confirm(`Tirar "${a.nome}" desta reunião?`)) return;
+            onClick={async () => {
+              if (!(await confirmar(`Tirar "${a.nome}" desta reunião?`))) return;
               startTransition(async () => {
                 const r = await removerApresentacao(a.id);
-                if (r.error) alert(r.error);
+                if (r.error) avisar(r.error);
               });
             }}
             className="border-l border-slate-200 px-1.5 py-1 text-slate-400 transition hover:text-red-600"
@@ -74,7 +75,7 @@ export default function MeetingSlides({
           if (!arquivo) return;
           // Acima do limite a Vercel recusa o envio sem explicar; avisa antes.
           if (arquivo.size > TAMANHO_MAXIMO) {
-            alert(`O arquivo passa de ${TAMANHO_MAXIMO_TEXTO}. Diminua as imagens ou envie em PDF.`);
+            avisar(`O arquivo passa de ${TAMANHO_MAXIMO_TEXTO}. Diminua as imagens ou envie em PDF.`);
             return;
           }
 
@@ -84,7 +85,7 @@ export default function MeetingSlides({
 
           startTransition(async () => {
             const r = await enviarApresentacao(dados);
-            if (r.error) alert(r.error);
+            if (r.error) avisar(r.error);
           });
         }}
       />

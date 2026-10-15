@@ -67,6 +67,7 @@ import {
   type AgendaState,
 } from "@/app/(app)/agenda/actions";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { avisar, confirmar } from "@/components/avisos";
 
 export type VisitaItem = {
   id: string;
@@ -1948,32 +1949,31 @@ export default function AgendaCalendar({
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => {
+                  onClick={async () => {
                     const dia = v.dia.split("-").reverse().join("/");
 
                     // Numa série, apagar só esta ou desta em diante são
                     // decisões diferentes — e quem escolhe é quem marcou.
                     if (v.seriesId && v.naSerie && v.naSerie.total > 1) {
-                      const serie = confirm(
-                        `Esta reunião faz parte de uma série (${v.naSerie.posicao} de ${v.naSerie.total}).\n\n` +
-                          "OK cancela esta e todas as seguintes.\n" +
-                          "Cancelar apaga só a deste dia.",
+                      const serie = await confirmar(
+                        `Esta reunião faz parte de uma série (${v.naSerie.posicao} de ${v.naSerie.total}). Excluir só a deste dia, ou esta e todas as seguintes?`,
+                        { sim: "Esta e as seguintes", nao: "Só este dia" },
                       );
 
                       if (serie) {
                         startTransition(async () => {
                           const r = await excluirSerie(v.seriesId!, v.dia);
-                          if (r.error) alert(r.error);
+                          if (r.error) avisar(r.error);
                         });
                         return;
                       }
                     }
 
-                    if (!confirm(`Excluir o agendamento de ${v.empresa} em ${dia}?`))
+                    if (!(await confirmar(`Excluir o agendamento de ${v.empresa} em ${dia}?`)))
                       return;
                     startTransition(async () => {
                       const r = await excluirVisita(v.id);
-                      if (r.error) alert(r.error);
+                      if (r.error) avisar(r.error);
                     });
                   }}
                   className="shrink-0 text-slate-300 transition hover:text-red-600"
@@ -2086,7 +2086,7 @@ function BotaoDaReuniao({ visitaId, companyId, reuniaoId }: { visitaId: string; 
       onClick={() =>
         iniciar(async () => {
           const r = await mandarParaReuniao(visitaId);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
           else if (r.id) router.push(`/empresas/${companyId}/reunioes/${r.id}`);
         })
       }

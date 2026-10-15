@@ -19,6 +19,7 @@ import {
 } from "@/lib/pdi";
 import { Field, FormError, Input, SubmitButton, Textarea } from "./form";
 import { Aviso, Etiqueta } from "./ui";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * O acompanhamento do plano: a próxima conversa (que está na agenda) e o
@@ -83,7 +84,7 @@ function ProximaConversa({
         onClick={() =>
           startTransition(async () => {
             const r = await marcarProximaConversa(planId, d, h);
-            if (r.error) alert(r.error);
+            if (r.error) avisar(r.error);
           })
         }
         className={botaoClaro}
@@ -96,7 +97,7 @@ function ProximaConversa({
           onClick={() =>
             startTransition(async () => {
               const r = await marcarProximaConversa(planId, "", "");
-              if (r.error) alert(r.error);
+              if (r.error) avisar(r.error);
             })
           }
           className="text-xs text-slate-400 hover:text-red-600"
@@ -321,8 +322,8 @@ export default function PdiAcompanhamento({
                       {c.autor ? <span className="text-[11px] text-slate-400">por {c.autor}</span> : null}
                       <button
                         type="button"
-                        onClick={() => {
-                          if (confirm("Excluir o registro desta conversa?"))
+                        onClick={async () => {
+                          if (await confirmar("Excluir o registro desta conversa?"))
                             startTransition(async () => void (await excluirConversa(c.id)));
                         }}
                         className="ml-auto text-slate-300 hover:text-red-600"

@@ -35,6 +35,7 @@ import {
 } from "@/lib/pdi";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { Aviso, Etiqueta } from "./ui";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * O plano: cada meta SMART com as ações que levam a ela. Uma ação ligada a um
@@ -355,7 +356,7 @@ function ComoFoi({ acao, aberto }: { acao: AcaoDaTela; aberto: boolean }) {
         setEditando(false);
         if (texto !== acao.observacao) {
           const r = await comentarAcao(acao.id, texto);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
         }
       }}
       placeholder="O que foi feito, o que faltou, o que se aprendeu"
@@ -388,7 +389,7 @@ function Acoes({
     setAcoes((atual) => atual.map((x) => (x.id === a.id ? { ...x, quantoFeito: quanto, done: quanto === 100 } : x)));
     startTransition(async () => {
       const r = await marcarAcao(a.id, quanto);
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
   }
 
@@ -468,8 +469,8 @@ function Acoes({
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (confirm("Excluir esta ação?")) startTransition(async () => void (await excluirAcao(a.id)));
+                        onClick={async () => {
+                          if (await confirmar("Excluir esta ação?")) startTransition(async () => void (await excluirAcao(a.id)));
                         }}
                         className="hover:text-red-600"
                         aria-label="Excluir ação"
@@ -573,8 +574,8 @@ function CartaoDaMeta({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(`Excluir a meta e as ${meta.acoes.length} ação(ões) dela?`))
+                onClick={async () => {
+                  if (await confirmar(`Excluir a meta e as ${meta.acoes.length} ação(ões) dela?`))
                     startTransition(async () => void (await excluirMeta(meta.id)));
                 }}
                 className="hover:text-red-600"
@@ -619,7 +620,7 @@ function Encerrar({ plano, onClose }: { plano: PlanoDaTela; onClose: () => void 
             onClick={() =>
               startTransition(async () => {
                 const r = await encerrarPlano(plano.id, status, balanco);
-                if (r.error) alert(r.error);
+                if (r.error) avisar(r.error);
                 else onClose();
               })
             }
@@ -725,7 +726,7 @@ export default function PdiPlano({
                     onClick={() =>
                       startTransition(async () => {
                         const r = await encerrarPlano(plano.id, "EM_ANDAMENTO", "");
-                        if (r.error) alert(r.error);
+                        if (r.error) avisar(r.error);
                       })
                     }
                     className={botaoClaro}
@@ -735,8 +736,8 @@ export default function PdiPlano({
                 )}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm(`Excluir o PDI "${plano.title}", com metas, ações e conversas? Não há como desfazer.`))
+                  onClick={async () => {
+                    if (await confirmar(`Excluir o PDI "${plano.title}", com metas, ações e conversas? Não há como desfazer.`))
                       startTransition(async () => void (await excluirPlano(plano.id)));
                   }}
                   className="text-slate-400 hover:text-red-600"

@@ -32,6 +32,7 @@ import {
   SubmitButton,
   Textarea,
 } from "./form";
+import { confirmar } from "@/components/avisos";
 
 /**
  * Estúdio de roteiros.
@@ -246,8 +247,8 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!confirm(`Excluir o roteiro "${roteiro.tema}"?`)) return;
+            onClick={async () => {
+              if (!(await confirmar(`Excluir o roteiro "${roteiro.tema}"?`))) return;
               startTransition(() => {
                 void excluirRoteiro(roteiro.id);
               });

@@ -8,6 +8,7 @@ import { reuniaoCombina, ROTULO_DA_SITUACAO, type SituacaoDaReuniao } from "@/li
 import type { OpcoesDaReuniao } from "@/lib/reunioes-dados";
 import { Vazio } from "./ui";
 import NewMeetingDialog from "./new-meeting-dialog";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * Todas as reuniões da empresa, uma por linha: as criadas à mão e as dos planos
@@ -53,15 +54,15 @@ function LinhaDaReuniao({ r, hoje }: { r: ReuniaoDaLista; hoje: string }) {
   const semMarcar = r.situacao === "AGENDADA" && r.chave !== null && r.chave < hoje;
 
   /** Sai com pauta, ata e o compromisso na agenda; a de um plano continua no plano como encontro. */
-  const excluir = () => {
+  const excluir = async () => {
     const pergunta = r.plano
       ? `Excluir a reunião "${r.titulo}", com a pauta e a ata? O encontro continua no plano "${r.plano}", sem data na agenda.`
       : `Excluir a reunião "${r.titulo}", com a pauta e a ata?`;
-    if (!confirm(pergunta)) return;
+    if (!(await confirmar(pergunta))) return;
 
     startTransition(async () => {
       const resposta = await excluirReuniao(r.reuniaoId);
-      if (resposta.error) alert(resposta.error);
+      if (resposta.error) avisar(resposta.error);
     });
   };
 

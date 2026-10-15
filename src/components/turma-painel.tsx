@@ -8,8 +8,8 @@ import {
   justificarTurma,
   mudarCampoDaTurma,
   type CampoDaTurma,
-  type TreinoState,
 } from "@/app/(app)/empresas/[id]/treinamentos/actions";
+import { avisar as mostrarAviso, avisarSeErro as avisar } from "@/components/avisos";
 
 /**
  * O que a reunião tem a mais quando é uma turma de treinamento: o treinamento,
@@ -39,10 +39,6 @@ const campo =
   "rounded-md border border-slate-300 bg-white px-2 py-1 text-[12px] outline-none transition focus:border-brand-500";
 const rotulo = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
 
-function avisar(r: TreinoState) {
-  if (r.error) alert(r.error);
-}
-
 function Campo({
   turmaId,
   qual,
@@ -67,7 +63,7 @@ function Campo({
     startTransition(async () => {
       const r = await mudarCampoDaTurma(turmaId, qual, texto);
       if (r.error) {
-        alert(r.error);
+        mostrarAviso(r.error);
         setTexto(valor);
       }
     });

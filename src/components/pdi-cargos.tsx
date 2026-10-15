@@ -16,6 +16,7 @@ import { criarCargo } from "@/app/(app)/empresas/[id]/treinamentos/actions";
 import { NIVEIS, ROTULO_DO_NIVEL, ROTULO_DO_TIPO, TIPOS_DE_COMPETENCIA, type TipoDeCompetencia } from "@/lib/pdi";
 import { Field, FormError, FormOk, Input, Select, SubmitButton, Textarea } from "./form";
 import { Etiqueta } from "./ui";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * As descrições de cargo da empresa: missão, responsabilidades, requisitos e
@@ -208,8 +209,8 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm(`Tirar ${c.nome} do cargo? As avaliações já feitas continuam como estão.`))
+                  onClick={async () => {
+                    if (await confirmar(`Tirar ${c.nome} do cargo? As avaliações já feitas continuam como estão.`))
                       startTransition(async () => void (await excluirCompetencia(c.id)));
                   }}
                   className="hover:text-red-600"
@@ -252,8 +253,8 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
                     onClick={() =>
                       startTransition(async () => {
                         const r = await copiarCompetencias(cargo.id, origem);
-                        if (r.error) alert(r.error);
-                        else alert(`${r.copiadas} competência(s) copiada(s).`);
+                        if (r.error) avisar(r.error);
+                        else avisar(`${r.copiadas} competência(s) copiada(s).`);
                         setOrigem("");
                       })
                     }
@@ -329,7 +330,7 @@ export default function PdiCargos({
             e.preventDefault();
             startTransition(async () => {
               const r = await criarCargo(companyId, novo);
-              if (r.error) alert(r.error);
+              if (r.error) avisar(r.error);
               else {
                 setNovo("");
                 router.push(`?aba=cargos&cargo=${r.id}`);

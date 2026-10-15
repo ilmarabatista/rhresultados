@@ -8,6 +8,7 @@ import {
   type FormState,
 } from "@/app/(app)/empresas/actions";
 import { Field, FormError, Input, SubmitButton } from "./form";
+import { confirmar } from "@/components/avisos";
 
 export type UnidadeItem = {
   id: string;
@@ -287,8 +288,8 @@ function CardUnidade({
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!confirm(`Excluir a unidade "${unidade.name}"?`)) return;
+            onClick={async () => {
+              if (!(await confirmar(`Excluir a unidade "${unidade.name}"?`))) return;
               startTransition(() => {
                 void deleteBranch(unidade.id);
               });

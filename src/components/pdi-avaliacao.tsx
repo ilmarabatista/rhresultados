@@ -31,6 +31,7 @@ import {
 } from "@/lib/pdi";
 import { Field, FormError, Input, SubmitButton, Textarea } from "./form";
 import { Aviso, Etiqueta, Numeros } from "./ui";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * A avaliação de competências, feita junto com a pessoa: para cada competência
@@ -133,7 +134,7 @@ function Comentario({ nota }: { nota: NotaDaTela }) {
         setAberto(false);
         if (texto !== nota.comentario) {
           const r = await comentarNota(nota.id, texto);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
         }
       }}
       placeholder="Exemplos, combinados, por que esta nota"
@@ -153,7 +154,7 @@ function Grade({ avaliacao, anterior }: { avaliacao: AvaliacaoDaTela; anterior: 
     setNotas((atual) => atual.map((n) => (n.id === nota.id ? { ...n, [campo]: valor } : n)));
     startTransition(async () => {
       const r = await marcarNota(nota.id, campo, valor);
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
   }
 
@@ -228,8 +229,8 @@ function Grade({ avaliacao, anterior }: { avaliacao: AvaliacaoDaTela; anterior: 
               <Comentario nota={n} />
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(`Tirar ${n.nome} desta avaliação?`)) {
+                onClick={async () => {
+                  if (await confirmar(`Tirar ${n.nome} desta avaliação?`)) {
                     setNotas((atual) => atual.filter((x) => x.id !== n.id));
                     startTransition(async () => void (await tirarDaAvaliacao(n.id)));
                   }
@@ -301,7 +302,7 @@ function Conversa({ avaliacao }: { avaliacao: AvaliacaoDaTela }) {
             onBlur={async (e) => {
               if (e.target.value === avaliacao[p.campo]) return;
               const r = await mudarAvaliacao(avaliacao.id, p.campo, e.target.value);
-              if (r.error) alert(r.error);
+              if (r.error) avisar(r.error);
             }}
           />
         </Field>
@@ -329,7 +330,7 @@ function Incluir({ avaliacaoId }: { avaliacaoId: string }) {
         e.preventDefault();
         startTransition(async () => {
           const r = await incluirNaAvaliacao(avaliacaoId, nome, tipo, esperado);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
           else {
             setNome("");
             setAberto(false);
@@ -505,7 +506,7 @@ export default function PdiAvaliacao({
         e.preventDefault();
         startTransition(async () => {
           const r = await criarAvaliacao(employeeId, dia);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
           else router.push(`?avaliacao=${r.id}#avaliacao`);
         });
       }}
@@ -579,7 +580,7 @@ export default function PdiAvaliacao({
                 onBlur={async (e) => {
                   if (e.target.value === avaliacao.dia) return;
                   const r = await mudarAvaliacao(avaliacao.id, "data", e.target.value);
-                  if (r.error) alert(r.error);
+                  if (r.error) avisar(r.error);
                 }}
                 className="rounded border border-slate-200 px-1.5 py-0.5"
               />
@@ -588,11 +589,11 @@ export default function PdiAvaliacao({
             {anterior ? <span>· comparando com {anterior.data}</span> : null}
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 const aviso = avaliacao.planos
                   ? "Excluir esta avaliação? O PDI que saiu dela continua, mas perde o vínculo com os gaps."
                   : "Excluir esta avaliação?";
-                if (confirm(aviso))
+                if (await confirmar(aviso))
                   startTransition(async () => {
                     await excluirAvaliacao(avaliacao.id);
                     router.push(`/empresas/${companyId}/pdi/${employeeId}#avaliacao`);

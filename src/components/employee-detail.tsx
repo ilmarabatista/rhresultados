@@ -13,6 +13,7 @@ import {
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import EmployeeForm, { type ColaboradorDados } from "./employee-form";
 import EmployeeExams, { type ExameDaFicha } from "./employee-exams";
+import { confirmar } from "@/components/avisos";
 
 export type RegistroItem = {
   id: string;
@@ -208,8 +209,8 @@ function CardRegistro({ registro }: { registro: RegistroItem }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!confirm("Excluir este registro?")) return;
+            onClick={async () => {
+              if (!(await confirmar("Excluir este registro?"))) return;
               startTransition(() => {
                 void deleteRecord(registro.id);
               });
@@ -426,11 +427,11 @@ export default function EmployeeDetail({
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
+          onClick={async () => {
             if (
-              !confirm(
+              !(await confirmar(
                 `Excluir ${pessoa.name} e todo o histórico dessa pessoa? Não há como desfazer.`,
-              )
+              ))
             )
               return;
             // A ficha deixa de existir: ficar nela era cair num 404.

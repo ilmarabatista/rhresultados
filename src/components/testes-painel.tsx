@@ -5,6 +5,7 @@ import { Copy, MessageCircle, Send, Trash2 } from "lucide-react";
 import { enviarTeste, excluirEnvio, type TestesState } from "@/app/(app)/testes/actions";
 import { Painel } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
+import { confirmar } from "@/components/avisos";
 
 /**
  * As peças da aba Testes que rodam no navegador: o envio (que devolve o link
@@ -183,11 +184,11 @@ export function AcoesDoEnvio({
         disabled={pendente}
         aria-label="Excluir envio"
         className="px-1 text-slate-400 transition hover:text-red-600 disabled:opacity-50"
-        onClick={() => {
+        onClick={async () => {
           const aviso = respondido
             ? `Excluir o teste de ${pessoa}? As respostas e o resultado serão apagados.`
             : `Excluir o envio para ${pessoa}? O link para de funcionar.`;
-          if (confirm(aviso)) iniciar(async () => void (await excluirEnvio(id)));
+          if (await confirmar(aviso)) iniciar(async () => void (await excluirEnvio(id)));
         }}
       >
         <Trash2 size={13} />

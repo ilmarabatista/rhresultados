@@ -32,6 +32,7 @@ import type { OpcoesDaReuniao } from "@/lib/reunioes-dados";
 import { SmallSubmitButton } from "./form";
 import MeetingSlides, { type Apresentacao } from "./meeting-slides";
 import TurmaPainel, { type TurmaDaReuniao } from "./turma-painel";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * A página de uma reunião, no jeito de uma folha: o título e quando no alto, o
@@ -97,7 +98,7 @@ const campo =
 const rotuloMiudo = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
 
 function avisarSeErro(r: ReuniaoState) {
-  if (r.error) alert(r.error);
+  if (r.error) avisar(r.error);
 }
 
 // ----------------------------------------------------------- campo que grava
@@ -135,7 +136,7 @@ function TextoAoSair({
     startTransition(async () => {
       const r = await salvar(texto);
       if (r.error) {
-        alert(r.error);
+        avisar(r.error);
         setTexto(valor);
         setSituacao("");
       } else {
@@ -305,14 +306,14 @@ function Participantes({
   const convocar = (employeeId: string | null, quem: string) =>
     startTransition(async () => {
       const r = await adicionarParticipante(reuniao.id, employeeId, quem);
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
       else setNome("");
     });
 
   const convocarTodos = (setor: string | null) =>
     startTransition(async () => {
       const r = await convocarGrupo(reuniao.id, setor);
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
       else setAberto(false);
     });
 
@@ -648,8 +649,8 @@ function LinhaDoItem({
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
-            if (!confirm("Apagar este registro da ata?")) return;
+          onClick={async () => {
+            if (!(await confirmar("Apagar este registro da ata?"))) return;
             startTransition(async () => avisarSeErro(await excluirItem(item.id)));
           }}
           className="text-slate-300 transition hover:text-red-600"
@@ -890,16 +891,16 @@ export default function MeetingRecord({
             <button
               type="button"
               disabled={pending}
-              onClick={() => {
+              onClick={async () => {
                 const pergunta = plano
                   ? `Tirar a reunião ${reuniao.codigo} do plano e da agenda, com a pauta e a ata?`
                   : turma
                     ? `Excluir esta turma de treinamento (${reuniao.codigo}), com convocados, presença e ata? Quem esteve presente perde este treinamento do histórico.`
                     : `Excluir a reunião ${reuniao.codigo}, com a pauta e a ata?`;
-                if (!confirm(pergunta)) return;
+                if (!(await confirmar(pergunta))) return;
                 startTransition(async () => {
                   const r = await excluirReuniao(reuniao.id);
-                  if (r.error) alert(r.error);
+                  if (r.error) avisar(r.error);
                   else router.push(`/empresas/${companyId}/${origem}`);
                 });
               }}

@@ -8,8 +8,8 @@ import {
   gerarIntegracao,
   marcarEtapaDeIntegracao,
   removerEtapaDeIntegracao,
-  type TreinoState,
 } from "@/app/(app)/empresas/[id]/treinamentos/actions";
+import { avisarSeErro as avisar, confirmar } from "@/components/avisos";
 
 /**
  * O que é de treinamento na ficha da pessoa: o checklist de integração (nasce
@@ -36,10 +36,6 @@ export type TreinamentoPendente = {
   /** A turma programada em que a pessoa já está convocada, se houver. */
   turma: { reuniaoId: string; quando: string } | null;
 };
-
-function avisar(r: TreinoState) {
-  if (r.error) alert(r.error);
-}
 
 function Integracao({ employeeId, etapas }: { employeeId: string; etapas: EtapaDaFicha[] }) {
   const [pending, startTransition] = useTransition();
@@ -93,8 +89,8 @@ function Integracao({ employeeId, etapas }: { employeeId: string; etapas: EtapaD
             {e.feitoEm ? <span className="text-[11px] text-slate-400">{e.feitoEm}</span> : null}
             <button
               type="button"
-              onClick={() => {
-                if (confirm(`Tirar "${e.texto}" do checklist desta pessoa?`)) {
+              onClick={async () => {
+                if (await confirmar(`Tirar "${e.texto}" do checklist desta pessoa?`)) {
                   startTransition(async () => avisar(await removerEtapaDeIntegracao(e.id)));
                 }
               }}

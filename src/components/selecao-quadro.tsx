@@ -32,6 +32,7 @@ import {
 } from "@/lib/selecao";
 import { Etiqueta, Painel, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
+import { avisar } from "@/components/avisos";
 
 /**
  * O quadro da vaga: uma coluna por etapa, com quem está em cada uma.
@@ -163,7 +164,7 @@ function TestesDoCandidato({
               iniciar(async () => {
                 const r = await enviarTesteAoCandidato(c.id, teste);
                 if (r.error || !r.token) {
-                  alert(r.error ?? "Não foi possível gerar o link.");
+                  avisar(r.error ?? "Não foi possível gerar o link.");
                   return;
                 }
                 const nome = disponiveis.find((d) => d.id === teste)?.nome ?? "teste";
@@ -171,7 +172,7 @@ function TestesDoCandidato({
                 if (c.telefone) window.open(linkDoWhatsapp(c.telefone, mensagem(nome, r.token)), "_blank");
                 else {
                   await navigator.clipboard.writeText(mensagem(nome, r.token)).catch(() => undefined);
-                  alert("Link gerado e copiado. Cole na conversa com o candidato.");
+                  avisar("Link gerado e copiado. Cole na conversa com o candidato.");
                 }
               })
             }
@@ -218,7 +219,7 @@ function Candidato({
   const rodar = (fn: () => Promise<SelecaoState>) =>
     startTransition(async () => {
       const r = await fn();
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
       else setMotivo("");
     });
 
@@ -352,7 +353,7 @@ function ColunaDaEtapa({
   const rodar = (fn: () => Promise<SelecaoState>) =>
     startTransition(async () => {
       const r = await fn();
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
 
   return (

@@ -35,6 +35,7 @@ import {
 } from "@/lib/planos";
 import { Aviso, Etiqueta, Painel, TituloDaSecao, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SmallSubmitButton, SubmitButton, Textarea } from "./form";
+import { confirmar } from "@/components/avisos";
 
 /**
  * Os planos de treinamento da empresa.
@@ -472,8 +473,8 @@ function LinhaDoEncontro({
                 type="button"
                 disabled={pendente}
                 className="px-1 text-[10px] text-slate-400 hover:text-red-600"
-                onClick={() => {
-                  if (confirm(`Tirar "${e.tema}" da agenda? Ele continua no plano.`)) rodar(() => tirarDaAgenda(e.id));
+                onClick={async () => {
+                  if (await confirmar(`Tirar "${e.tema}" da agenda? Ele continua no plano.`)) rodar(() => tirarDaAgenda(e.id));
                 }}
               >
                 tirar da agenda
@@ -491,14 +492,14 @@ function LinhaDoEncontro({
           type="button"
           disabled={pendente}
           aria-label="Tirar do plano"
-          onClick={() => {
+          onClick={async () => {
             const preparando = e.reuniaoId && (e.estado === "PLANEJADO" || e.estado === "NA_AGENDA");
             const aviso = preparando
               ? `Tirar "${e.tema}" do plano? A preparação sai junto; se já tiver pauta ou ata, fica guardada como arquivada na aba Reuniões.`
               : e.reuniaoId
               ? `Tirar "${e.tema}" do plano? A reunião continua na aba Reuniões, com a ata.`
               : `Tirar "${e.tema}" do plano?${e.estado === "NA_AGENDA" ? " O compromisso da agenda sai junto." : ""}`;
-            if (confirm(aviso)) rodar(() => excluirEncontro(e.id));
+            if (await confirmar(aviso)) rodar(() => excluirEncontro(e.id));
           }}
           className="p-1 text-slate-400 hover:text-red-600"
         >
@@ -779,9 +780,9 @@ function CartaoDoPlano({
               type="button"
               disabled={pendente}
               className={`${botao} hover:border-red-300 hover:text-red-700`}
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  confirm(
+                  await confirmar(
                     `Excluir o plano "${plano.titulo}"?\n\nOs compromissos da agenda que ainda não aconteceram saem junto. As reuniões já criadas ficam na aba Reuniões, com a ata.`,
                   )
                 ) {

@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { criarVaga, editarVaga, excluirVaga, type SelecaoState } from "@/app/(app)/selecao/actions";
 import { Etiqueta, Painel, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * As vagas: a lista e a abertura de uma nova.
@@ -121,14 +122,14 @@ function LinhaDaVaga({ vaga, mostrarEmpresa }: { vaga: VagaNaLista; mostrarEmpre
   const mudarStatus = (status: string) =>
     startTransition(async () => {
       const r = await editarVaga(vaga.id, { status });
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
 
   const excluir = () =>
     startTransition(async () => {
-      if (!confirm(`Excluir a vaga de ${vaga.titulo}, com os candidatos dela?`)) return;
+      if (!(await confirmar(`Excluir a vaga de ${vaga.titulo}, com os candidatos dela?`))) return;
       const r = await excluirVaga(vaga.id);
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
 
   return (

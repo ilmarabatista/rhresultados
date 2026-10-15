@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Avisos } from "@/components/avisos";
 
 export const metadata: Metadata = {
   title: "RH Resultados — Controle Operacional",
@@ -14,7 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        {children}
+        <Avisos />
+      </body>
     </html>
   );
 }

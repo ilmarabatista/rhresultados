@@ -15,6 +15,7 @@ import {
 import { TIPOS_DE_ETAPA, rotuloDoTipo } from "@/lib/selecao";
 import { Painel, Vazio } from "./ui";
 import { FormError, Input, Select, SubmitButton } from "./form";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * Os modelos de processo: as etapas que ela costuma usar, guardadas para
@@ -43,7 +44,7 @@ function Etapa({ etapa, primeira, ultima }: { etapa: ModeloNaTela["etapas"][numb
   const rodar = (fn: () => Promise<SelecaoState>) =>
     startTransition(async () => {
       const r = await fn();
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
 
   return (
@@ -106,7 +107,7 @@ function Modelo({ modelo }: { modelo: ModeloNaTela }) {
   const rodar = (fn: () => Promise<SelecaoState>) =>
     startTransition(async () => {
       const r = await fn();
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
 
   return (
@@ -126,8 +127,8 @@ function Modelo({ modelo }: { modelo: ModeloNaTela }) {
         <button
           type="button"
           className={botao}
-          onClick={() => {
-            if (confirm(`Excluir o modelo "${modelo.nome}"? As vagas já abertas não mudam.`)) rodar(() => excluirModelo(modelo.id));
+          onClick={async () => {
+            if (await confirmar(`Excluir o modelo "${modelo.nome}"? As vagas já abertas não mudam.`)) rodar(() => excluirModelo(modelo.id));
           }}
         >
           <Trash2 className="h-3 w-3" />

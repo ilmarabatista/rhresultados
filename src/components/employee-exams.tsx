@@ -25,6 +25,7 @@ import {
   validadeDe,
 } from "@/lib/exames";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { confirmar } from "@/components/avisos";
 
 /**
  * Exames ocupacionais de um colaborador, dentro da ficha dele.
@@ -345,8 +346,8 @@ function LinhaExame({
             <button
               type="button"
               disabled={pending}
-              onClick={() => {
-                if (!confirm(`Cancelar o exame ${rotuloDoTipo(exame.tipo)}?`)) return;
+              onClick={async () => {
+                if (!(await confirmar(`Cancelar o exame ${rotuloDoTipo(exame.tipo)}?`))) return;
                 startTransition(() => {
                   void cancelarExame(exame.id);
                 });
@@ -361,8 +362,8 @@ function LinhaExame({
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!confirm(`Excluir o exame ${rotuloDoTipo(exame.tipo)} desta ficha?`))
+            onClick={async () => {
+              if (!(await confirmar(`Excluir o exame ${rotuloDoTipo(exame.tipo)} desta ficha?`)))
                 return;
               startTransition(() => {
                 void excluirExame(exame.id);

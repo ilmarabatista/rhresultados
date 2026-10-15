@@ -20,6 +20,7 @@ import {
   peso,
   rotuloDoGrupo,
 } from "@/lib/gestao";
+import { confirmar } from "@/components/avisos";
 
 /**
  * Lançamento de despesa mês a mês, no formato de planilha.
@@ -392,12 +393,12 @@ function LinhaDaTabela({
         </button>
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             if (linha.temLancamento) {
               aoAgir(() => arquivarLinha(linha.id, !linha.ativa));
               return;
             }
-            if (!confirm(`Excluir a linha "${linha.nome}"?`)) return;
+            if (!(await confirmar(`Excluir a linha "${linha.nome}"?`))) return;
             aoAgir(() => excluirLinha(linha.id));
           }}
           className="ml-0.5 text-slate-300 transition hover:text-red-600"

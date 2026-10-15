@@ -12,6 +12,7 @@ import {
 import { lerEstrutura, MODELO_DE_ESTRUTURA, MODOS_DO_TESTE, type ModoDoTeste } from "@/lib/testes-cadastrados";
 import { Aviso, Etiqueta, Painel } from "./ui";
 import { Field, FormError, FormOk, Input, Select, SubmitButton, Textarea } from "./form";
+import { confirmar } from "@/components/avisos";
 
 /**
  * O cadastro de um teste: o nome, a forma de responder, as instruções e a
@@ -128,8 +129,8 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => {
-                    if (!confirm(`Excluir o teste "${teste.nome}"? As respostas já enviadas ficam guardadas.`)) return;
+                  onClick={async () => {
+                    if (!(await confirmar(`Excluir o teste "${teste.nome}"? As respostas já enviadas ficam guardadas.`))) return;
                     startTransition(async () => {
                       const r = await excluirTesteCadastrado(teste.id!);
                       if (r.ok) router.push("/testes?ver=cadastrados");

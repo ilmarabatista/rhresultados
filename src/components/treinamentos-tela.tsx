@@ -29,6 +29,7 @@ import {
   type Totais,
 } from "@/lib/treinamentos";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { avisar as mostrarAviso, avisarSeErro as avisar, confirmar } from "@/components/avisos";
 
 /**
  * A aba Treinamentos da empresa, em quatro partes: a programação do ano (o
@@ -87,10 +88,6 @@ const botao =
   "rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700";
 const botaoClaro =
   "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50";
-
-function avisar(r: TreinoState) {
-  if (r.error) alert(r.error);
-}
 
 function nomeDe(t: { codigo: string | null; nome: string }) {
   return t.codigo ? `${t.codigo} · ${t.nome}` : t.nome;
@@ -485,11 +482,11 @@ function Cargos({ companyId, cargos }: { companyId: string; cargos: Cargo[] }) {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   const aviso = c.pessoas
                     ? `Excluir o cargo ${c.nome}? ${c.pessoas} pessoa(s) ficam sem cargo.`
                     : `Excluir o cargo ${c.nome}?`;
-                  if (confirm(aviso)) startTransition(async () => avisar(await excluirCargo(c.id)));
+                  if (await confirmar(aviso)) startTransition(async () => avisar(await excluirCargo(c.id)));
                 }}
                 className="text-slate-400 opacity-0 hover:text-red-600 group-hover:opacity-100"
                 aria-label={`Excluir ${c.nome}`}
@@ -590,8 +587,8 @@ function Catalogo({
                   onClick={() =>
                     startTransition(async () => {
                       const r = await copiarCatalogo(companyId, origem);
-                      if (r.error) alert(r.error);
-                      else alert(`${r.copiados} treinamento(s) copiado(s).`);
+                      if (r.error) mostrarAviso(r.error);
+                      else mostrarAviso(`${r.copiados} treinamento(s) copiado(s).`);
                     })
                   }
                   className={botaoClaro}
@@ -672,8 +669,8 @@ function Catalogo({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (confirm(`Excluir o treinamento ${nomeDe(t)}?`)) {
+                          onClick={async () => {
+                            if (await confirmar(`Excluir o treinamento ${nomeDe(t)}?`)) {
                               startTransition(async () => avisar(await excluirTreinamento(t.id)));
                             }
                           }}
