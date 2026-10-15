@@ -30,6 +30,7 @@ import {
 } from "@/lib/treinamentos";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { avisar as mostrarAviso, avisarSeErro as avisar, confirmar } from "@/components/avisos";
+import Modal from "@/components/modal";
 
 /**
  * A aba Treinamentos da empresa, em quatro partes: a programação do ano (o
@@ -93,22 +94,6 @@ function nomeDe(t: { codigo: string | null; nome: string }) {
   return t.codigo ? `${t.codigo} · ${t.nome}` : t.nome;
 }
 
-function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-xl rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
-        <div className="mb-4 flex items-start justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">{titulo}</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Fechar">
-            <X size={16} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 // ------------------------------------------------------------ programar
 
 function FormularioDeTurma({
@@ -139,7 +124,7 @@ function FormularioDeTurma({
 
   if (ativos.length === 0) {
     return (
-      <Modal titulo="Programar treinamento" onClose={onClose}>
+      <Modal largura="xl" titulo="Programar treinamento" aoFechar={onClose}>
         <p className="text-sm text-slate-600">
           Cadastre antes os treinamentos da empresa em <strong>Catálogo e matriz</strong>.
         </p>
@@ -148,7 +133,7 @@ function FormularioDeTurma({
   }
 
   return (
-    <Modal titulo="Programar treinamento" onClose={onClose}>
+    <Modal largura="xl" titulo="Programar treinamento" aoFechar={onClose}>
       <form action={action} className="space-y-4">
         <input type="hidden" name="companyId" value={companyId} />
         <Field label="Treinamento *">
@@ -382,7 +367,7 @@ function FormularioDeTreinamento({
   }, [state.ok, onClose]);
 
   return (
-    <Modal titulo={treinamento ? "Editar treinamento" : "Novo treinamento"} onClose={onClose}>
+    <Modal largura="xl" titulo={treinamento ? "Editar treinamento" : "Novo treinamento"} aoFechar={onClose}>
       <form action={action} className="space-y-4">
         <input type="hidden" name="companyId" value={companyId} />
         {treinamento ? <input type="hidden" name="treinamentoId" value={treinamento.id} /> : null}

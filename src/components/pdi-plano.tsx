@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, Pencil, Trash2, X } from "lucide-react";
+import { Check, Pencil, Trash2 } from "lucide-react";
 import {
   editarPlano,
   encerrarPlano,
@@ -36,6 +36,7 @@ import {
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { Aviso, Etiqueta } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
+import Modal from "@/components/modal";
 
 /**
  * O plano: cada meta SMART com as ações que levam a ela. Uma ação ligada a um
@@ -93,22 +94,6 @@ export type PlanoDaTela = {
 const botaoClaro =
   "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50 disabled:opacity-60";
 
-function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
-        <div className="mb-4 flex items-start justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">{titulo}</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Fechar">
-            <X size={16} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function useFecharAoSalvar(state: PdiState, onClose: () => void) {
   useEffect(() => {
     if (state.ok) onClose();
@@ -119,7 +104,7 @@ function FormularioDoPlano({ plano, onClose }: { plano: PlanoDaTela; onClose: ()
   const [state, action] = useActionState<PdiState, FormData>(editarPlano, {});
   useFecharAoSalvar(state, onClose);
   return (
-    <Modal titulo="Editar plano" onClose={onClose}>
+    <Modal titulo="Editar plano" aoFechar={onClose}>
       <form action={action} className="space-y-3">
         <input type="hidden" name="planId" value={plano.id} />
         <Field label="Nome do plano *">
@@ -181,7 +166,7 @@ function FormularioDeMeta({
   };
 
   return (
-    <Modal titulo={meta ? "Editar meta" : "Nova meta"} onClose={onClose}>
+    <Modal titulo={meta ? "Editar meta" : "Nova meta"} aoFechar={onClose}>
       <form action={action} className="space-y-3">
         <input type="hidden" name="planId" value={plano.id} />
         {meta ? <input type="hidden" name="metaId" value={meta.id} /> : null}
@@ -599,7 +584,7 @@ function Encerrar({ plano, onClose }: { plano: PlanoDaTela; onClose: () => void 
   const [balanco, setBalanco] = useState(plano.balanco);
   const [status, setStatus] = useState<"CONCLUIDO" | "CANCELADO">("CONCLUIDO");
   return (
-    <Modal titulo="Encerrar o plano" onClose={onClose}>
+    <Modal titulo="Encerrar o plano" aoFechar={onClose}>
       <div className="space-y-3">
         <Field label="Como terminou">
           <Select value={status} onChange={(e) => setStatus(e.target.value as "CONCLUIDO" | "CANCELADO")}>

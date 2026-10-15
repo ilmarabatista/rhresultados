@@ -68,6 +68,7 @@ import {
 } from "@/app/(app)/agenda/actions";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { avisar, confirmar } from "@/components/avisos";
+import Modal from "@/components/modal";
 
 export type VisitaItem = {
   id: string;
@@ -753,36 +754,6 @@ function VisitaForm({
     </form>
   );
 }
-
-function Modal({
-  titulo,
-  aoFechar,
-  children,
-}: {
-  titulo: string;
-  aoFechar: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:p-8">
-      <div className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <h2 className="text-sm font-semibold text-slate-900">{titulo}</h2>
-          <button
-            type="button"
-            onClick={aoFechar}
-            className="text-slate-400 transition hover:text-slate-700"
-            aria-label="Fechar"
-          >
-            <X size={18} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 
 /**
  * A pauta de uma reunião.
