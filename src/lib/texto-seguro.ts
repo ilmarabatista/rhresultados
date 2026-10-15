@@ -86,3 +86,15 @@ export function textoSeguro(texto: string): string {
 export function temCaractereProibido(texto: string): boolean {
   return [...texto].some((c) => !cabeNoBanco(c));
 }
+
+/**
+ * Campo de formulário como texto pronto para gravar: só caracteres que o banco
+ * aceita, sem espaço nas pontas e com teto de tamanho, para um envio forjado
+ * não inchar o banco.
+ */
+export function textoDoFormulario(
+  valor: FormDataEntryValue | string | null | undefined,
+  max = 10_000,
+): string {
+  return textoSeguro(String(valor ?? "")).trim().slice(0, max);
+}

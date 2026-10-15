@@ -7,7 +7,7 @@ import BranchesManager from "@/components/branches-manager";
 import CompanyForm from "@/components/company-form";
 import { updateCompany } from "../../actions";
 import {
-  dateToDayKey,
+  paraCampoDeData,
   dayKeyToDate,
   formatFullDate,
   todayKey,
@@ -17,10 +17,6 @@ import BriefingCard from "@/components/briefing-card";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dados — RH Resultados" };
-
-function paraInput(date: Date | null) {
-  return date ? dateToDayKey(date) : "";
-}
 
 export default async function InformacoesPage({
   params,
@@ -200,8 +196,8 @@ export default async function InformacoesPage({
           contractValue: company.contractValue
             ? company.contractValue.toString()
             : "",
-          contractDate: paraInput(company.contractDate),
-          contractEndDate: paraInput(company.contractEndDate),
+          contractDate: paraCampoDeData(company.contractDate),
+          contractEndDate: paraCampoDeData(company.contractEndDate),
           contractStatus: company.contractStatus,
           paymentDay: company.paymentDay,
           notes: company.notes,

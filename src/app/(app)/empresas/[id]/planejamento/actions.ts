@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { diaValido, horaValida } from "@/lib/agenda";
 import { dateToDayKey, dayKeyToDate, formatFullDate } from "@/lib/dates";
-import { textoSeguro } from "@/lib/texto-seguro";
+import { textoDoFormulario as texto, textoSeguro } from "@/lib/texto-seguro";
 import { atividade } from "@/lib/atividade";
 import { acertarAgenda } from "@/lib/reuniao-agenda";
 import { codigoDaReuniao } from "@/lib/reunioes";
@@ -38,10 +38,6 @@ function refresh(companyId: string) {
   revalidatePath("/inicio");
 }
 
-/** Teto generoso: nenhum campo daqui chega perto, e um envio forjado não incha o banco. */
-function texto(v: FormDataEntryValue | null): string {
-  return textoSeguro(String(v ?? "")).trim().slice(0, 10_000);
-}
 
 function assunto(plano: string, tema: string) {
   return `${plano}: ${tema}`;

@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido, horaValida } from "@/lib/agenda";
 import { dayKeyToDate, todayKey } from "@/lib/dates";
-import { textoSeguro } from "@/lib/texto-seguro";
+import { textoDoFormulario } from "@/lib/texto-seguro";
 import {
   lerNivel,
   lerProgresso,
@@ -34,8 +34,7 @@ function refresh(companyId: string) {
 }
 
 function texto(valor: FormDataEntryValue | string | null | undefined, max = 4000): string | null {
-  const t = textoSeguro(String(valor ?? "")).trim().slice(0, max);
-  return t === "" ? null : t;
+  return textoDoFormulario(valor, max) || null;
 }
 
 function dia(valor: FormDataEntryValue | string | null | undefined): Date | null {

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { dateToDayKey, formatFullDate, formatMoment, todayKey } from "@/lib/dates";
+import { dateToDayKey, formatFullDate, formatMoment, paraCampoDeData, todayKey } from "@/lib/dates";
 import { progressoDoPlano } from "@/lib/pdi";
 import EmployeeDetail from "@/components/employee-detail";
 import EmployeeTraining from "@/components/employee-training";
@@ -17,10 +17,6 @@ import {
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Colaborador — RH Resultados" };
-
-function paraInput(d: Date | null) {
-  return d ? dateToDayKey(d) : "";
-}
 
 export default async function ColaboradorPage({
   params,
@@ -180,9 +176,9 @@ export default async function ColaboradorPage({
           phone: pessoa.phone,
           branchId: pessoa.branchId,
           unidade: pessoa.branch?.name ?? null,
-          birthDate: paraInput(pessoa.birthDate),
-          hiredAt: paraInput(pessoa.hiredAt),
-          terminatedAt: paraInput(pessoa.terminatedAt),
+          birthDate: paraCampoDeData(pessoa.birthDate),
+          hiredAt: paraCampoDeData(pessoa.hiredAt),
+          terminatedAt: paraCampoDeData(pessoa.terminatedAt),
           status: pessoa.status,
           notes: pessoa.notes,
           admissao: pessoa.hiredAt ? formatFullDate(pessoa.hiredAt) : null,

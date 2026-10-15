@@ -18,7 +18,7 @@ export type TestesState = { error?: string; erros?: string[]; ok?: boolean; id?:
 function refresh(id?: string) {
   revalidatePath("/testes");
   revalidatePath("/selecao", "layout");
-  if (id) revalidatePath(`/testes/${id}`);
+  if (id) revalidatePath(`/testes/cadastro/${id}`);
 }
 
 // ------------------------------------------------------------------ enviar

@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido, horaValida } from "@/lib/agenda";
 import { dayKeyToDate, formatFullDate } from "@/lib/dates";
-import { textoSeguro } from "@/lib/texto-seguro";
+import { textoDoFormulario, textoSeguro } from "@/lib/texto-seguro";
 import { acertarAgenda } from "@/lib/reuniao-agenda";
 import {
   lerCategoria,
@@ -37,7 +37,7 @@ function refresh(companyId: string) {
 }
 
 function texto(valor: FormDataEntryValue | string | null, max = 200): string {
-  return textoSeguro(String(valor ?? "")).trim().slice(0, max);
+  return textoDoFormulario(valor, max);
 }
 
 // ------------------------------------------------------------------ cargos
