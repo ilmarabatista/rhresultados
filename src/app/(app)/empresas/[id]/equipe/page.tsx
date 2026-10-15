@@ -14,16 +14,26 @@ export default async function EquipeEmpresaPage({
   await requireSession();
   const { id } = await params;
 
-  const [colaboradores, unidades, cargos, { porPessoa }] = await Promise.all([
+  const [colaboradores, ocorrencias, unidades, cargos, { porPessoa }] = await Promise.all([
     prisma.employee.findMany({
       where: { companyId: id },
       orderBy: [{ status: "asc" }, { name: "asc" }],
-      include: {
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        department: true,
+        status: true,
         branch: { select: { name: true } },
         _count: { select: { plans: true } },
-        records: { select: { kind: true } },
         integracao: { select: { feito: true } },
       },
+    }),
+    // Só as contagens por pessoa e tipo, sem trazer cada ocorrência.
+    prisma.employeeRecord.groupBy({
+      by: ["employeeId", "kind"],
+      where: { employee: { companyId: id }, kind: { in: ["ADVERTENCIA", "FALTA", "ATESTADO"] } },
+      _count: { _all: true },
     }),
     prisma.branch.findMany({
       where: { companyId: id },
@@ -33,6 +43,9 @@ export default async function EquipeEmpresaPage({
     prisma.cargo.findMany({ where: { companyId: id }, orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
     pendenciasDaEmpresa(id),
   ]);
+
+  const contagem = new Map(ocorrencias.map((o) => [`${o.employeeId}|${o.kind}`, o._count._all]));
+  const quantas = (employeeId: string, kind: string) => contagem.get(`${employeeId}|${kind}`) ?? 0;
 
   return (
     <main className="space-y-3.5">
@@ -48,9 +61,9 @@ export default async function EquipeEmpresaPage({
           unidade: c.branch?.name ?? null,
           status: c.status,
           planos: c._count.plans,
-          advertencias: c.records.filter((r) => r.kind === "ADVERTENCIA").length,
-          faltas: c.records.filter((r) => r.kind === "FALTA").length,
-          atestados: c.records.filter((r) => r.kind === "ATESTADO").length,
+          advertencias: quantas(c.id, "ADVERTENCIA"),
+          faltas: quantas(c.id, "FALTA"),
+          atestados: quantas(c.id, "ATESTADO"),
           integracaoFeita: c.integracao.filter((e) => e.feito).length,
           integracaoTotal: c.integracao.length,
           treinamentosPendentes: porPessoa.get(c.id)?.length ?? 0,
