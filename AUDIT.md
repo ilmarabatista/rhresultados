@@ -215,4 +215,53 @@ O bundle está saudável (103 kB compartilhado, maior página 125 kB) e não há
 As skills `frontend-design` e `web-design-guidelines` não estão instaladas nesta sessão. Na Fase 4 sigo as mesmas práticas (WCAG AA, tokens, medição com Playwright nas 4 larguras).
 
 ## Entrega final
-_(preenchido ao fim da Fase 4: corrigido, pendente e o que precisa de teste manual em produção)_
+Branch `audit/2026-10-15-jcjeum`, um commit por fase e por tema. Ao fim de cada fase passaram build, lint (`npm run lint`), typecheck (`npm run typecheck`) e os 266 testes (`npm test`).
+
+### Corrigido
+
+| Código | O que mudou |
+|---|---|
+| S-1 🔴 | RLS ligado em todas as tabelas e acesso dos papéis `anon`/`authenticated` revogado (migration `20261015120000_rls_e_permissoes`). Conferido no Supabase: 0 tabelas sem RLS, 0 permissões para `anon`. |
+| S-3 | Cabeçalhos de segurança (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, HSTS) e `poweredByHeader: false` em `next.config.ts`. |
+| S-4 | Trocar a senha derruba as outras sessões (`User.sessionVersion`, migration `20261015130000_versao_da_sessao`). |
+| S-5 | Login com tempo de resposta igual para e-mail existente ou não. |
+| S-7 | Apresentação só aceita PDF, PPT(X), ODP, Key, PNG e JPG, com tipo tirado da extensão (`src/lib/apresentacao.ts`). |
+| S-8 | Exportação CSV neutraliza fórmulas (`=`, `+`, `-`, `@`) para não rodarem no Excel. |
+| S-9 (parcial) | `npm audit fix` aplicado (sharp, source-map-js). |
+| S-10 | Gestão só para ADMIN (página, actions e menu). |
+| S-11 | `scripts/reset-db.mjs` só roda em banco local, salvo `--nuvem` e digitando APAGAR. |
+| S-13 | Textos dos formulários com tamanho máximo (`textoDoFormulario`). |
+| P-1 | Apresentação limitada a 4 MB, avisando antes do envio (o limite da Vercel é 4,5 MB). |
+| P-4, P-5 | Planos atualizam encontros em paralelo; replicar plano copia arquivos dentro do banco, sem trazer o binário. |
+| P-7 | 18 índices nas chaves estrangeiras (migration `20261015140000_indices_das_chaves`). |
+| P-8 | Equipe conta ocorrências com `groupBy`. |
+| C-1 a C-8 | ESLint configurado e sem avisos, scripts `lint`/`typecheck`, telas de erro e 404 em português, código morto removido, funções repetidas centralizadas, revalidação no caminho certo, comentário do reset atualizado. |
+| D-1 a D-10 | Avisos e confirmações no visual do sistema (no lugar de `alert`/`confirm`), uma janela modal acessível (Esc, foco preso e devolvido), tipografia mínima de 11 px, contraste do cinza, tokens de cor, foco visível, alvos de toque maiores no celular, abas da empresa roláveis no celular, cartões sem estouro em 375 px e rótulos nos campos. Conferido com Playwright em 23 telas a 375, 768, 1280 e 1920 px: nenhuma rola para o lado. |
+
+As três migrations já foram aplicadas no Supabase de produção e registradas em `_prisma_migrations`, então o `db:deploy` do próximo deploy as pula.
+
+### Pendente, e por quê
+
+- **Ponto (S-2, P-2, P-3, P-6):** fora do escopo por decisão sua; o ponto sairá do sistema.
+- **S-6 (cron sem segredo):** a Vercel não tem `CRON_SECRET`. Exigir o segredo no código antes de criá-lo pararia o cron que mantém o banco acordado. Crie `CRON_SECRET` na Vercel; depois disso a checagem em `src/app/api/manter-ativo/route.ts` pode ser ligada.
+- **S-9 (resto):** os avisos restantes (postcss dentro do Next, deepmerge-ts do Prisma) só somem com Next 16 e Prisma 7, que são atualizações grandes.
+- **S-12:** o IP do limite de tentativas vem de `x-forwarded-for`, confiável na Vercel. Fica só documentado.
+- **P-9, P-10:** as consultas do layout já rodam em paralelo; cache traria contadores desatualizados. Rever quando houver centenas de empresas.
+- **C-9:** migrar para `prisma.config.ts` faz o Prisma parar de ler o `.env` sozinho; melhor junto com o Prisma 7.
+- **Recomendações de arquitetura:** arquivos de reunião no banco em vez de um storage, e as demais da seção de arquitetura acima.
+- **Alvos pequenos:** links de texto dentro de tabelas e uma caixa de seleção continuam abaixo de 24 px.
+- **Supabase advisor:** mostra “RLS enabled, no policy” como informação. É o esperado: o app entra como `postgres`, que ignora RLS, e ninguém de fora deve ler as tabelas.
+
+### Teste manual em produção (depois do merge)
+
+1. Entrar e sair.
+2. Trocar a senha de um usuário com ele logado em outro navegador: a outra sessão deve cair para o login.
+3. Entrar como MEMBRO: Gestão não aparece no menu e `/gestao` volta para Empresas.
+4. Enviar uma apresentação menor que 4 MB (deve funcionar) e uma maior (deve recusar com aviso).
+5. Exportar um CSV e abrir no Excel.
+6. Excluir algo com confirmação; na agenda, excluir um compromisso de série (“Esta e as seguintes” / “Só este dia”).
+7. Abrir a ficha de uma empresa no celular: abas numa faixa que rola para o lado.
+8. Usar o ditado por voz (o microfone continua liberado).
+9. Replicar um plano que tenha arquivos e conferir os arquivos na cópia.
+10. Copiar o catálogo de treinamentos para outra empresa.
+11. Na Vercel, conferir que o cron `/api/manter-ativo` segue rodando.
