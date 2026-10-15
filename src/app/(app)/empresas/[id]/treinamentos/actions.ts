@@ -217,25 +217,28 @@ export async function copiarCatalogo(companyId: string, origemId: string): Promi
   const jaTem = (t: { codigo: string | null; nome: string }) =>
     aqui.some((a) => (t.codigo && a.codigo === t.codigo) || mesmoCargo(a.nome, t.nome));
 
-  let copiados = 0;
-  for (const t of origem) {
-    if (jaTem(t)) continue;
-    const cargos = t.cargos
-      .map((m) => cargosAqui.find((c) => mesmoCargo(c.nome, m.cargo.nome))?.id)
-      .filter((id): id is string => Boolean(id));
-    await prisma.treinamento.create({
-      data: {
-        companyId,
-        codigo: t.codigo,
-        nome: t.nome,
-        categoria: t.categoria,
-        cargaHoraria: t.cargaHoraria,
-        descricao: t.descricao,
-        cargos: { create: cargos.map((cargoId) => ({ cargoId })) },
-      },
-    });
-    copiados++;
-  }
+  // Tudo numa transação: ou o catálogo vem inteiro, ou nada muda.
+  const novos = origem.filter((t) => !jaTem(t));
+  await prisma.$transaction(
+    novos.map((t) => {
+      const cargos = t.cargos
+        .map((m) => cargosAqui.find((c) => mesmoCargo(c.nome, m.cargo.nome))?.id)
+        .filter((id): id is string => Boolean(id));
+      return prisma.treinamento.create({
+        data: {
+          companyId,
+          codigo: t.codigo,
+          nome: t.nome,
+          categoria: t.categoria,
+          cargaHoraria: t.cargaHoraria,
+          descricao: t.descricao,
+          cargos: { create: cargos.map((cargoId) => ({ cargoId })) },
+        },
+        select: { id: true },
+      });
+    }),
+  );
+  const copiados = novos.length;
 
   await log(companyId, session.userId, "CRIOU", companyId, `Copiou ${copiados} treinamento(s) do catálogo de ${empresa.name}.`);
   refresh(companyId);
