@@ -86,7 +86,7 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
                 <button
                   type="button"
                   onClick={() => setTexto(MODELO_DE_ESTRUTURA)}
-                  className="rounded-md border border-slate-300 px-2.5 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700"
+                  className="rounded-md border border-slate-300 px-2.5 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700"
                 >
                   Usar o modelo
                 </button>
@@ -98,7 +98,7 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
               rows={26}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              className="font-mono text-[12px]"
+              className="font-mono text-mini"
               placeholder={MODELO_DE_ESTRUTURA}
               spellCheck={false}
             />
@@ -136,7 +136,7 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
                       if (r.ok) router.push("/testes?ver=cadastrados");
                     });
                   }}
-                  className="ml-auto text-xs text-slate-400 transition hover:text-red-700 disabled:opacity-60"
+                  className="ml-auto text-xs text-slate-500 transition hover:text-red-700 disabled:opacity-60"
                 >
                   Excluir
                 </button>
@@ -159,19 +159,19 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
                   ].map(([rotulo, valor]) => (
                     <div key={rotulo} className="rounded-md bg-slate-50 py-2">
                       <p className="text-lg font-semibold tabular-nums text-brand-800">{valor}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-slate-400">{rotulo}</p>
+                      <p className="text-micro uppercase tracking-wider text-slate-500">{rotulo}</p>
                     </div>
                   ))}
                 </div>
 
                 {lido.erros.length > 0 ? (
                   <Aviso rotulo={`${lido.erros.length} ponto(s) a corrigir`} tom="ruim">
-                    <ul className="list-disc space-y-0.5 pl-4 text-[11px]">
+                    <ul className="list-disc space-y-0.5 pl-4 text-micro">
                       {lido.erros.slice(0, 15).map((e, i) => (
                         <li key={i}>{e}</li>
                       ))}
                     </ul>
-                    {lido.erros.length > 15 ? <p className="text-[11px]">E mais {lido.erros.length - 15}.</p> : null}
+                    {lido.erros.length > 15 ? <p className="text-micro">E mais {lido.erros.length - 15}.</p> : null}
                   </Aviso>
                 ) : (
                   <Aviso tom="bom">Tudo certo: a estrutura está pronta para salvar.</Aviso>
@@ -179,12 +179,12 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
 
                 {lido.estrutura.fatores.length > 0 ? (
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Fatores</p>
-                    <ul className="mt-0.5 space-y-0.5 text-[12px] text-slate-700">
+                    <p className="text-micro font-semibold uppercase tracking-wider text-slate-500">Fatores</p>
+                    <ul className="mt-0.5 space-y-0.5 text-mini text-slate-700">
                       {lido.estrutura.fatores.map((f) => (
                         <li key={f.codigo}>
                           <strong>{f.codigo}</strong> · {f.nome}
-                          {f.descricao ? <span className="text-slate-400"> — {f.descricao}</span> : null}
+                          {f.descricao ? <span className="text-slate-500"> — {f.descricao}</span> : null}
                         </li>
                       ))}
                     </ul>
@@ -192,14 +192,14 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
                 ) : null}
 
                 {lido.estrutura.pares.length > 0 ? (
-                  <p className="text-[12px] text-slate-700">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Tipo por </span>
+                  <p className="text-mini text-slate-700">
+                    <span className="text-micro font-semibold uppercase tracking-wider text-slate-500">Tipo por </span>
                     {lido.estrutura.pares.map((p) => p.join("/")).join(", ")}
                   </p>
                 ) : null}
 
                 {lido.estrutura.questoes.slice(0, 3).map((q, i) => (
-                  <div key={i} className="rounded-md border border-slate-200 p-2 text-[12px]">
+                  <div key={i} className="rounded-md border border-slate-200 p-2 text-mini">
                     <p className="whitespace-pre-line font-medium text-slate-800">
                       {i + 1}. {q.enunciado}
                     </p>
@@ -214,7 +214,7 @@ export default function CustomTestEditor({ teste }: { teste: TesteNaTela }) {
                   </div>
                 ))}
                 {lido.estrutura.questoes.length > 3 ? (
-                  <p className="text-[11px] text-slate-400">E mais {lido.estrutura.questoes.length - 3} questões.</p>
+                  <p className="text-micro text-slate-500">E mais {lido.estrutura.questoes.length - 3} questões.</p>
                 ) : null}
               </div>
             )}

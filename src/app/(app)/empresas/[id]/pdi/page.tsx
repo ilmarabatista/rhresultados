@@ -140,7 +140,7 @@ export default async function PdiPage({
           >
             {a.rotulo}
             {a.slug === "cargos" && cargosSemDescricao > 0 ? (
-              <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800">
+              <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-micro font-medium text-amber-800">
                 {cargosSemDescricao}
               </span>
             ) : null}
@@ -208,7 +208,7 @@ export default async function PdiPage({
             <Vazio>Ninguém na equipe ainda. Cadastre as pessoas na aba Equipe.</Vazio>
           ) : (
             <Tabela titulo="Equipe" direita={`${linhas.length} pessoas`} minLargura={860}>
-              <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_5rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+              <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_5rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-micro font-medium uppercase tracking-wider text-slate-500">
                 <span>Pessoa</span>
                 <span>Avaliação</span>
                 <span>Gaps</span>
@@ -219,27 +219,27 @@ export default async function PdiPage({
               {linhas.map((l) => (
                 <div
                   key={l.id}
-                  className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_5rem] items-center gap-3 border-b border-slate-100 px-3 py-1.5 text-[13px] last:border-b-0 even:bg-slate-50/60 hover:bg-brand-50/40"
+                  className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_5rem] items-center gap-3 border-b border-slate-100 px-3 py-1.5 text-corpo last:border-b-0 even:bg-slate-50/60 hover:bg-brand-50/40"
                 >
                   <div className="min-w-0">
                     <Link href={`/empresas/${id}/pdi/${l.id}`} className="block truncate font-medium text-slate-800 hover:text-brand-700">
                       {l.nome}
                     </Link>
-                    <span className="block truncate text-[11px] text-slate-400">
+                    <span className="block truncate text-micro text-slate-500">
                       {l.cargo ?? "sem cargo"}
                       {l.cargo && !l.cargoDescrito ? " · cargo sem descrição" : ""}
                     </span>
                   </div>
-                  <div className="text-[12px] text-slate-600">
+                  <div className="text-mini text-slate-600">
                     {l.avaliadaEm ? (
                       <>
                         {l.avaliadaEm}
                         {l.aderencia != null ? (
-                          <span className="block text-[11px] text-slate-400">{l.aderencia}% do esperado</span>
+                          <span className="block text-micro text-slate-500">{l.aderencia}% do esperado</span>
                         ) : null}
                       </>
                     ) : (
-                      <span className="text-slate-400">não avaliada</span>
+                      <span className="text-slate-500">não avaliada</span>
                     )}
                   </div>
                   <div className="flex min-w-0 flex-wrap gap-1">
@@ -248,10 +248,10 @@ export default async function PdiPage({
                         {g}
                       </Etiqueta>
                     ))}
-                    {l.gaps.length > 3 ? <span className="text-[11px] text-slate-400">+{l.gaps.length - 3}</span> : null}
+                    {l.gaps.length > 3 ? <span className="text-micro text-slate-500">+{l.gaps.length - 3}</span> : null}
                     {l.avaliadaEm && l.gaps.length === 0 ? <Etiqueta tom="bom">sem gaps</Etiqueta> : null}
                   </div>
-                  <div className="text-[12px]">
+                  <div className="text-mini">
                     {l.plano ? (
                       <>
                         <div className="flex items-center gap-2">
@@ -260,17 +260,17 @@ export default async function PdiPage({
                           </div>
                           <span className="tabular-nums text-slate-600">{l.plano.progresso ?? 0}%</span>
                         </div>
-                        <span className="block text-[11px] text-slate-400">
+                        <span className="block text-micro text-slate-500">
                           {l.plano.atingidas}/{l.plano.metas} metas{l.plano.fim ? ` · até ${l.plano.fim}` : ""}
                         </span>
                       </>
                     ) : (
-                      <span className="text-slate-400">
+                      <span className="text-slate-500">
                         sem plano{l.concluidos > 0 ? ` · ${l.concluidos} concluído(s)` : ""}
                       </span>
                     )}
                   </div>
-                  <div className="text-[12px]">
+                  <div className="text-mini">
                     {l.situacao === "ATRASADA" ? (
                       <Etiqueta tom="ruim">{l.proxima} · atrasada</Etiqueta>
                     ) : l.situacao === "PROXIMA" ? (
@@ -285,7 +285,7 @@ export default async function PdiPage({
                   </div>
                   <Link
                     href={`/empresas/${id}/pdi/${l.id}`}
-                    className="justify-self-end rounded-md border border-slate-200 px-2 py-0.5 text-[11px] text-brand-700 transition hover:border-brand-300"
+                    className="justify-self-end rounded-md border border-slate-200 px-2 py-0.5 text-micro text-brand-700 transition hover:border-brand-300"
                   >
                     {l.plano || l.avaliadaEm ? "Abrir" : "Começar"}
                   </Link>

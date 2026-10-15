@@ -33,7 +33,7 @@ export type ModeloNaTela = {
 };
 
 const botao =
-  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
+  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
 
 function Etapa({ etapa, primeira, ultima }: { etapa: ModeloNaTela["etapas"][number]; primeira: boolean; ultima: boolean }) {
   const [nome, setNome] = useState(etapa.nome);
@@ -55,12 +55,12 @@ function Etapa({ etapa, primeira, ultima }: { etapa: ModeloNaTela["etapas"][numb
         onBlur={() => {
           if (nome !== etapa.nome) rodar(() => editarEtapaDoModelo(etapa.id, { nome }));
         }}
-        className="min-w-[10rem] flex-1 rounded-md border border-transparent px-1.5 py-1 text-[12px] text-slate-700 outline-none hover:border-slate-200 focus:border-brand-400"
+        className="min-w-[10rem] flex-1 rounded-md border border-transparent px-1.5 py-1 text-mini text-slate-700 outline-none hover:border-slate-200 focus:border-brand-400"
       />
       <select
         value={etapa.tipo}
         onChange={(e) => rodar(() => editarEtapaDoModelo(etapa.id, { tipo: e.target.value }))}
-        className="rounded-md border border-slate-200 px-1.5 py-1 text-[11px] text-slate-600 outline-none focus:border-brand-400"
+        className="rounded-md border border-slate-200 px-1.5 py-1 text-micro text-slate-600 outline-none focus:border-brand-400"
       >
         {TIPOS_DE_ETAPA.map((t) => (
           <option key={t.valor} value={t.valor}>
@@ -76,7 +76,7 @@ function Etapa({ etapa, primeira, ultima }: { etapa: ModeloNaTela["etapas"][numb
         }}
         placeholder="dias"
         title="Prazo: depois disso o candidato aparece como parado"
-        className="w-16 rounded-md border border-slate-200 px-1.5 py-1 text-[11px] text-slate-600 outline-none focus:border-brand-400"
+        className="w-16 rounded-md border border-slate-200 px-1.5 py-1 text-micro text-slate-600 outline-none focus:border-brand-400"
       />
       {primeira ? null : (
         <button type="button" className={botao} onClick={() => rodar(() => moverEtapaDoModelo(etapa.id, "SUBIR"))}>
@@ -119,7 +119,7 @@ function Modelo({ modelo }: { modelo: ModeloNaTela }) {
           onBlur={() => {
             if (nome !== modelo.nome) rodar(() => renomearModelo(modelo.id, nome, modelo.descricao ?? ""));
           }}
-          className="flex-1 rounded-md border border-transparent px-1.5 py-1 text-[13px] font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-brand-400"
+          className="flex-1 rounded-md border border-transparent px-1.5 py-1 text-corpo font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-brand-400"
         />
         <button type="button" className={botao} onClick={() => setAberto((v) => !v)}>
           {aberto ? "Fechar" : `${modelo.etapas.length} etapa(s)`}
@@ -138,7 +138,7 @@ function Modelo({ modelo }: { modelo: ModeloNaTela }) {
       {aberto ? (
         <div className="mt-1.5">
           {modelo.etapas.length === 0 ? (
-            <p className="py-2 text-[11px] text-slate-400">Sem etapas ainda.</p>
+            <p className="py-2 text-micro text-slate-500">Sem etapas ainda.</p>
           ) : (
             modelo.etapas.map((e, i) => <Etapa key={e.id} etapa={e} primeira={i === 0} ultima={i === modelo.etapas.length - 1} />)
           )}
@@ -157,7 +157,7 @@ function Modelo({ modelo }: { modelo: ModeloNaTela }) {
           </form>
         </div>
       ) : (
-        <p className="mt-0.5 px-1.5 text-[11px] text-slate-500">
+        <p className="mt-0.5 px-1.5 text-micro text-slate-500">
           {modelo.etapas.map((e) => `${e.nome} (${rotuloDoTipo(e.tipo)})`).join(" → ") || "sem etapas"}
         </p>
       )}
@@ -194,7 +194,7 @@ export default function SelecaoModelos({ modelos }: { modelos: ModeloNaTela[] })
               Cancelar
             </button>
             <FormError message={state.error} />
-            <p className="w-full text-[11px] text-slate-500">Já nasce com as etapas de sempre; é só ajustar.</p>
+            <p className="w-full text-micro text-slate-500">Já nasce com as etapas de sempre; é só ajustar.</p>
           </form>
         ) : null}
 

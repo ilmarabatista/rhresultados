@@ -94,8 +94,8 @@ export type ReuniaoCompleta = {
 const escrito = (dia: string) => dia.split("-").reverse().join("/");
 
 const campo =
-  "rounded-md border border-slate-300 bg-white px-2 py-1 text-[12px] outline-none transition focus:border-brand-500";
-const rotuloMiudo = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
+  "rounded-md border border-slate-300 bg-white px-2 py-1 text-mini outline-none transition focus:border-brand-500";
+const rotuloMiudo = "text-micro font-semibold uppercase tracking-wider text-slate-500";
 
 function avisarSeErro(r: ReuniaoState) {
   if (r.error) avisar(r.error);
@@ -177,7 +177,7 @@ function TextoAoSair({
         />
       )}
       {mostrarSituacao && situacao ? (
-        <span className="text-[10px] text-slate-400">{situacao === "gravando" ? "gravando…" : "gravado"}</span>
+        <span className="text-micro text-slate-500">{situacao === "gravando" ? "gravando…" : "gravado"}</span>
       ) : null}
     </>
   );
@@ -204,9 +204,9 @@ function Quando({ reuniao }: { reuniao: ReuniaoCompleta }) {
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}
-        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-700 transition hover:text-brand-700"
+        className="inline-flex items-center gap-1.5 text-mini font-medium text-slate-700 transition hover:text-brand-700"
       >
-        {texto} <Pencil size={11} className="text-slate-400" />
+        {texto} <Pencil size={11} className="text-slate-500" />
       </button>
 
       {aberto ? (
@@ -214,7 +214,7 @@ function Quando({ reuniao }: { reuniao: ReuniaoCompleta }) {
           <form action={action} className="space-y-2">
             <input type="hidden" name="reuniaoId" value={reuniao.id} />
             {doPlano ? (
-              <p className="text-[10px] leading-snug text-slate-500">
+              <p className="text-micro leading-snug text-slate-500">
                 Muda só esta data; as outras reuniões do plano ficam como estão.
               </p>
             ) : null}
@@ -235,7 +235,7 @@ function Quando({ reuniao }: { reuniao: ReuniaoCompleta }) {
               />
             </div>
             {doPlano ? null : (
-              <label className="flex items-center gap-1.5 text-[11px] text-slate-600">
+              <label className="flex items-center gap-1.5 text-micro text-slate-600">
                 <input
                   type="checkbox"
                   name="aAgendar"
@@ -246,13 +246,13 @@ function Quando({ reuniao }: { reuniao: ReuniaoCompleta }) {
                 A agendar (ainda sem data)
               </label>
             )}
-            {state.error ? <p className="text-[11px] text-red-600">{state.error}</p> : null}
+            {state.error ? <p className="text-micro text-red-600">{state.error}</p> : null}
             <div className="flex items-center gap-2">
               <SmallSubmitButton pendingLabel="Gravando…">Salvar</SmallSubmitButton>
               <button
                 type="button"
                 onClick={() => setAberto(false)}
-                className="text-[11px] text-slate-500 transition hover:text-slate-800"
+                className="text-micro text-slate-500 transition hover:text-slate-800"
               >
                 cancelar
               </button>
@@ -323,14 +323,14 @@ function Participantes({
         <p className={rotuloMiudo}>Convocados</p>
         {reuniao.participantes.length > 0 ? (
           <>
-            <span className="text-[11px] text-slate-500">
+            <span className="text-micro text-slate-500">
               {presentes} de {reuniao.participantes.length} presente{reuniao.participantes.length === 1 ? "" : "s"}
             </span>
             <button
               type="button"
               disabled={pending}
               onClick={() => startTransition(async () => avisarSeErro(await marcarTodosPresentes(reuniao.id, !todosPresentes)))}
-              className="text-[11px] text-brand-700 transition hover:text-brand-900"
+              className="text-micro text-brand-700 transition hover:text-brand-900"
             >
               {todosPresentes ? "desmarcar todos" : "marcar todos presentes"}
             </button>
@@ -338,13 +338,13 @@ function Participantes({
         ) : null}
       </div>
       {reuniao.participantes.length > 0 ? (
-        <p className="text-[10px] text-slate-400">Clique no nome para marcar que a pessoa estava presente.</p>
+        <p className="text-micro text-slate-500">Clique no nome para marcar que a pessoa estava presente.</p>
       ) : null}
       <div className={`mt-1 flex flex-wrap items-center gap-1.5 ${pending ? "opacity-60" : ""}`}>
         {reuniao.participantes.map((p) => (
           <span
             key={p.id}
-            className={`inline-flex items-center gap-0.5 rounded-full py-0.5 pl-1 pr-1 text-[12px] transition ${
+            className={`inline-flex items-center gap-0.5 rounded-full py-0.5 pl-1 pr-1 text-mini transition ${
               p.presente ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-slate-700"
             }`}
           >
@@ -366,7 +366,7 @@ function Participantes({
             <button
               type="button"
               onClick={() => startTransition(async () => avisarSeErro(await removerParticipante(p.id)))}
-              className="rounded-full p-0.5 text-slate-400 transition hover:text-red-600"
+              className="rounded-full p-0.5 text-slate-500 transition hover:text-red-600"
               aria-label={`Tirar ${p.nome}`}
             >
               <X size={11} />
@@ -388,12 +388,12 @@ function Participantes({
             <div className="absolute left-0 top-full z-20 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
               {pessoas.length > 0 ? (
                 <div className="mb-2 border-b border-slate-100 pb-2">
-                  <p className="px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Convocar de uma vez</p>
+                  <p className="px-1 text-micro font-semibold uppercase tracking-wider text-slate-500">Convocar de uma vez</p>
                   <div className="mt-1 flex flex-wrap gap-1">
                     <button
                       type="button"
                       onClick={() => convocarTodos(null)}
-                      className="rounded-md bg-brand-700 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-brand-800"
+                      className="rounded-md bg-brand-700 px-2 py-1 text-micro font-medium text-white transition hover:bg-brand-800"
                     >
                       Toda a equipe ({pessoas.length})
                     </button>
@@ -402,7 +402,7 @@ function Participantes({
                         key={setor}
                         type="button"
                         onClick={() => convocarTodos(setor)}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-[11px] text-slate-700 transition hover:border-brand-300 hover:text-brand-700"
+                        className="rounded-md border border-slate-300 px-2 py-1 text-micro text-slate-700 transition hover:border-brand-300 hover:text-brand-700"
                       >
                         {setor} ({n})
                       </button>
@@ -431,22 +431,22 @@ function Participantes({
                       <button
                         type="button"
                         onClick={() => convocar(p.id, p.nome)}
-                        className="block w-full truncate rounded px-2 py-1 text-left text-[12px] text-slate-700 transition hover:bg-brand-50"
+                        className="block w-full truncate rounded px-2 py-1 text-left text-mini text-slate-700 transition hover:bg-brand-50"
                       >
                         {p.nome}
-                        {p.setor ? <span className="text-slate-400"> · {p.setor}</span> : null}
+                        {p.setor ? <span className="text-slate-500"> · {p.setor}</span> : null}
                       </button>
                     </li>
                   ))}
                 </ul>
               ) : null}
-              <p className="mt-1 px-1 text-[10px] text-slate-400">Enter convoca um nome que não está na equipe.</p>
+              <p className="mt-1 px-1 text-micro text-slate-500">Enter convoca um nome que não está na equipe.</p>
             </div>
           ) : null}
         </div>
 
         {reuniao.participantes.length === 0 ? (
-          <span className="text-[12px] text-slate-400">ninguém convocado</span>
+          <span className="text-mini text-slate-500">ninguém convocado</span>
         ) : null}
       </div>
     </div>
@@ -517,7 +517,7 @@ function FormularioDoItem({
 
       {tipo === "DECIDIDO" ? (
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1 text-[11px] text-slate-500">
+          <label className="flex items-center gap-1 text-micro text-slate-500">
             vale desde
             <input type="date" name="valeDesde" defaultValue={item ? (item.valeDesde ?? "") : hoje} className={campo} />
           </label>
@@ -539,7 +539,7 @@ function FormularioDoItem({
             placeholder="Responsável"
             className={`${campo} min-w-[10rem] flex-1`}
           />
-          <label className="flex items-center gap-1 text-[11px] text-slate-500">
+          <label className="flex items-center gap-1 text-micro text-slate-500">
             até
             <input type="date" name="prazo" defaultValue={item?.prazo ?? ""} className={campo} />
           </label>
@@ -551,11 +551,11 @@ function FormularioDoItem({
         <button
           type="button"
           onClick={aoFechar}
-          className="text-[11px] text-slate-500 transition hover:text-slate-800"
+          className="text-micro text-slate-500 transition hover:text-slate-800"
         >
           {item ? "cancelar" : "fechar"}
         </button>
-        {state.error ? <span className="text-[11px] text-red-600">{state.error}</span> : null}
+        {state.error ? <span className="text-micro text-red-600">{state.error}</span> : null}
       </div>
     </form>
   );
@@ -614,15 +614,15 @@ function LinhaDoItem({
 
       <div className="min-w-0 flex-1">
         <p
-          className={`whitespace-pre-wrap text-[13px] leading-snug ${
-            item.feito ? "text-slate-400 line-through" : "text-slate-700"
+          className={`whitespace-pre-wrap text-corpo leading-snug ${
+            item.feito ? "text-slate-500 line-through" : "text-slate-700"
           }`}
         >
           {item.texto}
         </p>
 
         {item.tipo === "DECIDIDO" && (item.valeDesde || item.porque) ? (
-          <p className="text-[11px] text-slate-500">
+          <p className="text-micro text-slate-500">
             {[item.valeDesde ? `vale desde ${escrito(item.valeDesde)}` : null, item.porque ? `por quê: ${item.porque}` : null]
               .filter(Boolean)
               .join(" · ")}
@@ -630,7 +630,7 @@ function LinhaDoItem({
         ) : null}
 
         {prazo ? (
-          <p className="flex flex-wrap gap-x-2 text-[11px]">
+          <p className="flex flex-wrap gap-x-2 text-micro">
             <span className="text-slate-600">{item.responsavel || "sem responsável"}</span>
             <span className={PRAZO[prazo].cor}>{PRAZO[prazo].texto(item.prazo)}</span>
           </p>
@@ -680,13 +680,13 @@ function ParteDaAta({
     <div className="border-b border-slate-100 py-2.5 last:border-b-0">
       <div className="flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${parte.cor}`} />
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-800">{parte.rotulo}</h3>
-        <span className="text-[11px] tabular-nums text-slate-400">{itens.length}</span>
-        <span className="text-[11px] text-slate-400">· {parte.dica}</span>
+        <h3 className="text-micro font-semibold uppercase tracking-wider text-slate-800">{parte.rotulo}</h3>
+        <span className="text-micro tabular-nums text-slate-500">{itens.length}</span>
+        <span className="text-micro text-slate-500">· {parte.dica}</span>
         <button
           type="button"
           onClick={() => setRegistrando((v) => !v)}
-          className="ml-auto text-slate-400 transition hover:text-brand-700"
+          className="ml-auto text-slate-500 transition hover:text-brand-700"
           aria-label={registrando ? "Fechar" : `Registrar ${parte.rotulo.toLowerCase()}`}
         >
           {registrando ? <X size={15} /> : <Plus size={15} />}
@@ -704,7 +704,7 @@ function ParteDaAta({
         ) : null}
 
         {itens.length === 0 && !registrando ? (
-          <p className="mt-1 text-[12px] text-slate-400">Nada registrado.</p>
+          <p className="mt-1 text-mini text-slate-500">Nada registrado.</p>
         ) : (
           <ul className="mt-1 space-y-0.5">
             {itens.map((i) => (
@@ -723,7 +723,7 @@ function CabecalhoDaParte({ titulo, dica }: { titulo: string; dica: string }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-2 border-b border-slate-300 pb-1">
       <h2 className="text-lg font-semibold text-slate-900">{titulo}</h2>
-      <span className="text-[10px] uppercase tracking-wider text-slate-400">{dica}</span>
+      <span className="text-micro uppercase tracking-wider text-slate-500">{dica}</span>
     </div>
   );
 }
@@ -801,12 +801,12 @@ export default function MeetingRecord({
       </div>
 
       {emPreparacao && turma ? (
-        <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[12px] text-sky-800">
+        <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-mini text-sky-800">
           Treinamento programado, ainda sem dia. Já dá para convocar e preparar a pauta; ao marcar o dia (no alto, à
           direita) ele vai para a agenda e para a aba Reuniões.
         </p>
       ) : emPreparacao ? (
-        <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[12px] text-sky-800">
+        <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-mini text-sky-800">
           Em preparação no plano. Tudo o que escrever aqui (pauta, participantes, apresentação) segue junto quando o
           encontro for para a agenda e, lá, para reunião; só então ele aparece na aba Reuniões.
         </p>
@@ -831,7 +831,7 @@ export default function MeetingRecord({
                   campo?.focus();
                   campo?.select();
                 }}
-                className="no-print inline-flex shrink-0 items-center gap-1 self-center rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700"
+                className="no-print inline-flex shrink-0 items-center gap-1 self-center rounded-md border border-slate-200 px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700"
               >
                 <Pencil size={11} /> Editar nome
               </button>
@@ -839,7 +839,7 @@ export default function MeetingRecord({
                 <span className="shrink-0 text-xl font-semibold tracking-tight text-brand-700">{reuniao.setor}</span>
               ) : null}
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-micro text-slate-500">
               {[
                 reuniao.codigo,
                 produto?.nome,
@@ -883,7 +883,7 @@ export default function MeetingRecord({
                     avisarSeErro(await arquivarReuniao(reuniao.id, reuniao.situacao !== "ARQUIVADA")),
                   )
                 }
-                className="text-[11px] text-slate-400 transition hover:text-slate-700"
+                className="text-micro text-slate-500 transition hover:text-slate-700"
               >
                 {reuniao.situacao === "ARQUIVADA" ? "Desarquivar" : "Arquivar"}
               </button>
@@ -904,7 +904,7 @@ export default function MeetingRecord({
                   else router.push(`/empresas/${companyId}/${origem}`);
                 });
               }}
-              className="inline-flex items-center gap-1 text-[11px] text-slate-400 transition hover:text-red-600"
+              className="inline-flex items-center gap-1 text-micro text-slate-500 transition hover:text-red-600"
             >
               <Trash2 size={12} /> Excluir
             </button>
@@ -958,7 +958,7 @@ export default function MeetingRecord({
                       type="button"
                       title={u.nome}
                       onClick={() => !ativa && escolher("unidade", u.id)}
-                      className={`max-w-[8rem] truncate rounded-md border px-2 py-0.5 text-[11px] font-medium transition ${
+                      className={`max-w-[8rem] truncate rounded-md border px-2 py-0.5 text-micro font-medium transition ${
                         ativa ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-600 hover:border-brand-300"
                       }`}
                     >
@@ -1012,7 +1012,7 @@ export default function MeetingRecord({
           linhas={Math.min(30, Math.max(4, reuniao.pauta.split("\n").length + 1))}
           placeholder="O que vai ser conversado."
           mostrarSituacao
-          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] leading-relaxed text-slate-700 outline-none transition focus:border-brand-400"
+          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-corpo leading-relaxed text-slate-700 outline-none transition focus:border-brand-400"
         />
       </section>
 

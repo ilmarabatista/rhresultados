@@ -194,7 +194,7 @@ function FormularioDeMeta({
             <div key={l.letra} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-2">
               <span
                 className={`mt-6 flex h-7 w-7 items-center justify-center rounded-md text-sm font-bold ${
-                  ok ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-400"
+                  ok ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500"
                 }`}
                 title={ok ? "ok" : "falta"}
               >
@@ -221,7 +221,7 @@ function FormularioDeMeta({
         <FormError message={state.error} />
         <div className="flex items-center justify-end gap-2">
           {!Object.values(smart).every(Boolean) ? (
-            <span className="mr-auto text-[11px] text-amber-700">Dá para salvar e completar depois.</span>
+            <span className="mr-auto text-micro text-amber-700">Dá para salvar e completar depois.</span>
           ) : null}
           <button type="button" onClick={onClose} className={botaoClaro}>
             Cancelar
@@ -271,7 +271,7 @@ function FormularioDeAcao({
         <Input name="responsavel" defaultValue={acao?.responsavel ?? ""} placeholder="Responsável (pessoa, líder, RH)" />
         <Input name="dueDate" type="date" defaultValue={acao?.dueDate || meta.prazo} aria-label="Prazo da ação" />
       </div>
-      <p className="text-[11px] text-slate-400">{DICA_DA_ACAO[treinamento ? "FORMAL" : tipo]}</p>
+      <p className="text-micro text-slate-500">{DICA_DA_ACAO[treinamento ? "FORMAL" : tipo]}</p>
       {treinamentos.length > 0 ? (
         <Select name="treinamentoId" value={treinamento} onChange={(e) => setTreinamento(e.target.value)}>
           <option value="">Sem treinamento do catálogo</option>
@@ -283,7 +283,7 @@ function FormularioDeAcao({
         </Select>
       ) : null}
       {treinamento ? (
-        <p className="text-[11px] text-slate-500">
+        <p className="text-micro text-slate-500">
           A ação se cumpre sozinha quando a pessoa estiver presente numa turma realizada deste treinamento.
         </p>
       ) : null}
@@ -325,7 +325,7 @@ function ComoFoi({ acao, aberto }: { acao: AcaoDaTela; aberto: boolean }) {
         type="button"
         disabled={!aberto}
         onClick={() => setEditando(true)}
-        className={`block text-left text-[11px] ${acao.observacao ? "text-slate-600" : "text-slate-400 hover:text-brand-700"}`}
+        className={`block text-left text-micro ${acao.observacao ? "text-slate-600" : "text-slate-500 hover:text-brand-700"}`}
       >
         {acao.observacao ? `Como foi: ${acao.observacao}` : "+ como foi"}
       </button>
@@ -345,7 +345,7 @@ function ComoFoi({ acao, aberto }: { acao: AcaoDaTela; aberto: boolean }) {
         }
       }}
       placeholder="O que foi feito, o que faltou, o que se aprendeu"
-      className="mt-1 w-full rounded-md border border-brand-300 px-2 py-1 text-[12px] outline-none"
+      className="mt-1 w-full rounded-md border border-brand-300 px-2 py-1 text-mini outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
     />
   );
 }
@@ -381,7 +381,7 @@ function Acoes({
   return (
     <div className={pending ? "opacity-60" : ""}>
       {acoes.length === 0 ? (
-        <p className="text-xs text-slate-400">Nenhuma ação ainda. Toda meta precisa de pelo menos uma.</p>
+        <p className="text-xs text-slate-500">Nenhuma ação ainda. Toda meta precisa de pelo menos uma.</p>
       ) : (
         <ul className="space-y-1">
           {acoes.map((a) => {
@@ -409,13 +409,13 @@ function Acoes({
                   {quanto === 100 ? <Check size={11} strokeWidth={3} /> : null}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className={`text-[13px] leading-snug ${quanto === 100 ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                  <p className={`text-corpo leading-snug ${quanto === 100 ? "text-slate-500 line-through" : "text-slate-700"}`}>
                     {a.title}
                   </p>
-                  <p className="flex flex-wrap items-center gap-x-2 text-[11px]">
+                  <p className="flex flex-wrap items-center gap-x-2 text-micro">
                     <span className="text-slate-600">{a.responsavel || "sem responsável"}</span>
                     <span className={PRAZO_DA_ACAO[situacao].cor}>{PRAZO_DA_ACAO[situacao].texto(a.prazo)}</span>
-                    <span className="text-slate-400">{ROTULO_DA_ACAO[lerTipoDeAcao(a.tipo)]}</span>
+                    <span className="text-slate-500">{ROTULO_DA_ACAO[lerTipoDeAcao(a.tipo)]}</span>
                     {a.treinamentoNome ? (
                       <span className={a.feitoNaTurma ? "text-emerald-700" : "text-slate-500"}>
                         {a.feitoNaTurma ? `feito na turma de ${a.feitoNaTurma}` : `treinamento: ${a.treinamentoNome}`}
@@ -439,8 +439,8 @@ function Acoes({
                         disabled={travada}
                         title={ROTULO_DO_QUANTO[q]}
                         onClick={() => marcar(a, q)}
-                        className={`w-9 border-l border-slate-200 py-0.5 text-[10px] tabular-nums transition first:border-l-0 ${
-                          quanto === q ? `${COR_DO_QUANTO[q]} font-semibold` : "bg-white text-slate-400 hover:bg-slate-100"
+                        className={`w-9 border-l border-slate-200 py-0.5 text-micro tabular-nums transition first:border-l-0 ${
+                          quanto === q ? `${COR_DO_QUANTO[q]} font-semibold` : "bg-white text-slate-500 hover:bg-slate-100"
                         }`}
                       >
                         {q}%
@@ -521,8 +521,8 @@ function CartaoDaMeta({
                 <span
                   key={l.letra}
                   title={`${l.nome}: ${smart[l.letra] ? "ok" : "falta"}`}
-                  className={`flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold ${
-                    smart[l.letra] ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-400"
+                  className={`flex h-4 w-4 items-center justify-center rounded text-micro font-bold ${
+                    smart[l.letra] ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500"
                   }`}
                 >
                   {l.letra}
@@ -531,7 +531,7 @@ function CartaoDaMeta({
             </span>
           </div>
           <h4 className="mt-1 text-sm font-semibold leading-snug text-slate-900">{meta.titulo}</h4>
-          <dl className="mt-1.5 grid gap-x-4 gap-y-1 text-[12px] leading-snug sm:grid-cols-2">
+          <dl className="mt-1.5 grid gap-x-4 gap-y-1 text-mini leading-snug sm:grid-cols-2">
             {[
               ["Como medir", meta.indicador],
               ["Apoio e recursos", meta.recursos],
@@ -539,7 +539,7 @@ function CartaoDaMeta({
               ["Prazo", meta.prazoTexto],
             ].map(([rotulo, valor]) => (
               <div key={rotulo}>
-                <dt className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{rotulo}</dt>
+                <dt className="text-micro font-medium uppercase tracking-wider text-slate-500">{rotulo}</dt>
                 <dd className={valor ? "text-slate-600" : "text-amber-700"}>{valor || "a definir"}</dd>
               </div>
             ))}
@@ -550,10 +550,10 @@ function CartaoDaMeta({
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-brand-600" style={{ width: `${progresso}%` }} />
           </div>
-          <span className="mt-0.5 block text-[10px] text-slate-400">meta, na última conversa</span>
-          {execucao != null ? <span className="block text-[10px] text-slate-500">ações: {execucao}% feito</span> : null}
+          <span className="mt-0.5 block text-micro text-slate-500">meta, na última conversa</span>
+          {execucao != null ? <span className="block text-micro text-slate-500">ações: {execucao}% feito</span> : null}
           {aberto ? (
-            <div className="mt-2 flex justify-end gap-1.5 text-slate-400">
+            <div className="mt-2 flex justify-end gap-1.5 text-slate-500">
               <button type="button" onClick={onEditar} className="hover:text-brand-700" aria-label="Editar meta">
                 <Pencil size={13} />
               </button>
@@ -690,7 +690,7 @@ export default function PdiPlano({
               <div className="min-w-0">
                 <h3 className="text-base font-semibold text-slate-900">{plano.title}</h3>
                 {plano.objective ? <p className="mt-0.5 text-sm text-slate-600">{plano.objective}</p> : null}
-                <p className="mt-1 text-[11px] text-slate-400">
+                <p className="mt-1 text-micro text-slate-500">
                   {plano.periodo ?? `criado em ${plano.criadoEm}`}
                   {plano.status !== "EM_ANDAMENTO" ? ` · ${plano.status === "CONCLUIDO" ? "concluído" : "cancelado"}` : ""}
                 </p>
@@ -725,7 +725,7 @@ export default function PdiPlano({
                     if (await confirmar(`Excluir o PDI "${plano.title}", com metas, ações e conversas? Não há como desfazer.`))
                       startTransition(async () => void (await excluirPlano(plano.id)));
                   }}
-                  className="text-slate-400 hover:text-red-600"
+                  className="text-slate-500 hover:text-red-600"
                   aria-label="Excluir plano"
                 >
                   <Trash2 size={15} />
@@ -735,7 +735,7 @@ export default function PdiPlano({
 
             <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
               <div>
-                <div className="flex items-baseline justify-between text-[11px] text-slate-500">
+                <div className="flex items-baseline justify-between text-micro text-slate-500">
                   <span>Progresso do plano</span>
                   <span className="tabular-nums">{progresso ?? 0}%</span>
                 </div>
@@ -745,7 +745,7 @@ export default function PdiPlano({
               </div>
               {todasAcoes.length > 0 ? (
                 <div>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-micro text-slate-500">
                     Ações: prática {dist.PRATICA}% · troca {dist.TROCA}% · formal {dist.FORMAL}%
                   </span>
                   <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-white">
@@ -758,7 +758,7 @@ export default function PdiPlano({
             </div>
             {plano.balanco && !aberto ? (
               <p className="mt-3 whitespace-pre-wrap rounded-md bg-white px-3 py-2 text-sm text-slate-600">
-                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Balanço</span>
+                <span className="mr-1 text-micro font-semibold uppercase tracking-wider text-slate-500">Balanço</span>
                 {plano.balanco}
               </p>
             ) : null}
@@ -796,10 +796,10 @@ export default function PdiPlano({
 
           {plano.acoesSoltas.length > 0 ? (
             <div className="rounded-lg border border-slate-200 p-3">
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Ações sem meta</h4>
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Ações sem meta</h4>
               <ul className="space-y-1">
                 {plano.acoesSoltas.map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 text-[13px] text-slate-700">
+                  <li key={a.id} className="flex items-center gap-2 text-corpo text-slate-700">
                     <input
                       type="checkbox"
                       defaultChecked={a.done}
@@ -807,7 +807,7 @@ export default function PdiPlano({
                       onChange={(e) => startTransition(async () => void (await marcarAcao(a.id, e.target.checked ? 100 : 0)))}
                       className="h-4 w-4 accent-brand-600"
                     />
-                    <span className={a.done ? "text-slate-400 line-through" : ""}>{a.title}</span>
+                    <span className={a.done ? "text-slate-500 line-through" : ""}>{a.title}</span>
                   </li>
                 ))}
               </ul>

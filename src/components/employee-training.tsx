@@ -83,10 +83,10 @@ function Integracao({ employeeId, etapas }: { employeeId: string; etapas: EtapaD
             >
               {e.feito ? <Check size={11} /> : null}
             </button>
-            <span className={`flex-1 text-sm ${e.feito ? "text-slate-400 line-through" : "text-slate-700"}`}>
+            <span className={`flex-1 text-sm ${e.feito ? "text-slate-500 line-through" : "text-slate-700"}`}>
               {e.texto}
             </span>
-            {e.feitoEm ? <span className="text-[11px] text-slate-400">{e.feitoEm}</span> : null}
+            {e.feitoEm ? <span className="text-micro text-slate-500">{e.feitoEm}</span> : null}
             <button
               type="button"
               onClick={async () => {
@@ -173,9 +173,9 @@ export default function EmployeeTraining({
           ) : null}
         </div>
 
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Falta fazer</p>
+        <p className="mb-1 text-micro font-semibold uppercase tracking-wider text-slate-500">Falta fazer</p>
         {!temCargo ? (
-          <p className="mb-3 text-sm text-slate-400">Sem cargo no cadastro: a matriz não tem o que pedir.</p>
+          <p className="mb-3 text-sm text-slate-500">Sem cargo no cadastro: a matriz não tem o que pedir.</p>
         ) : pendentes.length === 0 ? (
           <p className="mb-3 text-sm text-emerald-700">Em dia com a matriz do cargo.</p>
         ) : (
@@ -184,16 +184,16 @@ export default function EmployeeTraining({
               <li key={p.nome} className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
                 <span className="text-slate-700">{p.nome}</span>
-                <span className="text-[11px] text-slate-400">{p.categoria}</span>
+                <span className="text-micro text-slate-500">{p.categoria}</span>
                 {p.turma ? (
                   <Link
                     href={`/empresas/${companyId}/reunioes/${p.turma.reuniaoId}`}
-                    className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 hover:bg-sky-100"
+                    className="rounded bg-sky-50 px-1.5 py-0.5 text-micro font-medium text-sky-700 hover:bg-sky-100"
                   >
                     convocado · {p.turma.quando}
                   </Link>
                 ) : (
-                  <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                  <span className="rounded bg-orange-50 px-1.5 py-0.5 text-micro font-medium text-orange-700">
                     sem turma
                   </span>
                 )}
@@ -202,13 +202,13 @@ export default function EmployeeTraining({
           </ul>
         )}
 
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Histórico</p>
+        <p className="mb-1 text-micro font-semibold uppercase tracking-wider text-slate-500">Histórico</p>
         {feitos.length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum treinamento realizado ainda.</p>
+          <p className="text-sm text-slate-500">Nenhum treinamento realizado ainda.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-[11px] text-slate-400">
+              <thead className="text-micro text-slate-500">
                 <tr>
                   <th className="py-1 pr-3 font-medium">Treinamento</th>
                   <th className="py-1 pr-3 font-medium">Categoria</th>

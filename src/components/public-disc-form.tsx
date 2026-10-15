@@ -114,7 +114,7 @@ export default function PublicDiscForm({ token }: { token: string }) {
 
       <div className="flex flex-col items-end">
         <Enviar faltam={faltam} />
-        <p className="mt-2 text-xs text-slate-400">O envio é definitivo: o link aceita uma resposta só.</p>
+        <p className="mt-2 text-xs text-slate-500">O envio é definitivo: o link aceita uma resposta só.</p>
       </div>
     </form>
   );

@@ -87,14 +87,14 @@ export default function PublicCustomTestForm({
                       className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
                     />
                     <span>
-                      <strong className="mr-1 text-slate-400">{String.fromCharCode(65 + j)})</strong>
+                      <strong className="mr-1 text-slate-500">{String.fromCharCode(65 + j)})</strong>
                       {a}
                     </span>
                   </label>
                 ) : (
                   <div key={j} className="flex flex-col gap-1.5 rounded-md bg-slate-50 px-2.5 py-2 sm:flex-row sm:items-center sm:gap-3">
                     <p className="flex-1 text-sm leading-snug text-slate-700">
-                      <strong className="mr-1 text-slate-400">{String.fromCharCode(65 + j)})</strong>
+                      <strong className="mr-1 text-slate-500">{String.fromCharCode(65 + j)})</strong>
                       {a}
                     </p>
                     <div className="flex shrink-0 gap-1" role="radiogroup" aria-label={`Questão ${i + 1}, alternativa ${String.fromCharCode(65 + j)}`}>
@@ -130,7 +130,7 @@ export default function PublicCustomTestForm({
 
       <div className="flex flex-col items-end">
         <Enviar faltam={faltam} />
-        <p className="mt-2 text-xs text-slate-400">O envio é definitivo: o link aceita uma resposta só.</p>
+        <p className="mt-2 text-xs text-slate-500">O envio é definitivo: o link aceita uma resposta só.</p>
       </div>
     </form>
   );

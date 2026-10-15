@@ -21,7 +21,7 @@ export default async function AppLayout({
         user={{ name: session.name, role: session.role }}
         companies={companies}
       />
-      <div className="min-h-screen bg-[#f4f7fa]">{children}</div>
+      <div className="min-h-screen bg-fundo">{children}</div>
     </div>
   );
 }

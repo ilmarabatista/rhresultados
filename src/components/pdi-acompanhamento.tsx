@@ -100,12 +100,12 @@ function ProximaConversa({
               if (r.error) avisar(r.error);
             })
           }
-          className="text-xs text-slate-400 hover:text-red-600"
+          className="text-xs text-slate-500 hover:text-red-600"
         >
           desmarcar
         </button>
       ) : null}
-      <span className="text-[11px] text-slate-400">Fica na agenda da empresa como “PDI: conversa com…”.</span>
+      <span className="text-micro text-slate-500">Fica na agenda da empresa como “PDI: conversa com…”.</span>
     </div>
   );
 }
@@ -174,10 +174,10 @@ function NovaConversa({
           <p className="text-sm font-medium text-slate-700">Onde cada meta está</p>
           {progressos.map((p, i) => (
             <div key={p.metaId} className="rounded-md bg-white p-2.5">
-              <p className="text-[13px] font-medium text-slate-800">
+              <p className="text-corpo font-medium text-slate-800">
                 {p.titulo}
                 {p.execucao != null ? (
-                  <span className="ml-2 text-[11px] font-normal text-slate-400">ações: {p.execucao}% feito</span>
+                  <span className="ml-2 text-micro font-normal text-slate-500">ações: {p.execucao}% feito</span>
                 ) : null}
               </p>
               <div className="mt-1.5 grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_3rem_10rem]">
@@ -209,7 +209,7 @@ function NovaConversa({
                 value={p.comentario}
                 onChange={(e) => muda(i, { comentario: e.target.value })}
                 placeholder="Comentário sobre esta meta (opcional)"
-                className="mt-1.5 w-full rounded-md border border-slate-200 px-2 py-1 text-[12px]"
+                className="mt-1.5 w-full rounded-md border border-slate-200 px-2 py-1 text-mini"
               />
             </div>
           ))}
@@ -226,7 +226,7 @@ function NovaConversa({
         <Field label="Hora">
           <Input name="proximaHora" type="time" defaultValue="09:00" />
         </Field>
-        <span className="pb-2 text-[11px] text-slate-400">Vai para a agenda. Deixe vazio para não marcar.</span>
+        <span className="pb-2 text-micro text-slate-500">Vai para a agenda. Deixe vazio para não marcar.</span>
       </div>
       <FormError message={state.error} />
       <div className="flex justify-end gap-2">
@@ -290,7 +290,7 @@ export default function PdiAcompanhamento({
       </div>
 
       {!planId ? (
-        <p className="text-sm text-slate-400">O acompanhamento começa quando o plano existe.</p>
+        <p className="text-sm text-slate-500">O acompanhamento começa quando o plano existe.</p>
       ) : (
         <div className="space-y-3">
           {aberto ? <ProximaConversa planId={planId} dia={proximaDia} hora={proximaHora} situacao={situacao} /> : null}
@@ -319,7 +319,7 @@ export default function PdiAcompanhamento({
                   <div className="rounded-lg border border-slate-200 p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-slate-800">{c.data}</span>
-                      {c.autor ? <span className="text-[11px] text-slate-400">por {c.autor}</span> : null}
+                      {c.autor ? <span className="text-micro text-slate-500">por {c.autor}</span> : null}
                       <button
                         type="button"
                         onClick={async () => {
@@ -338,10 +338,10 @@ export default function PdiAcompanhamento({
                         {c.progressos.map((p, i) => {
                           const s = lerStatusDaMeta(p.status);
                           return (
-                            <li key={i} className="grid grid-cols-[minmax(0,1fr)_5rem_auto] items-center gap-2 text-[12px]">
+                            <li key={i} className="grid grid-cols-[minmax(0,1fr)_5rem_auto] items-center gap-2 text-mini">
                               <span className="truncate text-slate-600" title={p.metaTitulo}>
                                 {p.metaTitulo}
-                                {p.comentario ? <span className="text-slate-400"> — {p.comentario}</span> : null}
+                                {p.comentario ? <span className="text-slate-500"> — {p.comentario}</span> : null}
                               </span>
                               <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                                 <div className="h-full rounded-full bg-brand-600" style={{ width: `${p.progresso}%` }} />
@@ -356,7 +356,7 @@ export default function PdiAcompanhamento({
                       </ul>
                     ) : null}
                     {c.combinados ? (
-                      <p className="mt-2 whitespace-pre-wrap rounded-md bg-amber-50/70 px-2.5 py-1.5 text-[12px] text-amber-900">
+                      <p className="mt-2 whitespace-pre-wrap rounded-md bg-amber-50/70 px-2.5 py-1.5 text-mini text-amber-900">
                         <span className="mr-1 font-semibold">Combinados:</span>
                         {c.combinados}
                       </p>

@@ -91,7 +91,7 @@ export function Numeros({
           key={n.rotulo}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2"
         >
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          <p className="text-micro font-medium uppercase tracking-wider text-slate-500">
             {n.rotulo}
           </p>
           <p
@@ -102,7 +102,7 @@ export function Numeros({
             {n.valor}
           </p>
           {n.detalhe ? (
-            <p className="mt-0.5 text-[11px] leading-snug text-slate-400">
+            <p className="mt-0.5 text-micro leading-snug text-slate-500">
               {n.detalhe}
             </p>
           ) : null}
@@ -139,7 +139,7 @@ export function Aviso({
       className={`rounded-lg border border-transparent border-l-4 px-3 py-1.5 ${TOM_DO_AVISO[tom]}`}
     >
       {rotulo ? (
-        <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
+        <p className="text-micro font-semibold uppercase tracking-wider opacity-70">
           {rotulo}
         </p>
       ) : null}
@@ -168,7 +168,7 @@ export function Filtros({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {rotulo ? (
-        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+        <span className="text-micro font-medium uppercase tracking-wider text-slate-500">
           {rotulo}
         </span>
       ) : null}
@@ -186,7 +186,7 @@ export function Filtros({
           {f.rotulo}
           {f.contagem !== undefined ? (
             <span
-              className={`tabular-nums ${f.ativo ? "text-white/70" : "text-slate-400"}`}
+              className={`tabular-nums ${f.ativo ? "text-white/70" : "text-slate-500"}`}
             >
               {f.contagem}
             </span>
@@ -257,11 +257,11 @@ export function Tabela({
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-900 px-3 py-1.5">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-white">
+        <h3 className="text-micro font-semibold uppercase tracking-wider text-white">
           {titulo}
         </h3>
         {direita ? (
-          <span className="text-[11px] font-medium uppercase tracking-wider text-brand-200">
+          <span className="text-micro font-medium uppercase tracking-wider text-brand-200">
             {direita}
           </span>
         ) : null}
@@ -294,7 +294,7 @@ export function Etiqueta({
 
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cores[tom]}`}
+      className={`rounded px-1.5 py-0.5 text-micro font-medium ${cores[tom]}`}
     >
       {children}
     </span>

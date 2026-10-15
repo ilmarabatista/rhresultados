@@ -81,24 +81,24 @@ export default async function TestesPage({
         >
           <div className="flex items-center gap-2.5 border-b border-slate-100 px-3 py-2">
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium text-slate-800">Perfil comportamental (DISC)</p>
-              <p className="text-[11px] text-slate-400">26 questões · gabarito da consultoria · já vem pronto no sistema</p>
+              <p className="text-corpo font-medium text-slate-800">Perfil comportamental (DISC)</p>
+              <p className="text-micro text-slate-500">26 questões · gabarito da consultoria · já vem pronto no sistema</p>
             </div>
             <Etiqueta tom="azul">do sistema</Etiqueta>
           </div>
           {cadastrados.map((t) => (
             <div key={t.id} className="flex items-center gap-2.5 border-b border-slate-100 px-3 py-2 last:border-b-0 even:bg-slate-50/60">
               <div className="min-w-0 flex-1">
-                <Link href={`/testes/cadastro/${t.id}`} className="text-[13px] font-medium text-slate-800 hover:text-brand-700">
+                <Link href={`/testes/cadastro/${t.id}`} className="text-corpo font-medium text-slate-800 hover:text-brand-700">
                   {t.name}
                 </Link>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-micro text-slate-500">
                   {Array.isArray(t.questions) ? t.questions.length : 0} questões ·{" "}
                   {t.mode === "NOTAS" ? "numerar as alternativas" : "escolher uma alternativa"} · enviado {t._count.testeEnviados} vez(es)
                 </p>
               </div>
               <Etiqueta tom={t.active ? "bom" : "neutro"}>{t.active ? "ativo" : "desativado"}</Etiqueta>
-              <Link href={`/testes/cadastro/${t.id}`} className="text-[11px] text-brand-700 hover:text-brand-900">
+              <Link href={`/testes/cadastro/${t.id}`} className="text-micro text-brand-700 hover:text-brand-900">
                 editar ›
               </Link>
             </div>
@@ -123,8 +123,8 @@ export default async function TestesPage({
           />
 
           <form method="get" className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Empresa</span>
-            <select name="empresa" defaultValue={empresa ?? ""} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm">
+            <span className="text-micro font-medium uppercase tracking-wider text-slate-500">Empresa</span>
+            <select name="empresa" aria-label="Empresa" defaultValue={empresa ?? ""} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm">
               <option value="">Todas</option>
               {empresas.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -156,12 +156,12 @@ export default async function TestesPage({
                   <div key={e.id} className="flex flex-wrap items-center gap-2.5 border-b border-slate-100 px-3 py-2 last:border-b-0 even:bg-slate-50/60">
                     <span aria-hidden className={`h-4 w-1 shrink-0 rounded-full ${respondido ? "bg-emerald-500" : "bg-amber-400"}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] text-slate-800">
+                      <p className="text-corpo text-slate-800">
                         <span className="font-medium">{e.pessoa}</span>
-                        <span className="text-slate-400"> · {e.nomeDoTeste}</span>
-                        {e.company ? <span className="text-slate-400"> · {e.company.name}</span> : null}
+                        <span className="text-slate-500"> · {e.nomeDoTeste}</span>
+                        {e.company ? <span className="text-slate-500"> · {e.company.name}</span> : null}
                       </p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-micro text-slate-500">
                         enviado {formatMoment(e.enviadoEm)}
                         {respondido && e.respondidoEm ? ` · respondido ${formatMoment(e.respondidoEm)}` : ""}
                         {resumo ? <span className="text-brand-700"> · {resumo}</span> : null}
@@ -169,7 +169,7 @@ export default async function TestesPage({
                     </div>
                     <Etiqueta tom={respondido ? "bom" : "atencao"}>{respondido ? "respondido" : "aguardando"}</Etiqueta>
                     {respondido ? (
-                      <Link href={`/testes/resultado/${e.id}`} className="text-[11px] font-medium text-brand-700 hover:text-brand-900">
+                      <Link href={`/testes/resultado/${e.id}`} className="text-micro font-medium text-brand-700 hover:text-brand-900">
                         ver resultado ›
                       </Link>
                     ) : null}

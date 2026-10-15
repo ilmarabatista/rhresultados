@@ -60,7 +60,7 @@ export default function EmployeeForm({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700"
+            className="text-slate-500 transition hover:text-slate-700"
             aria-label="Fechar"
           >
             ✕

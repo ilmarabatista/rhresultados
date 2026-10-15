@@ -73,7 +73,7 @@ export type EtapaNaTela = {
 export type FunilNaTela = { id: string; nome: string; agora: number; passaram: number; pararam: number }[];
 
 const botao =
-  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
+  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
 
 const TOM_DA_PENDENCIA: Record<Pendencia, "atencao" | "ruim"> = {
   ESPERANDO_RESPOSTA: "atencao",
@@ -106,9 +106,9 @@ function TestesDoCandidato({
 
   return (
     <div className="space-y-1 rounded-md bg-slate-50 p-1.5">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Testes</p>
+      <p className="text-micro font-medium uppercase tracking-wider text-slate-500">Testes</p>
       {c.testes.map((t) => (
-        <div key={t.id} className="flex flex-wrap items-center gap-1 text-[11px] text-slate-600">
+        <div key={t.id} className="flex flex-wrap items-center gap-1 text-micro text-slate-600">
           <span className="min-w-0 flex-1 truncate">{t.nome}</span>
           {t.respondido ? (
             <Link href={`/testes/resultado/${t.id}`} className="text-emerald-700 hover:underline">
@@ -148,7 +148,7 @@ function TestesDoCandidato({
             value={teste}
             onChange={(e) => setTeste(e.target.value)}
             aria-label="Teste para enviar"
-            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-600 outline-none focus:border-brand-400"
+            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-micro text-slate-600 outline-none focus:border-brand-400"
           >
             {disponiveis.map((t) => (
               <option key={t.id} value={t.id}>
@@ -234,8 +234,8 @@ function Candidato({
     <div className="rounded-md border border-slate-200 bg-white p-2">
       <div className="flex items-start justify-between gap-2">
         <button type="button" className="text-left" onClick={() => setAberto((v) => !v)}>
-          <p className="text-[13px] font-medium text-slate-800">{c.nome}</p>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-corpo font-medium text-slate-800">{c.nome}</p>
+          <p className="text-micro text-slate-500">
             {c.telefone ?? c.email ?? "sem contato"}
             {!encerrado && c.diasNaEtapa > 0 ? ` · há ${c.diasNaEtapa} dia(s) aqui` : ""}
           </p>
@@ -256,7 +256,7 @@ function Candidato({
           ) : null}
           {encerrado ? (
             <>
-              {c.ultimoMotivo ? <p className="text-[11px] text-slate-600">Motivo: {c.ultimoMotivo}</p> : null}
+              {c.ultimoMotivo ? <p className="text-micro text-slate-600">Motivo: {c.ultimoMotivo}</p> : null}
               <div className="flex flex-wrap gap-1">
                 <a className={botao} href={linkDoWhatsapp(c.telefone, recado)} target="_blank" rel="noreferrer">
                   <MessageCircle className="h-3 w-3" /> Dar retorno
@@ -279,13 +279,13 @@ function Candidato({
                 }}
                 rows={2}
                 placeholder="O que aconteceu nesta etapa."
-                className="w-full rounded-md border border-slate-200 px-2 py-1 text-[12px] text-slate-700 outline-none focus:border-brand-400"
+                className="w-full rounded-md border border-slate-200 px-2 py-1 text-mini text-slate-700 outline-none focus:border-brand-400"
               />
               <input
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
                 placeholder="Motivo (obrigatório para reprovar)"
-                className="w-full rounded-md border border-slate-200 px-2 py-1 text-[12px] text-slate-700 outline-none focus:border-brand-400"
+                className="w-full rounded-md border border-slate-200 px-2 py-1 text-mini text-slate-700 outline-none focus:border-brand-400"
               />
               <div className="flex flex-wrap gap-1">
                 <button type="button" className={botao} onClick={() => rodar(() => aprovarCandidato(c.id, motivo))}>
@@ -308,7 +308,7 @@ function Candidato({
                 <select
                   value={c.etapaId ?? ""}
                   onChange={(e) => rodar(() => moverCandidato(c.id, e.target.value))}
-                  className="w-full rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 outline-none focus:border-brand-400"
+                  className="w-full rounded-md border border-slate-200 px-2 py-1 text-micro text-slate-600 outline-none focus:border-brand-400"
                 >
                   {etapas.map((e) => (
                     <option key={e.id} value={e.id}>
@@ -369,12 +369,12 @@ function ColunaDaEtapa({
                 setEditando(false);
               }}
               autoFocus
-              className="w-full rounded-md border border-slate-200 px-2 py-1 text-[12px] outline-none focus:border-brand-400"
+              className="w-full rounded-md border border-slate-200 px-2 py-1 text-mini outline-none focus:border-brand-400"
             />
             <select
               value={etapa.tipo}
               onChange={(e) => rodar(() => editarEtapa(etapa.id, { tipo: e.target.value }))}
-              className="w-full rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 outline-none focus:border-brand-400"
+              className="w-full rounded-md border border-slate-200 px-2 py-1 text-micro text-slate-600 outline-none focus:border-brand-400"
             >
               {TIPOS_DE_ETAPA.map((t) => (
                 <option key={t.valor} value={t.valor}>
@@ -389,15 +389,15 @@ function ColunaDaEtapa({
                 rodar(() => editarEtapa(etapa.id, { prazoDias: Number.isFinite(n) && n > 0 ? Math.floor(n) : null }));
               }}
               placeholder="Prazo em dias"
-              className="w-full rounded-md border border-slate-200 px-2 py-1 text-[11px] outline-none focus:border-brand-400"
+              className="w-full rounded-md border border-slate-200 px-2 py-1 text-micro outline-none focus:border-brand-400"
             />
           </div>
         ) : (
           <button type="button" className="text-left" onClick={() => setEditando(true)} title="Clique para editar a etapa">
-            <p className="text-[12px] font-semibold text-slate-700">
-              {etapa.nome} <span className="font-normal text-slate-400">({candidatos.length})</span>
+            <p className="text-mini font-semibold text-slate-700">
+              {etapa.nome} <span className="font-normal text-slate-500">({candidatos.length})</span>
             </p>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-micro text-slate-500">
               {rotuloDoTipo(etapa.tipo)}
               {etapa.prazoDias ? ` · até ${etapa.prazoDias} dias` : ""}
             </p>
@@ -422,7 +422,7 @@ function ColunaDaEtapa({
 
       <div className="space-y-1.5">
         {candidatos.length === 0 ? (
-          <p className="px-1 py-2 text-[11px] text-slate-400">Ninguém aqui.</p>
+          <p className="px-1 py-2 text-micro text-slate-500">Ninguém aqui.</p>
         ) : (
           candidatos.map((c) => (
             <Candidato
@@ -597,7 +597,7 @@ export default function SelecaoQuadro({
         <Painel titulo="Funil da vaga" descricao="Quantos passaram por cada etapa e quantos pararam nela.">
           <div className="space-y-1">
             {funil.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 text-[12px] text-slate-600">
+              <div key={f.id} className="flex items-center gap-2 text-mini text-slate-600">
                 <span className="w-44 shrink-0 truncate">{f.nome}</span>
                 <span className="w-24 shrink-0 text-slate-500">{f.passaram} passaram</span>
                 <span className="w-24 shrink-0 text-slate-500">{f.pararam} pararam</span>

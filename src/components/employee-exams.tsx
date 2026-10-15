@@ -254,13 +254,13 @@ function LinhaExame({
           <span
             className={`text-sm font-medium ${
               exame.status === "CANCELADO"
-                ? "text-slate-400 line-through"
+                ? "text-slate-500 line-through"
                 : "text-slate-900"
             }`}
           >
             {rotuloDoTipo(exame.tipo)}
           </span>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-500">
             {[
               rotuloDoStatus(exame.status),
               exame.agendadoEm && !exame.realizadoEm
@@ -292,7 +292,7 @@ function LinhaExame({
         <div className="flex shrink-0 items-center gap-2">
           {exame.resultado ? (
             <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+              className={`rounded px-1.5 py-0.5 text-micro font-medium ${
                 RESULTADO_ESTILO[exame.resultado] ?? ""
               }`}
             >
@@ -302,7 +302,7 @@ function LinhaExame({
 
           {prazo ? (
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              className={`rounded-full px-2 py-0.5 text-micro font-medium ${
                 nivel === "ATRASADO"
                   ? "bg-red-50 text-red-700"
                   : nivel === "HOJE" || nivel === "PROXIMO"
@@ -319,7 +319,7 @@ function LinhaExame({
               type="button"
               disabled={pending}
               onClick={() => setAberto(aberto === "agendar" ? null : "agendar")}
-              className="flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-[11px] text-slate-700 transition hover:bg-slate-50"
+              className="flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-micro text-slate-700 transition hover:bg-slate-50"
             >
               <CalendarCheck size={12} />
               {exame.status === "AGENDADO" ? "remarcar" : "agendar"}
@@ -541,7 +541,7 @@ export default function EmployeeExams({
         </ul>
       )}
 
-      <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+      <p className="mt-3 text-micro leading-relaxed text-slate-500">
         O arquivo do ASO ainda não é guardado aqui — o sistema não tem
         armazenamento de arquivos. O que fica registrado é o que o documento
         diz: tipo, data, resultado e validade.

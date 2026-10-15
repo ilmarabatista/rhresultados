@@ -79,7 +79,7 @@ const STATUS_ESTILO: Record<string, string> = {
   APROVADO: "bg-brand-50 text-brand-700",
   GRAVADO: "bg-sky-50 text-sky-700",
   PUBLICADO: "bg-emerald-50 text-emerald-700",
-  DESCARTADO: "bg-slate-50 text-slate-400",
+  DESCARTADO: "bg-slate-50 text-slate-500",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -105,7 +105,7 @@ function TextoParaGravar({
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <span className="text-micro font-semibold uppercase tracking-wide text-slate-500">
           Roteiro completo
         </span>
 
@@ -115,7 +115,7 @@ function TextoParaGravar({
               key={m}
               type="button"
               onClick={() => setModo(m)}
-              className={`px-2 py-0.5 text-[11px] transition ${
+              className={`px-2 py-0.5 text-micro transition ${
                 modo === m
                   ? "bg-brand-600 font-medium text-white"
                   : "text-slate-500 hover:text-slate-800"
@@ -137,7 +137,7 @@ function TextoParaGravar({
               setCopiado(false);
             }
           }}
-          className="ml-auto flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-[11px] text-slate-700 transition hover:bg-slate-50"
+          className="ml-auto flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-micro text-slate-700 transition hover:bg-slate-50"
         >
           <Copy size={11} />
           {copiado ? "copiado" : "copiar"}
@@ -201,29 +201,29 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
             <h3
               className={`text-sm font-semibold ${
                 roteiro.status === "DESCARTADO"
-                  ? "text-slate-400 line-through"
+                  ? "text-slate-500 line-through"
                   : "text-slate-900"
               }`}
             >
               {roteiro.tema}
             </h3>
             <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+              className={`rounded px-1.5 py-0.5 text-micro font-medium ${
                 STATUS_ESTILO[roteiro.status] ?? STATUS_ESTILO.RASCUNHO
               }`}
             >
               {STATUS_LABEL[roteiro.status] ?? roteiro.status}
             </span>
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-micro text-slate-500">
               {roteiro.framework}
             </span>
             {roteiro.angulo ? (
-              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-micro font-medium text-amber-800">
                 {roteiro.angulo}
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-500">
             {[
               rotuloDoObjetivo(roteiro.objetivo),
               roteiro.plataforma,
@@ -271,7 +271,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
         <>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <div className="rounded-lg bg-slate-50 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">
+              <p className="text-micro uppercase tracking-wide text-slate-500">
                 Copy thesis
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
@@ -279,7 +279,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
               </p>
             </div>
             <div className="rounded-lg bg-slate-50 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">
+              <p className="text-micro uppercase tracking-wide text-slate-500">
                 Ideia dominante
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
@@ -294,7 +294,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
 
             {blocos.map((b, i) => (
               <label key={b.rotulo} className="block">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                <span className="mb-1 block text-micro font-semibold uppercase tracking-wide text-slate-500">
                   {b.rotulo}
                 </span>
                 <Textarea
@@ -308,7 +308,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span
-                className={`text-[11px] ${
+                className={`text-micro ${
                   linguagem.simples ? "text-emerald-700" : "text-amber-700"
                 }`}
                 title={
@@ -328,7 +328,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
               </span>
 
               <span
-                className={`text-[11px] ${
+                className={`text-micro ${
                   tamanho.ajuste === "OK"
                     ? "text-emerald-700"
                     : "text-amber-700"
@@ -348,7 +348,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
                 </SubmitButton>
               ) : null}
               {state.ok && !mudou ? (
-                <span className="text-[11px] text-emerald-700">
+                <span className="text-micro text-emerald-700">
                   Edição gravada. O sistema aprendeu com ela.
                 </span>
               ) : null}
@@ -394,7 +394,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
 
           {roteiro.ganchosAlternativos.length > 0 ? (
             <div className="mt-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              <p className="text-micro font-semibold uppercase tracking-wide text-slate-500">
                 Ganchos alternativos, para testar
               </p>
               <ul className="mt-1 space-y-1">
@@ -415,7 +415,7 @@ function CardRoteiro({ roteiro }: { roteiro: RoteiroItem }) {
       <FormError message={erro} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-        <span className="text-[11px] text-slate-400">{roteiro.quando}</span>
+        <span className="text-micro text-slate-500">{roteiro.quando}</span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {roteiro.status === "RASCUNHO" || roteiro.status === "DESCARTADO" ? (
             <button
@@ -480,7 +480,7 @@ function Aprendizado({ exemplos }: { exemplos: ExemploItem[] }) {
       title="O que o sistema aprendeu com você"
       description="Cada bloco que você reescreve vira exemplo nas próximas gerações. Não é treino de modelo: é a IA vendo como você escreve antes de escrever."
     >
-      <p className="mb-3 text-[11px] text-slate-500">
+      <p className="mb-3 text-micro text-slate-500">
         {ativos} de {exemplos.length} correções em uso. As seis mais recentes
         entram no prompt — exemplo demais afoga o método.
       </p>
@@ -494,10 +494,10 @@ function Aprendizado({ exemplos }: { exemplos: ExemploItem[] }) {
             }`}
           >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-micro font-medium text-slate-600">
                 {e.bloco}
               </span>
-              <span className="text-[11px] text-slate-400">{e.quando}</span>
+              <span className="text-micro text-slate-500">{e.quando}</span>
               <button
                 type="button"
                 disabled={pending}
@@ -506,7 +506,7 @@ function Aprendizado({ exemplos }: { exemplos: ExemploItem[] }) {
                     void esquecerExemplo(e.id, !e.usar);
                   })
                 }
-                className="ml-auto text-[11px] text-slate-500 transition hover:text-slate-800"
+                className="ml-auto text-micro text-slate-500 transition hover:text-slate-800"
               >
                 {e.usar ? "esquecer este" : "usar de novo"}
               </button>
@@ -514,7 +514,7 @@ function Aprendizado({ exemplos }: { exemplos: ExemploItem[] }) {
 
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">
+                <p className="text-micro uppercase tracking-wide text-slate-500">
                   a IA escreveu
                 </p>
                 <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
@@ -522,7 +522,7 @@ function Aprendizado({ exemplos }: { exemplos: ExemploItem[] }) {
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-brand-600">
+                <p className="text-micro uppercase tracking-wide text-brand-600">
                   você reescreveu
                 </p>
                 <p className="mt-0.5 text-xs leading-relaxed text-slate-700">

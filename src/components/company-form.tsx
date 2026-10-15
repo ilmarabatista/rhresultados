@@ -259,6 +259,7 @@ export default function CompanyForm({
       <Section title="Observações">
         <Textarea
           name="notes"
+          aria-label="Observações"
           rows={3}
           defaultValue={d.notes ?? ""}
           placeholder="Qualquer informação relevante sobre o cliente."

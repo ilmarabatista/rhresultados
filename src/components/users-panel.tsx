@@ -96,7 +96,7 @@ function UserCard({
               {user.name}
             </p>
             <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+              className={`rounded px-1.5 py-0.5 text-micro font-medium ${
                 user.role === "ADMIN"
                   ? "bg-brand-50 text-brand-700"
                   : "bg-slate-100 text-slate-600"
@@ -105,7 +105,7 @@ function UserCard({
               {user.role}
             </span>
             {!user.active ? (
-              <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
+              <span className="rounded bg-red-50 px-1.5 py-0.5 text-micro font-medium text-red-700">
                 INATIVO
               </span>
             ) : null}

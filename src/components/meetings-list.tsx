@@ -76,49 +76,49 @@ function LinhaDaReuniao({ r, hoje }: { r: ReuniaoDaLista; hoje: string }) {
         href={r.href}
         className="grid min-w-0 flex-1 grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-x-4 px-3 py-2.5 md:grid-cols-[7.5rem_minmax(0,1fr)_5rem_5rem_2.5rem_9.5rem_7rem]"
       >
-      <span className="text-[13px] font-semibold tabular-nums text-slate-800">
-        {r.dia ?? <span className="font-normal text-slate-400">a agendar</span>}
-        {r.hora ? <span className="ml-1.5 text-[11px] font-normal text-slate-400">{r.hora}</span> : null}
+      <span className="text-corpo font-semibold tabular-nums text-slate-800">
+        {r.dia ?? <span className="font-normal text-slate-500">a agendar</span>}
+        {r.hora ? <span className="ml-1.5 text-micro font-normal text-slate-500">{r.hora}</span> : null}
       </span>
 
       <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium text-slate-800">{r.titulo}</span>
-        <span className="block truncate text-[11px] text-slate-400">
+        <span className="block truncate text-corpo font-medium text-slate-800">{r.titulo}</span>
+        <span className="block truncate text-micro text-slate-500">
           {[r.codigo, r.plano ? `plano ${r.plano}` : null, r.setor, r.tipo, r.local].filter(Boolean).join(" · ")}
         </span>
       </span>
 
       <span className="hidden md:block">
         {r.produto ? (
-          <span className="inline-block max-w-full truncate rounded border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+          <span className="inline-block max-w-full truncate rounded border border-slate-300 px-1.5 py-0.5 text-micro font-medium text-slate-600">
             {r.produto}
           </span>
         ) : (
-          <span className="text-[11px] text-slate-300">—</span>
+          <span className="text-micro text-slate-300">—</span>
         )}
       </span>
 
-      <span className="hidden truncate text-[11px] text-slate-500 md:block" title={r.unidade}>
+      <span className="hidden truncate text-micro text-slate-500 md:block" title={r.unidade}>
         {r.unidade}
       </span>
 
-      <span className="hidden items-center gap-1 text-[11px] text-slate-500 md:flex">
+      <span className="hidden items-center gap-1 text-micro text-slate-500 md:flex">
         <Users size={12} /> {r.participantes}
       </span>
 
-      <span className={`group/comb relative hidden text-[11px] md:block ${r.combinadosAbertos > 0 ? "cursor-help text-amber-700" : "text-slate-400"}`}>
+      <span className={`group/comb relative hidden text-micro md:block ${r.combinadosAbertos > 0 ? "cursor-help text-amber-700" : "text-slate-500"}`}>
         {r.combinadosAbertos === 0
           ? "nenhum combinado aberto"
           : `${r.combinadosAbertos} combinado${r.combinadosAbertos === 1 ? "" : "s"} aberto${r.combinadosAbertos === 1 ? "" : "s"}`}
         {r.combinados.length > 0 ? (
           // Ao passar o mouse: os combinados em aberto, sem precisar abrir a reunião.
           <span className="pointer-events-none absolute right-0 top-full z-30 mt-1 hidden w-80 rounded-lg border border-slate-200 bg-white p-2.5 text-left shadow-xl group-hover/comb:block">
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-amber-700">Combinados em aberto</span>
+            <span className="mb-1 block text-micro font-semibold uppercase tracking-wider text-amber-700">Combinados em aberto</span>
             {r.combinados.map((c, i) => (
               <span key={i} className="block border-t border-slate-100 py-1 first-of-type:border-t-0">
-                <span className="block whitespace-normal text-[12px] leading-snug text-slate-800">{c.texto}</span>
+                <span className="block whitespace-normal text-mini leading-snug text-slate-800">{c.texto}</span>
                 {c.responsavel || c.prazo ? (
-                  <span className="block text-[10px] text-slate-500">
+                  <span className="block text-micro text-slate-500">
                     {[c.responsavel, c.prazo ? `até ${c.prazo}` : null].filter(Boolean).join(" · ")}
                   </span>
                 ) : null}
@@ -128,7 +128,7 @@ function LinhaDaReuniao({ r, hoje }: { r: ReuniaoDaLista; hoje: string }) {
         ) : null}
       </span>
 
-      <span className="hidden items-center gap-1.5 text-[11px] md:flex">
+      <span className="hidden items-center gap-1.5 text-micro md:flex">
         <span
           className={`h-1.5 w-1.5 rounded-full ${
             semMarcar
@@ -171,9 +171,9 @@ function Grupo({
 }) {
   return (
     <section>
-      <p className="flex items-center gap-1.5 border-b border-slate-200 px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+      <p className="flex items-center gap-1.5 border-b border-slate-200 px-3 pb-1.5 text-micro font-semibold uppercase tracking-wider text-slate-500">
         <CalendarClock size={12} /> {titulo}
-        <span className="font-normal normal-case tracking-normal text-slate-400">{detalhe}</span>
+        <span className="font-normal normal-case tracking-normal text-slate-500">{detalhe}</span>
       </p>
       <div className="bg-white">{children}</div>
     </section>
@@ -185,7 +185,7 @@ function VerMais({ quantas, onClick }: { quantas: number; onClick: () => void })
     <button
       type="button"
       onClick={onClick}
-      className="w-full px-3 py-1.5 text-left text-[11px] text-brand-700 transition hover:bg-brand-50/40"
+      className="w-full px-3 py-1.5 text-left text-micro text-brand-700 transition hover:bg-brand-50/40"
     >
       ver mais {quantas}
     </button>
@@ -264,12 +264,12 @@ export default function MeetingsList({
       ) : (
         <>
           <label className="flex items-center gap-2 border-b border-slate-200 pb-1.5">
-            <Search size={13} className="text-slate-400" />
+            <Search size={13} className="text-slate-500" />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por título, plano, setor, tipo ou REU-…"
-              className="w-full bg-transparent text-[13px] outline-none placeholder:text-slate-400"
+              className="w-full bg-transparent text-corpo outline-none focus-visible:ring-2 focus-visible:ring-brand-300 placeholder:text-slate-400"
             />
           </label>
 
@@ -318,7 +318,7 @@ export default function MeetingsList({
               <button
                 type="button"
                 onClick={() => setVerArquivadas(true)}
-                className="px-3 text-[11px] text-slate-400 transition hover:text-brand-700"
+                className="px-3 text-micro text-slate-500 transition hover:text-brand-700"
               >
                 ver {arquivadas.length} arquivada{arquivadas.length === 1 ? "" : "s"}
               </button>

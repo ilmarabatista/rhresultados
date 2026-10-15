@@ -77,7 +77,7 @@ function FormularioRegistro({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700"
+            className="text-slate-500 transition hover:text-slate-700"
             aria-label="Fechar"
           >
             ✕
@@ -182,7 +182,7 @@ function CardRegistro({ registro }: { registro: RegistroItem }) {
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+            className={`rounded px-1.5 py-0.5 text-micro font-medium ${
               tipo?.cor ?? "bg-slate-100 text-slate-600"
             }`}
           >
@@ -191,11 +191,11 @@ function CardRegistro({ registro }: { registro: RegistroItem }) {
           </span>
 
           {registro.justified === true ? (
-            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-micro font-medium text-emerald-700">
               justificada
             </span>
           ) : registro.justified === false ? (
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-micro font-medium text-slate-600">
               não justificada
             </span>
           ) : null}
@@ -227,7 +227,7 @@ function CardRegistro({ registro }: { registro: RegistroItem }) {
         </p>
 
         {registro.autor ? (
-          <p className="mt-1.5 text-[11px] text-slate-400">
+          <p className="mt-1.5 text-micro text-slate-500">
             registrado por {registro.autor}
           </p>
         ) : null}
@@ -285,7 +285,7 @@ export default function EmployeeDetail({
                 .filter(Boolean)
                 .join(" · ") || "Sem cargo informado"}
             </p>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-slate-500">
               {[
                 pessoa.status,
                 pessoa.admissao ? `admitido em ${pessoa.admissao}` : null,
@@ -319,7 +319,7 @@ export default function EmployeeDetail({
             {contagem.map((t) => (
               <span
                 key={t.key}
-                className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${t.cor}`}
+                className={`rounded-full px-2.5 py-0.5 text-micro font-medium ${t.cor}`}
               >
                 {t.n} {t.label.toLowerCase()}
                 {t.n > 1 && t.key !== "OBSERVACAO" ? "s" : ""}

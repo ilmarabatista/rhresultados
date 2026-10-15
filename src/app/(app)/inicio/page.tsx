@@ -236,13 +236,13 @@ export default async function InicioPage() {
                   href={`/empresas/${v.companyId}/agenda`}
                   className="block rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5 transition hover:border-brand-200 hover:bg-brand-50/40"
                 >
-                  <span className="block text-[11px] text-slate-400">
+                  <span className="block text-micro text-slate-500">
                     {formatFullDate(v.date)} · {faixaHoraria(v.startTime, v.endTime)}
                   </span>
                   <span className="mt-0.5 block truncate text-sm font-medium text-slate-800">
                     {v.company.name}
                   </span>
-                  <span className="block truncate text-[11px] text-slate-400">
+                  <span className="block truncate text-micro text-slate-500">
                     {v.subject ?? v.service?.name ?? "sem assunto definido"}
                   </span>
                 </Link>
@@ -273,7 +273,7 @@ export default async function InicioPage() {
                       className="block text-sm text-slate-700 transition hover:text-brand-700"
                     >
                       {c.text}
-                      <span className="mt-0.5 block text-[11px] text-slate-400">
+                      <span className="mt-0.5 block text-micro text-slate-500">
                         {c.meeting.company.name} · {codigoDaReuniao(c.meeting.number)}
                         {c.responsible ? ` · ${c.responsible}` : ""}
                         {c.dueDate ? (
@@ -309,7 +309,7 @@ export default async function InicioPage() {
                       className="block text-sm text-slate-700 transition hover:text-brand-700"
                     >
                       {e.tema}
-                      <span className="mt-0.5 block text-[11px] text-slate-400">
+                      <span className="mt-0.5 block text-micro text-slate-500">
                         {e.plano.company.name} · plano {e.plano.titulo}
                         {e.branch ? ` · ${e.branch.name}` : ""}
                         {e.data ? (
@@ -352,9 +352,9 @@ export default async function InicioPage() {
                     className="min-w-0 flex-1 text-sm text-slate-700 transition hover:text-brand-700"
                   >
                     {v.titulo}
-                    <span className="text-slate-400"> · {v.empresa?.nome ?? "sem empresa"}</span>
+                    <span className="text-slate-500"> · {v.empresa?.nome ?? "sem empresa"}</span>
                   </Link>
-                  <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                  <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-micro font-medium text-amber-700">
                     {v.pendentes} pendente{v.pendentes > 1 ? "s" : ""}
                   </span>
                 </li>
@@ -388,20 +388,20 @@ export default async function InicioPage() {
                       className="min-w-0 flex-1 text-sm text-slate-800 transition hover:text-brand-700"
                     >
                       <span className="font-medium">{rotuloDoTipo(e.tipo)}</span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-500">
                         {" — "}
                         {e.nome}
                       </span>
-                      <span className="text-slate-400"> · {e.empresa}</span>
+                      <span className="text-slate-500"> · {e.empresa}</span>
                     </Link>
 
-                    <span className="shrink-0 text-[11px] text-slate-400">
+                    <span className="shrink-0 text-micro text-slate-500">
                       {e.status === "AGENDADO" ? "agendado" : "a agendar"}
                     </span>
 
                     {prazo ? (
                       <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-micro font-medium ${
                           nivel === "ATRASADO"
                             ? "bg-red-50 text-red-700"
                             : nivel === "HOJE" || nivel === "PROXIMO"
@@ -427,15 +427,15 @@ export default async function InicioPage() {
           <ul className="scroll-thin max-h-[420px] divide-y divide-slate-50 overflow-y-auto pr-1">
             {atividades.map((a) => (
               <li key={a.id} className="flex items-baseline gap-3 py-2">
-                <span className="w-20 shrink-0 text-[11px] text-slate-400">{quando(a.createdAt)}</span>
+                <span className="w-20 shrink-0 text-micro text-slate-500">{quando(a.createdAt)}</span>
                 <Link
                   href={`/empresas/${a.companyId}/dados`}
                   className="min-w-0 flex-1 text-sm text-slate-700 transition hover:text-brand-700"
                 >
-                  <span className="text-slate-400">{a.company.name} · </span>
+                  <span className="text-slate-500">{a.company.name} · </span>
                   {a.description}
                 </Link>
-                <span className="hidden shrink-0 text-[11px] text-slate-400 sm:block">
+                <span className="hidden shrink-0 text-micro text-slate-500 sm:block">
                   {a.user?.name ?? "Sistema"}
                 </span>
               </li>

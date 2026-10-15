@@ -89,7 +89,7 @@ function Celula({
       }}
       inputMode="decimal"
       aria-label={`${MESES_CURTOS[mes - 1]} — valor`}
-      className={`w-full rounded px-1 py-0.5 text-right text-[11px] tabular-nums outline-none transition ${
+      className={`w-full rounded px-1 py-0.5 text-right text-micro tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-brand-300 transition ${
         erro
           ? "bg-red-50 text-red-700 ring-1 ring-red-300"
           : pending
@@ -122,8 +122,8 @@ function NomeEditavel({ linha }: { linha: LinhaDespesa }) {
         if (e.key === "Escape") setNome(linha.nome);
       }}
       aria-label={`Nome da linha ${linha.nome}`}
-      className={`w-full rounded px-1 py-0.5 text-left text-[11px] outline-none transition hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-brand-300 ${
-        linha.ativa ? "text-slate-700" : "text-slate-400 line-through"
+      className={`w-full rounded px-1 py-0.5 text-left text-micro outline-none transition hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-brand-300 ${
+        linha.ativa ? "text-slate-700" : "text-slate-500 line-through"
       }`}
     />
   );
@@ -194,7 +194,7 @@ export default function ExpenseGrid({
         <button
           type="button"
           onClick={() => setNovo((v) => !v)}
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] text-slate-700 transition hover:bg-slate-50"
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-micro text-slate-700 transition hover:bg-slate-50"
         >
           <Plus size={12} /> linha
         </button>
@@ -203,13 +203,13 @@ export default function ExpenseGrid({
           <button
             type="button"
             onClick={() => setMostrarArquivadas((v) => !v)}
-            className="text-[11px] text-slate-500 transition hover:text-slate-800"
+            className="text-micro text-slate-500 transition hover:text-slate-800"
           >
             {mostrarArquivadas ? "esconder" : "mostrar"} {arquivadas} arquivada(s)
           </button>
         ) : null}
 
-        <span className="ml-auto text-[11px] text-slate-400">
+        <span className="ml-auto text-micro text-slate-500">
           digite na célula e saia do campo para gravar · vazio apaga
         </span>
       </div>
@@ -223,9 +223,9 @@ export default function ExpenseGrid({
       ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full min-w-[1240px] border-collapse text-[11px]">
+        <table className="w-full min-w-[1240px] border-collapse text-micro">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/80 text-[10px] uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-slate-200 bg-slate-50/80 text-micro uppercase tracking-wide text-slate-500">
               <th className="sticky left-0 z-10 w-64 min-w-64 bg-slate-50/95 px-2 py-1.5 text-left font-medium">
                 Linha
               </th>
@@ -252,11 +252,11 @@ export default function ExpenseGrid({
                   <tr className="bg-slate-50/60">
                     <td
                       colSpan={16}
-                      className="sticky left-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="sticky left-0 px-2 py-1 text-micro font-semibold uppercase tracking-wide text-slate-500"
                     >
                       {g.label}
                       {totalGrupo > 0 ? (
-                        <span className="ml-2 font-normal normal-case text-slate-400">
+                        <span className="ml-2 font-normal normal-case text-slate-500">
                           {formatarValor(totalGrupo)} no ano
                         </span>
                       ) : null}
@@ -288,7 +288,7 @@ export default function ExpenseGrid({
                   <tr className="bg-slate-50/60">
                     <td
                       colSpan={16}
-                      className="sticky left-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                      className="sticky left-0 px-2 py-1 text-micro font-semibold uppercase tracking-wide text-slate-500"
                     >
                       {rotuloDoGrupo(null)}
                     </td>
@@ -322,7 +322,7 @@ export default function ExpenseGrid({
               <td className="px-2 py-1.5 text-right tabular-nums">
                 {totalGeral ? formatarValor(totalGeral) : "—"}
               </td>
-              <td className="px-2 py-1.5 text-right text-slate-400">100%</td>
+              <td className="px-2 py-1.5 text-right text-slate-500">100%</td>
               <td />
             </tr>
           </tfoot>
@@ -370,7 +370,7 @@ function LinhaDaTabela({
       <td className="px-2 py-0.5 text-right tabular-nums font-medium text-slate-700">
         {total ? formatarValor(total) : "—"}
       </td>
-      <td className="px-2 py-0.5 text-right tabular-nums text-slate-400">
+      <td className="px-2 py-0.5 text-right tabular-nums text-slate-500">
         {percentual ? `${percentual}%` : "—"}
       </td>
 
@@ -436,7 +436,7 @@ function FormularioLinha({ aoFechar }: { aoFechar: () => void }) {
       className="mb-2 flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3"
     >
       <label className="block">
-        <span className="mb-1 block text-[10px] uppercase tracking-wide text-slate-500">
+        <span className="mb-1 block text-micro uppercase tracking-wide text-slate-500">
           Nome da linha
         </span>
         <input
@@ -448,7 +448,7 @@ function FormularioLinha({ aoFechar }: { aoFechar: () => void }) {
       </label>
 
       <label className="block">
-        <span className="mb-1 block text-[10px] uppercase tracking-wide text-slate-500">
+        <span className="mb-1 block text-micro uppercase tracking-wide text-slate-500">
           Grupo
         </span>
         <select

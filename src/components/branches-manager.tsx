@@ -67,7 +67,7 @@ function FormularioUnidade({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700"
+            className="text-slate-500 transition hover:text-slate-700"
             aria-label="Fechar"
           >
             ✕
@@ -241,7 +241,7 @@ function CardUnidade({
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium text-slate-800">{unidade.name}</h3>
         {unidade.isHeadquarters ? (
-          <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">
+          <span className="rounded bg-brand-100 px-1.5 py-0.5 text-micro font-medium text-brand-700">
             MATRIZ
           </span>
         ) : null}
@@ -251,7 +251,7 @@ function CardUnidade({
         {enderecoDe(unidade)}
       </p>
       {unidade.employeeCount || unidade.phone ? (
-        <p className="mt-1 text-[11px] text-slate-400">
+        <p className="mt-1 text-micro text-slate-500">
           {[
             unidade.employeeCount && `${unidade.employeeCount} funcionários`,
             unidade.phone,
@@ -271,7 +271,7 @@ function CardUnidade({
                 void setHeadquarters(unidade.id);
               })
             }
-            className="text-[11px] text-slate-500 transition hover:text-brand-700"
+            className="text-micro text-slate-500 transition hover:text-brand-700"
           >
             Tornar matriz
           </button>
@@ -280,7 +280,7 @@ function CardUnidade({
           type="button"
           onClick={onEditar}
           disabled={pending}
-          className="text-[11px] text-brand-600 transition hover:text-brand-700"
+          className="text-micro text-brand-600 transition hover:text-brand-700"
         >
           Editar
         </button>
@@ -294,7 +294,7 @@ function CardUnidade({
                 void deleteBranch(unidade.id);
               });
             }}
-            className="ml-auto text-[11px] text-red-500 transition hover:text-red-700"
+            className="ml-auto text-micro text-red-500 transition hover:text-red-700"
           >
             Excluir
           </button>

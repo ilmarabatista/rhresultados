@@ -13,7 +13,7 @@ import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form"
  * participantes, a ata e a apresentação usada.
  */
 
-const rotuloMiudo = "mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500";
+const rotuloMiudo = "mb-1.5 block text-micro font-semibold uppercase tracking-wider text-slate-500";
 
 function Escolha({
   ativo,
@@ -31,7 +31,7 @@ function Escolha({
       type="button"
       onClick={onClick}
       title={title}
-      className={`max-w-[9rem] truncate rounded-md border px-2.5 py-1 text-[12px] font-medium transition ${
+      className={`max-w-[9rem] truncate rounded-md border px-2.5 py-1 text-mini font-medium transition ${
         ativo ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-600 hover:border-brand-300"
       }`}
     >
@@ -79,7 +79,7 @@ export default function NewMeetingDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-nova-reuniao"
-        className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl"
+        className="w-full max-w-lg overflow-hidden rounded-lg bg-white shadow-xl"
       >
         <div className="flex items-center justify-between bg-brand-900 px-4 py-2.5">
           <h2 id="titulo-nova-reuniao" className="text-sm font-semibold text-white">
@@ -120,7 +120,7 @@ export default function NewMeetingDialog({
                   className="w-28"
                 />
               </div>
-              <label className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-600">
+              <label className="mt-1.5 flex items-center gap-1.5 text-micro text-slate-600">
                 <input
                   type="checkbox"
                   name="aAgendar"

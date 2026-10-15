@@ -36,8 +36,8 @@ export type TurmaDaReuniao = {
 };
 
 const campo =
-  "rounded-md border border-slate-300 bg-white px-2 py-1 text-[12px] outline-none transition focus:border-brand-500";
-const rotulo = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
+  "rounded-md border border-slate-300 bg-white px-2 py-1 text-mini outline-none transition focus:border-brand-500";
+const rotulo = "text-micro font-semibold uppercase tracking-wider text-slate-500";
 
 function Campo({
   turmaId,
@@ -100,27 +100,27 @@ export default function TurmaPainel({ companyId, turma }: { companyId: string; t
     <section className={`rounded-lg border border-violet-200 bg-violet-50/40 p-3 ${pending ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
         <GraduationCap size={15} className="text-violet-700" />
-        <span className="text-[13px] font-semibold text-violet-900">Treinamento: {turma.treinamento}</span>
-        <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-medium text-violet-700 ring-1 ring-violet-200">
+        <span className="text-corpo font-semibold text-violet-900">Treinamento: {turma.treinamento}</span>
+        <span className="rounded bg-white px-1.5 py-0.5 text-micro font-medium text-violet-700 ring-1 ring-violet-200">
           {turma.categoria}
         </span>
         <Link
           href={`/empresas/${companyId}/treinamentos`}
-          className="ml-auto text-[11px] text-violet-700 transition hover:text-violet-900"
+          className="ml-auto text-micro text-violet-700 transition hover:text-violet-900"
         >
           Planejamento de treinamentos ›
         </Link>
       </div>
 
       {turma.justificativa ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-amber-50 px-2 py-1.5 text-[12px] text-amber-900">
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-amber-50 px-2 py-1.5 text-mini text-amber-900">
           <span>
             <strong>Não realizado · justificado:</strong> {turma.justificativa}
           </span>
           <button
             type="button"
             onClick={() => startTransition(async () => avisar(await justificarTurma(turma.id, null)))}
-            className="ml-auto text-[11px] text-amber-800 underline hover:text-amber-950"
+            className="ml-auto text-micro text-amber-800 underline hover:text-amber-950"
           >
             voltar a programar
           </button>
@@ -181,7 +181,7 @@ export default function TurmaPainel({ companyId, turma }: { companyId: string; t
         />
       </label>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-mini">
         {turma.faltaConvocar.length > 0 ? (
           <>
             <span className="text-orange-800">
@@ -192,7 +192,7 @@ export default function TurmaPainel({ companyId, turma }: { companyId: string; t
             <button
               type="button"
               onClick={() => startTransition(async () => avisar(await convocarQuemPrecisa(turma.id)))}
-              className="rounded-md bg-violet-700 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-violet-800"
+              className="rounded-md bg-violet-700 px-2 py-1 text-micro font-medium text-white transition hover:bg-violet-800"
             >
               Convocar {turma.faltaConvocar.length === 1 ? "" : "todos "}
             </button>
@@ -207,14 +207,14 @@ export default function TurmaPainel({ companyId, turma }: { companyId: string; t
               const motivo = prompt("Por que este treinamento não vai acontecer?");
               if (motivo && motivo.trim()) startTransition(async () => avisar(await justificarTurma(turma.id, motivo)));
             }}
-            className="ml-auto text-[11px] text-slate-500 transition hover:text-amber-700"
+            className="ml-auto text-micro text-slate-500 transition hover:text-amber-700"
           >
             Não vai acontecer (justificar)
           </button>
         ) : null}
       </div>
       {realizada ? null : (
-        <p className="mt-1.5 text-[11px] text-slate-500">
+        <p className="mt-1.5 text-micro text-slate-500">
           Ao encerrar, quem estiver marcado como presente ganha este treinamento no histórico da ficha.
         </p>
       )}

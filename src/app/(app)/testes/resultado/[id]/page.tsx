@@ -38,7 +38,7 @@ export default async function ResultadoDoTestePage({ params }: { params: Promise
       </div>
 
       <header>
-        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{e.nomeDoTeste}</p>
+        <p className="text-micro font-medium uppercase tracking-wider text-slate-500">{e.nomeDoTeste}</p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">{e.pessoa}</h1>
         <p className="text-xs text-slate-500">
           {[e.company?.name, `enviado ${formatMoment(e.enviadoEm)}`, e.respondidoEm ? `respondido ${formatMoment(e.respondidoEm)}` : "ainda não respondido"]
@@ -58,7 +58,7 @@ export default async function ResultadoDoTestePage({ params }: { params: Promise
           </Painel>
 
           <Painel titulo="Respostas" descricao={e.tipo === "DISC" ? "A nota que a pessoa deu a cada opção: 4 é a que mais tem a ver com ela, 1 a que menos." : undefined}>
-            <ol className="space-y-2.5 text-[12px]">
+            <ol className="space-y-2.5 text-mini">
               {e.tipo === "DISC"
                 ? QUESTOES_DISC.map((q, i) => {
                     const notas = Array.isArray(respostas[i]) ? (respostas[i] as number[]) : [];
@@ -70,11 +70,11 @@ export default async function ResultadoDoTestePage({ params }: { params: Promise
                         <ul className="mt-0.5 grid gap-x-4 sm:grid-cols-2">
                           {q.opcoes.map((o, j) => (
                             <li key={j} className="flex gap-2 text-slate-600">
-                              <span className={`w-5 shrink-0 text-right font-semibold tabular-nums ${notas[j] === 4 ? "text-brand-700" : "text-slate-400"}`}>
+                              <span className={`w-5 shrink-0 text-right font-semibold tabular-nums ${notas[j] === 4 ? "text-brand-700" : "text-slate-500"}`}>
                                 {notas[j] ?? "—"}
                               </span>
                               <span>
-                                {LETRAS[j]}. {o.texto} <span className="text-slate-400">({o.fator})</span>
+                                {LETRAS[j]}. {o.texto} <span className="text-slate-500">({o.fator})</span>
                               </span>
                             </li>
                           ))}
@@ -95,11 +95,11 @@ export default async function ResultadoDoTestePage({ params }: { params: Promise
                             const nota = Array.isArray(r) ? (r as number[])[j] : null;
                             return (
                               <li key={j} className={`flex gap-2 ${escolhida ? "font-medium text-brand-800" : "text-slate-600"}`}>
-                                <span className="w-5 shrink-0 text-right tabular-nums text-slate-400">
+                                <span className="w-5 shrink-0 text-right tabular-nums text-slate-500">
                                   {teste.modo === "NOTAS" ? (nota ?? "—") : escolhida ? "✓" : ""}
                                 </span>
                                 <span>
-                                  {String.fromCharCode(65 + j)}) {o.texto} <span className="text-slate-400">[{o.fator}]</span>
+                                  {String.fromCharCode(65 + j)}) {o.texto} <span className="text-slate-500">[{o.fator}]</span>
                                 </span>
                               </li>
                             );

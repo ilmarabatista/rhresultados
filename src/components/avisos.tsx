@@ -62,6 +62,7 @@ export function Avisos() {
     () => undefined,
   );
   const principal = useRef<HTMLButtonElement>(null);
+  const cancelar = useRef<HTMLButtonElement>(null);
   const antes = useRef<Element | null>(null);
 
   function fechar(ok: boolean) {
@@ -73,7 +74,8 @@ export function Avisos() {
   useEffect(() => {
     if (!atual) return;
     antes.current = document.activeElement;
-    principal.current?.focus();
+    // Numa pergunta o foco fica no Cancelar: um Enter distraído não exclui nada.
+    (cancelar.current ?? principal.current)?.focus();
     function tecla(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -107,6 +109,7 @@ export function Avisos() {
         <div className="mt-5 flex justify-end gap-2">
           {pergunta ? (
             <button
+              ref={cancelar}
               type="button"
               onClick={() => fechar(false)}
               className="min-h-9 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"

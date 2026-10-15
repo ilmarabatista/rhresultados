@@ -144,7 +144,7 @@ export default async function EvolucaoPage({
 
       {/* Cabeçalho do documento: no papel é a capa do relatório do mês. */}
       <header className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Relatório de atividades · RH Resultados</p>
+        <p className="text-micro font-medium uppercase tracking-wider text-slate-500">Relatório de atividades · RH Resultados</p>
         <h2 className="text-base font-semibold text-slate-900">{empresa.name}</h2>
         <p className="text-xs text-slate-500">{mesEscrito(mes)}</p>
       </header>
@@ -180,15 +180,15 @@ export default async function EvolucaoPage({
             return (
               <section key={r.id} className="print-break overflow-hidden rounded-lg border border-slate-200 bg-white">
                 <header className="flex flex-wrap items-baseline justify-between gap-2 bg-brand-900 px-3 py-2">
-                  <h3 className="text-[12px] font-semibold uppercase tracking-wider text-white">{r.title}</h3>
-                  <span className="text-[11px] text-brand-200">
+                  <h3 className="text-mini font-semibold uppercase tracking-wider text-white">{r.title}</h3>
+                  <span className="text-micro text-brand-200">
                     {[formatFullDate(r.date), r.startTime, produto, r.location].filter(Boolean).join(" · ")}
                   </span>
                 </header>
 
                 <div className="space-y-2.5 px-3 py-2.5">
                   {r.participants.length > 0 ? (
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-micro text-slate-500">
                       <span className="font-medium text-slate-600">Participaram:</span>{" "}
                       {r.participants.map((p) => p.name).join(", ")}
                     </p>
@@ -196,17 +196,17 @@ export default async function EvolucaoPage({
 
                   {r.agenda ? (
                     <div>
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pauta</h4>
-                      <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-slate-700">{r.agenda}</p>
+                      <h4 className="text-micro font-semibold uppercase tracking-wider text-slate-500">Pauta</h4>
+                      <p className="whitespace-pre-wrap text-mini leading-relaxed text-slate-700">{r.agenda}</p>
                     </div>
                   ) : null}
 
                   {conversado.length > 0 ? (
                     <div>
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">O que foi conversado</h4>
+                      <h4 className="text-micro font-semibold uppercase tracking-wider text-slate-500">O que foi conversado</h4>
                       <ul className="mt-0.5 space-y-0.5">
                         {conversado.map((i) => (
-                          <li key={i.id} className="text-[12px] leading-relaxed text-slate-700">
+                          <li key={i.id} className="text-mini leading-relaxed text-slate-700">
                             • {i.text}
                           </li>
                         ))}
@@ -216,14 +216,14 @@ export default async function EvolucaoPage({
 
                   {decidido.length > 0 ? (
                     <div>
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Decisões</h4>
+                      <h4 className="text-micro font-semibold uppercase tracking-wider text-slate-500">Decisões</h4>
                       <ul className="mt-0.5 space-y-1">
                         {decidido.map((i) => (
-                          <li key={i.id} className="text-[12px] leading-relaxed text-slate-700">
+                          <li key={i.id} className="text-mini leading-relaxed text-slate-700">
                             • {i.text}
                             {i.reason ? <span className="text-slate-500"> — porque {i.reason}</span> : null}
                             {i.validFrom ? (
-                              <span className="text-[10px] text-slate-400"> (vale desde {formatFullDate(i.validFrom)})</span>
+                              <span className="text-micro text-slate-500"> (vale desde {formatFullDate(i.validFrom)})</span>
                             ) : null}
                           </li>
                         ))}
@@ -233,17 +233,17 @@ export default async function EvolucaoPage({
 
                   {combinadosDaReuniao.length > 0 ? (
                     <div>
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Combinados</h4>
+                      <h4 className="text-micro font-semibold uppercase tracking-wider text-slate-500">Combinados</h4>
                       <ul className="mt-0.5 space-y-0.5">
                         {combinadosDaReuniao.map((c) => (
-                          <li key={c.id} className="flex items-start gap-2 text-[12px] leading-relaxed">
+                          <li key={c.id} className="flex items-start gap-2 text-mini leading-relaxed">
                             {c.done ? (
                               <Check size={13} className="mt-0.5 shrink-0 text-emerald-600" />
                             ) : (
                               <span className="mt-[0.35rem] h-2 w-2 shrink-0 rounded-full border border-amber-500" />
                             )}
                             <span className="min-w-0 flex-1 text-slate-700">{c.text}</span>
-                            <span className="shrink-0 text-[10px] text-slate-400">
+                            <span className="shrink-0 text-micro text-slate-500">
                               {[
                                 c.responsible,
                                 c.done
@@ -263,7 +263,7 @@ export default async function EvolucaoPage({
                     </div>
                   ) : null}
 
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-micro text-slate-500">
                     {codigoDaReuniao(r.number)}
                     {r.plano?.titulo ? ` · ${r.plano.titulo}` : ""}
                   </p>
@@ -276,16 +276,16 @@ export default async function EvolucaoPage({
           {concluidosNoMes.length > 0 ? (
             <section className="print-break overflow-hidden rounded-lg border border-emerald-200 bg-white">
               <header className="bg-emerald-50 px-3 py-2">
-                <h3 className="text-[12px] font-semibold uppercase tracking-wider text-emerald-800">
+                <h3 className="text-mini font-semibold uppercase tracking-wider text-emerald-800">
                   O que foi desenvolvido em {nomeDoMes(mes)}
                 </h3>
               </header>
               <ul className="divide-y divide-slate-100">
                 {concluidosNoMes.map((c) => (
-                  <li key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-[12px]">
+                  <li key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-mini">
                     <Check size={13} className="shrink-0 text-emerald-600" />
                     <span className="min-w-0 flex-1 text-slate-700">{c.text}</span>
-                    <span className="shrink-0 text-[10px] text-slate-400">
+                    <span className="shrink-0 text-micro text-slate-500">
                       {[c.responsible, `combinado em ${formatFullDate(c.meeting.date)}`, c.doneAt ? `concluído em ${formatMoment(c.doneAt)}` : null]
                         .filter(Boolean)
                         .join(" · ")}
@@ -301,19 +301,19 @@ export default async function EvolucaoPage({
           {emDesenvolvimento.length > 0 ? (
             <section className="print-break overflow-hidden rounded-lg border border-amber-200 bg-white">
               <header className="flex flex-wrap items-baseline justify-between gap-2 bg-amber-50 px-3 py-2">
-                <h3 className="text-[12px] font-semibold uppercase tracking-wider text-amber-800">O que está em desenvolvimento</h3>
+                <h3 className="text-mini font-semibold uppercase tracking-wider text-amber-800">O que está em desenvolvimento</h3>
                 {vindosDeAntes.length > 0 ? (
-                  <span className="text-[10px] text-amber-700">{vindosDeAntes.length} vem de reuniões anteriores</span>
+                  <span className="text-micro text-amber-700">{vindosDeAntes.length} vem de reuniões anteriores</span>
                 ) : null}
               </header>
               <ul className="divide-y divide-slate-100">
                 {emDesenvolvimento.map((c) => {
                   const atrasado = Boolean(c.dueDate && c.dueDate < hoje);
                   return (
-                    <li key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-[12px]">
+                    <li key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-mini">
                       <span className="mt-[0.1rem] h-2 w-2 shrink-0 rounded-full border border-amber-500" />
                       <span className="min-w-0 flex-1 text-slate-700">{c.text}</span>
-                      <span className="shrink-0 text-[10px] text-slate-400">
+                      <span className="shrink-0 text-micro text-slate-500">
                         {[c.responsible, `de ${formatFullDate(c.meeting.date)}`].filter(Boolean).join(" · ")}
                       </span>
                       <Etiqueta tom={atrasado ? "ruim" : "atencao"}>

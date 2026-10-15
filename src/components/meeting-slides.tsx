@@ -33,7 +33,7 @@ export default function MeetingSlides({
       {arquivos.map((a) => (
         <span
           key={a.id}
-          className="inline-flex items-center overflow-hidden rounded-md border border-slate-200 bg-white text-[11px] text-slate-700"
+          className="inline-flex items-center overflow-hidden rounded-md border border-slate-200 bg-white text-micro text-slate-700"
         >
           <a
             href={`/api/reunioes/arquivo/${a.id}`}
@@ -44,7 +44,7 @@ export default function MeetingSlides({
           >
             <FileText size={12} />
             <span className="max-w-[16rem] truncate">{a.nome}</span>
-            <span className="text-slate-400">{Math.max(1, Math.round(a.tamanho / 1024))} KB</span>
+            <span className="text-slate-500">{Math.max(1, Math.round(a.tamanho / 1024))} KB</span>
           </a>
           <button
             type="button"
@@ -56,7 +56,7 @@ export default function MeetingSlides({
                 if (r.error) avisar(r.error);
               });
             }}
-            className="border-l border-slate-200 px-1.5 py-1 text-slate-400 transition hover:text-red-600"
+            className="border-l border-slate-200 px-1.5 py-1 text-slate-500 transition hover:text-red-600"
             aria-label={`Tirar ${a.nome}`}
           >
             <X size={11} />
@@ -93,7 +93,7 @@ export default function MeetingSlides({
         type="button"
         disabled={pending}
         onClick={() => escolha.current?.click()}
-        className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-slate-300 px-2.5 py-1 text-[11px] text-slate-500 transition hover:border-brand-400 hover:text-brand-700 disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-slate-300 px-2.5 py-1 text-micro text-slate-500 transition hover:border-brand-400 hover:text-brand-700 disabled:opacity-60"
       >
         <Upload size={12} />
         {pending ? "enviando…" : arquivos.length > 0 ? "anexar outra" : "anexar a apresentação usada"}

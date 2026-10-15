@@ -74,7 +74,7 @@ type Opcao = { id: string; nome: string; ativo?: boolean };
 const EMPRESA = "EMPRESA";
 
 const botao =
-  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
+  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
 
 const STATUS_DO_PLANO: Record<string, { rotulo: string; tom: "bom" | "atencao" | "neutro" | "azul" }> = {
   ATIVO: { rotulo: "em andamento", tom: "azul" },
@@ -165,7 +165,7 @@ function NovoPlano({
 
             <div>
               <p className="mb-1 text-sm font-medium text-slate-700">Onde começa</p>
-              <p className="mb-1.5 text-[11px] text-slate-500">
+              <p className="mb-1.5 text-micro text-slate-500">
                 Escolha uma filial, com a primeira data e o horário. Prepare as pautas nela e depois use “Replicar para outras
                 filiais” no plano.
               </p>
@@ -189,7 +189,7 @@ function NovoPlano({
                       </label>
                       {marcado && periodicidade !== "LIVRE" ? (
                         <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-6">
-                          <label className="text-[11px] text-slate-500">
+                          <label className="text-micro text-slate-500">
                             1º encontro{" "}
                             <input
                               type="date"
@@ -200,12 +200,12 @@ function NovoPlano({
                               className="rounded border border-slate-300 px-1.5 py-0.5 text-xs"
                             />
                           </label>
-                          <label className="text-[11px] text-slate-500">
+                          <label className="text-micro text-slate-500">
                             às{" "}
                             <input type="time" name={`hora-${f.id}`} defaultValue="14:00" required className="rounded border border-slate-300 px-1.5 py-0.5 text-xs" />
                           </label>
                           {datas.length ? (
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-micro text-slate-500">
                               {datas.map((d) => dataCurta(d!)).join(", ")}
                               {lista.length > 4 ? "…" : ""}
                             </span>
@@ -230,7 +230,7 @@ function NovoPlano({
               />
             </Field>
             {lista.length > 0 ? (
-              <p className="mt-1 text-[11px] text-slate-500">
+              <p className="mt-1 text-micro text-slate-500">
                 {lista.length} encontro(s)
               </p>
             ) : null}
@@ -309,7 +309,7 @@ function EditarPlano({ plano, produtos, fechar }: { plano: PlanoNaTela; produtos
       <FormError message={state.error} />
       <div className="flex items-center gap-3">
         <SmallSubmitButton>Salvar</SmallSubmitButton>
-        <button type="button" onClick={fechar} className="text-[11px] text-slate-500">
+        <button type="button" onClick={fechar} className="text-micro text-slate-500">
           cancelar
         </button>
       </div>
@@ -332,15 +332,15 @@ function DataDoEncontro({ e, fechar }: { e: EncontroNaTela; fechar: () => void }
       <input type="date" name="dia" defaultValue={e.dia ?? ""} disabled={aAgendar} className="rounded border border-slate-300 px-1.5 py-0.5 text-xs disabled:bg-slate-100" />
       <input type="time" name="hora" defaultValue={e.hora ?? "14:00"} disabled={aAgendar} className="rounded border border-slate-300 px-1.5 py-0.5 text-xs disabled:bg-slate-100" />
       {e.estado === "PLANEJADO" ? (
-        <label className="flex items-center gap-1 text-[11px] text-slate-500">
+        <label className="flex items-center gap-1 text-micro text-slate-500">
           <input type="checkbox" name="aAgendar" checked={aAgendar} onChange={(ev) => setAAgendar(ev.target.checked)} /> sem data
         </label>
       ) : null}
       <SmallSubmitButton>OK</SmallSubmitButton>
-      <button type="button" onClick={fechar} className="text-[11px] text-slate-500">
+      <button type="button" onClick={fechar} className="text-micro text-slate-500">
         cancelar
       </button>
-      {state.error ? <span className="w-full text-[11px] text-red-600">{state.error}</span> : null}
+      {state.error ? <span className="w-full text-micro text-red-600">{state.error}</span> : null}
     </form>
   );
 }
@@ -399,7 +399,7 @@ function LinhaDoEncontro({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="w-5 shrink-0 text-right text-[11px] tabular-nums text-slate-400">{posicao}.</span>
+          <span className="w-5 shrink-0 text-right text-micro tabular-nums text-slate-500">{posicao}.</span>
           <input
             value={tema}
             onChange={(ev) => setTema(ev.target.value)}
@@ -409,13 +409,13 @@ function LinhaDoEncontro({
             onKeyDown={(ev) => {
               if (ev.key === "Enter") (ev.target as HTMLInputElement).blur();
             }}
-            className={`min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-[13px] outline-none transition hover:border-slate-200 focus:border-brand-400 focus:bg-white ${
+            className={`min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-corpo outline-none transition hover:border-slate-200 focus:border-brand-400 focus:bg-white ${
               realizado ? "text-slate-500" : "text-slate-800"
             }`}
             aria-label="Tema do encontro"
           />
         </div>
-        <div className="ml-6 flex flex-wrap items-center gap-1.5 text-[11px]">
+        <div className="ml-6 flex flex-wrap items-center gap-1.5 text-micro">
           <button type="button" onClick={() => setMudandoData((v) => !v)} className="text-slate-500 hover:text-brand-700" title="Mudar a data">
             {e.dia ? `${dataCurta(e.dia)}${e.hora ? ` às ${e.hora}` : ""}` : "sem data"}
           </button>
@@ -428,7 +428,7 @@ function LinhaDoEncontro({
             <DataDoEncontro e={e} fechar={() => setMudandoData(false)} />
           </div>
         ) : null}
-        {erro ? <p className="ml-6 text-[11px] text-red-600">{erro}</p> : null}
+        {erro ? <p className="ml-6 text-micro text-red-600">{erro}</p> : null}
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5">
@@ -472,7 +472,7 @@ function LinhaDoEncontro({
               <button
                 type="button"
                 disabled={pendente}
-                className="px-1 text-[10px] text-slate-400 hover:text-red-600"
+                className="px-1 text-micro text-slate-500 hover:text-red-600"
                 onClick={async () => {
                   if (await confirmar(`Tirar "${e.tema}" da agenda? Ele continua no plano.`)) rodar(() => tirarDaAgenda(e.id));
                 }}
@@ -482,10 +482,10 @@ function LinhaDoEncontro({
             ) : null}
           </>
         )}
-        <button type="button" disabled={pendente || primeiro} onClick={() => rodar(() => moverEncontro(e.id, "subir"))} className="p-1 text-slate-400 hover:text-brand-700 disabled:opacity-30" aria-label="Subir">
+        <button type="button" disabled={pendente || primeiro} onClick={() => rodar(() => moverEncontro(e.id, "subir"))} className="p-1 text-slate-500 hover:text-brand-700 disabled:opacity-30" aria-label="Subir">
           <ArrowUp size={13} />
         </button>
-        <button type="button" disabled={pendente || ultimo} onClick={() => rodar(() => moverEncontro(e.id, "descer"))} className="p-1 text-slate-400 hover:text-brand-700 disabled:opacity-30" aria-label="Descer">
+        <button type="button" disabled={pendente || ultimo} onClick={() => rodar(() => moverEncontro(e.id, "descer"))} className="p-1 text-slate-500 hover:text-brand-700 disabled:opacity-30" aria-label="Descer">
           <ArrowDown size={13} />
         </button>
         <button
@@ -501,7 +501,7 @@ function LinhaDoEncontro({
               : `Tirar "${e.tema}" do plano?${e.estado === "NA_AGENDA" ? " O compromisso da agenda sai junto." : ""}`;
             if (await confirmar(aviso)) rodar(() => excluirEncontro(e.id));
           }}
-          className="p-1 text-slate-400 hover:text-red-600"
+          className="p-1 text-slate-500 hover:text-red-600"
         >
           <Trash2 size={13} />
         </button>
@@ -522,7 +522,7 @@ function Remarcar({ planoId, local, horario, hoje, fechar }: { planoId: string; 
     <form action={action} className="flex flex-wrap items-end gap-2 border-b border-slate-100 bg-slate-50/60 px-3 py-2">
       <input type="hidden" name="planoId" value={planoId} />
       <input type="hidden" name="filial" value={local.chave} />
-      <p className="w-full text-[11px] text-slate-600">
+      <p className="w-full text-micro text-slate-600">
         Os encontros de {local.nome} que ainda não aconteceram vão ser remarcados em sequência, a partir do dia escolhido. Na agenda e nas
         reuniões, as datas acompanham.
       </p>
@@ -533,10 +533,10 @@ function Remarcar({ planoId, local, horario, hoje, fechar }: { planoId: string; 
         <Input type="time" name="hora" defaultValue={horario ?? "14:00"} required />
       </Field>
       <SmallSubmitButton>Remarcar</SmallSubmitButton>
-      <button type="button" onClick={fechar} className="pb-2 text-[11px] text-slate-500">
+      <button type="button" onClick={fechar} className="pb-2 text-micro text-slate-500">
         cancelar
       </button>
-      {state.error ? <p className="w-full text-[11px] text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="w-full text-micro text-red-600">{state.error}</p> : null}
     </form>
   );
 }
@@ -563,10 +563,10 @@ function NovoEncontro({ planoId, local, fechar }: { planoId: string; local: Loca
         <Input type="time" name="hora" />
       </Field>
       <SmallSubmitButton>Acrescentar</SmallSubmitButton>
-      <button type="button" onClick={fechar} className="pb-2 text-[11px] text-slate-500">
+      <button type="button" onClick={fechar} className="pb-2 text-micro text-slate-500">
         cancelar
       </button>
-      {state.error ? <p className="w-full text-[11px] text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="w-full text-micro text-red-600">{state.error}</p> : null}
     </form>
   );
 }
@@ -582,8 +582,8 @@ function BlocoDoLocal({ companyId, plano, local, hoje }: { companyId: string; pl
   return (
     <div className="border-t border-slate-200">
       <div className="flex flex-wrap items-center gap-2 bg-slate-50 px-3 py-1.5">
-        <p className="text-[12px] font-semibold text-slate-700">{local.nome}</p>
-        <span className="text-[11px] text-slate-500">
+        <p className="text-mini font-semibold text-slate-700">{local.nome}</p>
+        <span className="text-micro text-slate-500">
           {a.realizadas} de {a.total} realizados
         </span>
         <span className="flex-1" />
@@ -606,7 +606,7 @@ function BlocoDoLocal({ companyId, plano, local, hoje }: { companyId: string; pl
           Remarcar
         </button>
       </div>
-      {erro ? <p className="px-3 text-[11px] text-red-600">{erro}</p> : null}
+      {erro ? <p className="px-3 text-micro text-red-600">{erro}</p> : null}
       {modo === "remarcar" ? <Remarcar planoId={plano.id} local={local} horario={plano.horario} hoje={hoje} fechar={fechar} /> : null}
       <ol>
         {local.encontros.map((e, i) => (
@@ -650,13 +650,13 @@ function Replicar({ plano, filiais, hoje, fechar }: { plano: PlanoNaTela; filiai
   return (
     <form action={action} className="space-y-2 rounded-lg border border-brand-200 bg-brand-50/40 p-3">
       <input type="hidden" name="planoId" value={plano.id} />
-      <p className="text-[12px] font-medium text-slate-800">Replicar para outras filiais</p>
-      <p className="text-[11px] text-slate-600">
+      <p className="text-mini font-medium text-slate-800">Replicar para outras filiais</p>
+      <p className="text-micro text-slate-600">
         Copia os temas, na mesma ordem, com a pauta e a apresentação que já foram preparadas. Convocados e ata não vão: são de cada
         filial.
       </p>
       {plano.locais.length > 1 ? (
-        <label className="block text-[11px] text-slate-600">
+        <label className="block text-micro text-slate-600">
           Copiar de{" "}
           <select name="origem" defaultValue={plano.locais[0].chave} className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs">
             {plano.locais.map((l) => (
@@ -670,14 +670,14 @@ function Replicar({ plano, filiais, hoje, fechar }: { plano: PlanoNaTela; filiai
         <input type="hidden" name="origem" value={plano.locais[0]?.chave ?? EMPRESA} />
       )}
       {livres.length === 0 ? (
-        <p className="text-[11px] text-slate-500">Todas as filiais já estão no plano.</p>
+        <p className="text-micro text-slate-500">Todas as filiais já estão no plano.</p>
       ) : (
         <div className="space-y-1.5">
           {livres.map((f) => {
             const marcado = marcados.includes(f.id);
             return (
               <div key={f.id} className={`rounded-md border bg-white px-2.5 py-1.5 ${marcado ? "border-brand-300" : "border-slate-200"}`}>
-                <label className="flex items-center gap-2 text-[13px] text-slate-800">
+                <label className="flex items-center gap-2 text-corpo text-slate-800">
                   <input
                     type="checkbox"
                     name="destino"
@@ -689,7 +689,7 @@ function Replicar({ plano, filiais, hoje, fechar }: { plano: PlanoNaTela; filiai
                   {f.nome}
                 </label>
                 {marcado && !semData ? (
-                  <div className="mt-1 flex flex-wrap items-center gap-2 pl-6 text-[11px] text-slate-500">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 pl-6 text-micro text-slate-500">
                     <label>
                       1º encontro{" "}
                       <input type="date" name={`inicio-${f.id}`} defaultValue={hoje} required className="rounded border border-slate-300 px-1.5 py-0.5 text-xs" />
@@ -708,7 +708,7 @@ function Replicar({ plano, filiais, hoje, fechar }: { plano: PlanoNaTela; filiai
       <FormError message={state.error} />
       <div className="flex items-center gap-3">
         {livres.length > 0 ? <SmallSubmitButton pendingLabel="Replicando…">Replicar</SmallSubmitButton> : null}
-        <button type="button" onClick={fechar} className="text-[11px] text-slate-500">
+        <button type="button" onClick={fechar} className="text-micro text-slate-500">
           cancelar
         </button>
       </div>
@@ -752,17 +752,17 @@ function CartaoDoPlano({
             title={aberto ? "Minimizar o plano" : "Abrir o plano"}
           >
             <div className="flex flex-wrap items-center gap-1.5">
-              {aberto ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
+              {aberto ? <ChevronDown size={15} className="text-slate-500" /> : <ChevronRight size={15} className="text-slate-500" />}
               <h3 className="text-sm font-semibold text-slate-900">{plano.titulo}</h3>
               <Etiqueta tom={status.tom}>{status.rotulo}</Etiqueta>
               {!aberto ? (
-                <span className="text-[11px] text-slate-500">
+                <span className="text-micro text-slate-500">
                   {a.realizadas} de {a.total} realizados
                   {a.atrasadas ? <span className="text-amber-700"> · {a.atrasadas} sem marcar</span> : null}
                 </span>
               ) : null}
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-micro text-slate-500">
               {plano.produto?.nome ?? "sem produto"} · {rotuloDaPeriodicidade(plano.periodicidade)} ·{" "}
               {plano.locais.map((l) => l.nome).join(", ")}
             </p>
@@ -803,11 +803,11 @@ function CartaoDoPlano({
         </p>
 
         <div>
-          <div className="flex items-baseline justify-between text-[11px]">
+          <div className="flex items-baseline justify-between text-micro">
             <span className="text-slate-600">
               <strong className="text-brand-800">{a.realizadas}</strong> de {a.total} encontros realizados
             </span>
-            {a.aAgendar ? <span className="text-slate-400">{a.aAgendar} sem data</span> : null}
+            {a.aAgendar ? <span className="text-slate-500">{a.aAgendar} sem data</span> : null}
           </div>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${a.percentual}%` }} />

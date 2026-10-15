@@ -22,7 +22,7 @@ export function Field({
         {label}
       </span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-slate-400">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
     </label>
   );
 }
@@ -77,7 +77,7 @@ export function SmallSubmitButton({
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md bg-brand-700 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-brand-800 disabled:opacity-60"
+      className="rounded-md bg-brand-700 px-2.5 py-1 text-micro font-medium text-white transition hover:bg-brand-800 disabled:opacity-60"
     >
       {pending ? (pendingLabel ?? "Salvando…") : children}
     </button>
