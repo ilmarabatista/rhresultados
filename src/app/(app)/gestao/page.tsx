@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 import { anoValido, PAINEIS, type Painel } from "@/lib/gestao";
 import { todayKey } from "@/lib/dates";
 import ManagementPanel from "@/components/management-panel";
@@ -12,7 +12,7 @@ export default async function GestaoPage({
 }: {
   searchParams: Promise<{ painel?: string; ano?: string }>;
 }) {
-  await requireSession();
+  await requireAdmin();
   const { painel, ano: anoParam } = await searchParams;
 
   const escolhido = PAINEIS.some((p) => p.valor === painel)

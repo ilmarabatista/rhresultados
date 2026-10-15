@@ -32,7 +32,7 @@ export const NAV: NavGroup[] = [
       { label: "Agenda", href: "/agenda", icon: "CalendarDays" },
       { label: "Seleção", href: "/selecao", icon: "UserSearch" },
       { label: "Testes", href: "/testes", icon: "ClipboardCheck" },
-      { label: "Gestão", href: "/gestao", icon: "Wallet" },
+      { label: "Gestão", href: "/gestao", icon: "Wallet", adminOnly: true },
       { label: "Relatórios", href: "/relatorios", icon: "ChartNoAxesColumn" },
       // O cofre do Obsidian desta máquina: abre o aplicativo, não uma tela daqui.
       { label: "Obsidian", href: "obsidian://open?vault=Obsidian%20Vault", icon: "NotebookPen", externo: true },
