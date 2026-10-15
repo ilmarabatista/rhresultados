@@ -38,8 +38,9 @@ function refresh(companyId: string) {
   revalidatePath("/inicio");
 }
 
+/** Teto generoso: nenhum campo daqui chega perto, e um envio forjado não incha o banco. */
 function texto(v: FormDataEntryValue | null): string {
-  return textoSeguro(String(v ?? "")).trim();
+  return textoSeguro(String(v ?? "")).trim().slice(0, 10_000);
 }
 
 function assunto(plano: string, tema: string) {
