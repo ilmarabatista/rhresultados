@@ -6,6 +6,7 @@ import {
   enviarApresentacao,
   removerApresentacao,
 } from "@/app/(app)/empresas/[id]/reunioes/actions";
+import { EXTENSOES_ACEITAS, TAMANHO_MAXIMO, TAMANHO_MAXIMO_TEXTO } from "@/lib/apresentacao";
 
 /**
  * A apresentação usada na reunião, anexada como veio: o slide que foi
@@ -15,7 +16,6 @@ import {
 
 export type Apresentacao = { id: string; nome: string; tamanho: number };
 
-const ACEITOS = ".pptx,.ppt,.pdf,.odp,.key,.png,.jpg,.jpeg";
 
 export default function MeetingSlides({
   reuniaoId,
@@ -66,12 +66,17 @@ export default function MeetingSlides({
       <input
         ref={escolha}
         type="file"
-        accept={ACEITOS}
+        accept={EXTENSOES_ACEITAS}
         className="hidden"
         onChange={(e) => {
           const arquivo = e.target.files?.[0];
           e.target.value = "";
           if (!arquivo) return;
+          // Acima do limite a Vercel recusa o envio sem explicar; avisa antes.
+          if (arquivo.size > TAMANHO_MAXIMO) {
+            alert(`O arquivo passa de ${TAMANHO_MAXIMO_TEXTO}. Diminua as imagens ou envie em PDF.`);
+            return;
+          }
 
           const dados = new FormData();
           dados.set("reuniaoId", reuniaoId);
