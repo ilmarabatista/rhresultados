@@ -185,7 +185,6 @@ function TextoAoSair({
 // --------------------------------------------------------------- quando
 
 function Quando({ reuniao }: { reuniao: ReuniaoCompleta }) {
-  const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [aAgendar, setAAgendar] = useState(!reuniao.dia);
   const [state, action] = useActionState<ReuniaoState, FormData>(mudarDataDaReuniao, {});

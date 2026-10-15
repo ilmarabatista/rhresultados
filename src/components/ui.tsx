@@ -276,41 +276,6 @@ export function Tabela({
   );
 }
 
-const BARRA_DA_LINHA: Record<string, string> = {
-  neutro: "bg-slate-300",
-  azul: "bg-brand-500",
-  bom: "bg-emerald-500",
-  atencao: "bg-amber-400",
-  ruim: "bg-red-400",
-};
-
-/**
- * Linha de tabela: barrinha de cor à esquerda, conteúdo, ações à direita.
- * As linhas alternam um fundo levíssimo, como no print.
- */
-export function Linha({
-  tom = "neutro",
-  acoes,
-  children,
-}: {
-  tom?: "neutro" | "azul" | "bom" | "atencao" | "ruim";
-  acoes?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 border-b border-slate-100 px-3 py-1.5 last:border-b-0 even:bg-slate-50/60 hover:bg-brand-50/40">
-      <span
-        aria-hidden
-        className={`h-4 w-1 shrink-0 rounded-full ${BARRA_DA_LINHA[tom]}`}
-      />
-      <div className="min-w-0 flex-1 text-[13px] leading-snug text-slate-700">{children}</div>
-      {acoes ? (
-        <div className="flex shrink-0 items-center gap-1.5">{acoes}</div>
-      ) : null}
-    </div>
-  );
-}
-
 /** Etiqueta miúda, para tipo, situação e afins. */
 export function Etiqueta({
   children,
@@ -333,41 +298,6 @@ export function Etiqueta({
     >
       {children}
     </span>
-  );
-}
-
-// ------------------------------------------------------------- progresso
-
-/** Barra de progresso com rótulo e fração, como no painel do print. */
-export function Progresso({
-  rotulo,
-  feito,
-  total,
-  sufixo,
-}: {
-  rotulo: string;
-  feito: number;
-  total: number;
-  /** Texto no lugar de "3/8", quando a unidade não é contagem. */
-  sufixo?: string;
-}) {
-  const pct = total > 0 ? Math.round((feito / total) * 100) : 0;
-
-  return (
-    <div>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] text-slate-500">{rotulo}</span>
-        <span className="text-[11px] tabular-nums text-slate-400">
-          {sufixo ?? `${feito}/${total}`}
-        </span>
-      </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full rounded-full bg-brand-600 transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
   );
 }
 

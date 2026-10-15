@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { textoSeguro } from "@/lib/texto-seguro";
+import { textoDoFormulario as texto, textoSeguro } from "@/lib/texto-seguro";
 import { atividade } from "@/lib/atividade";
 import { MODELO_SUGERIDO, tipoValido, type EtapaTipo } from "@/lib/selecao";
 
@@ -40,10 +40,6 @@ function refresh(companyId?: string | null) {
   if (companyId) revalidatePath(`/empresas/${companyId}`, "layout");
 }
 
-/** Teto generoso: nenhum campo daqui chega perto, e um envio forjado não incha o banco. */
-function texto(v: FormDataEntryValue | null): string {
-  return textoSeguro(String(v ?? "")).trim().slice(0, 10_000);
-}
 
 function numero(v: FormDataEntryValue | null): number | null {
   const n = Number(String(v ?? "").trim());
@@ -511,16 +507,6 @@ export async function marcarAvisado(id: string, avisado: boolean): Promise<Selec
   if (!c) return { error: "Candidato não encontrado." };
   await prisma.candidate.update({ where: { id }, data: { avisadoEm: avisado ? new Date() : null } });
   if (avisado) await log(c.companyId, session.userId, "EDITOU", id, `Avisou ${c.name} do resultado do processo.`);
-  refresh(c.companyId);
-  return { ok: true };
-}
-
-export async function excluirCandidato(id: string): Promise<SelecaoState> {
-  const session = await requireSession();
-  const c = await prisma.candidate.findUnique({ where: { id }, select: { companyId: true, name: true } });
-  if (!c) return { error: "Candidato não encontrado." };
-  await prisma.candidate.delete({ where: { id } });
-  await log(c.companyId, session.userId, "EXCLUIU", id, `Excluiu o candidato ${c.name}.`);
   refresh(c.companyId);
   return { ok: true };
 }

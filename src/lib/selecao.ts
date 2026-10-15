@@ -38,13 +38,6 @@ export const MODELO_SUGERIDO: { nome: string; tipo: EtapaTipo; prazoDias: number
 
 export type Situacao = "EM_ANDAMENTO" | "APROVADO" | "REPROVADO" | "DESISTIU";
 
-export const SITUACOES: { valor: Situacao; rotulo: string }[] = [
-  { valor: "EM_ANDAMENTO", rotulo: "Em andamento" },
-  { valor: "APROVADO", rotulo: "Aprovado" },
-  { valor: "REPROVADO", rotulo: "Reprovado" },
-  { valor: "DESISTIU", rotulo: "Desistiu" },
-];
-
 // --------------------------------------------------------------- pendências
 
 /**

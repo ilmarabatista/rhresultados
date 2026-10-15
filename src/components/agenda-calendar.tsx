@@ -30,7 +30,6 @@ import {
 import {
   agoraNoEscritorio,
   colunasDoDia,
-  emMinutos,
   HORA_FIM,
   HORA_INICIO,
   passouSemCheck,
