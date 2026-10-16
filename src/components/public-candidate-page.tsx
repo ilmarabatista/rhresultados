@@ -5,7 +5,7 @@
 
 export function AvisoAoCandidato({ titulo, texto }: { titulo: string; texto: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f4f7fa] px-4 py-7">
+    <main className="flex min-h-screen items-center justify-center bg-fundo px-4 py-7">
       <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
         <h1 className="text-lg font-semibold text-slate-900">{titulo}</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-500">{texto}</p>
@@ -28,7 +28,7 @@ export function PaginaDoCandidato({
   children: React.ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-[#f4f7fa]">
+    <main className="min-h-screen bg-fundo">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <header className="mb-4">
           {empresa ? (

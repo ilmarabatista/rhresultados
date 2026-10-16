@@ -72,7 +72,9 @@ export async function gerarNovoRoteiro(
   if (formData.get("modo") === "MAO") {
     const framework = escolherFramework(OBJETIVO_PADRAO);
     const blocos: Bloco[] = BLOCOS[framework].map((rotulo) => ({ rotulo, texto: "" }));
-    const { quantidade: _q, ...campos } = d;
+    // A quantidade só vale para o pedido à IA.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { quantidade, ...campos } = d;
     await prisma.script.create({
       data: {
         ...campos,

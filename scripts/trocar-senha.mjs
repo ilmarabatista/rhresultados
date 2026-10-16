@@ -88,7 +88,7 @@ async function main() {
   const emailFinal = novoEmail || usuario.email;
   await prisma.user.update({
     where: { email: usuario.email },
-    data: { email: emailFinal, passwordHash: await bcrypt.hash(senha, 10) },
+    data: { email: emailFinal, passwordHash: await bcrypt.hash(senha, 10), sessionVersion: { increment: 1 } },
   });
   console.log(`\nPronto. Entre em http://localhost:3000 com ${emailFinal} e a senha que você acabou de escolher.`);
 }

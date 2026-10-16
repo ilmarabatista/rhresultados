@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 import { anoValido, lerValor, LINHAS_SUGERIDAS } from "@/lib/gestao";
 
 export type GestaoState = { error?: string; ok?: boolean };
@@ -15,7 +15,7 @@ function refresh() {
 
 /** Cria as linhas sugeridas, só quando o plano de contas está vazio. */
 export async function usarLinhasSugeridas(): Promise<GestaoState> {
-  await requireSession();
+  await requireAdmin();
 
   const quantas = await prisma.expenseLine.count();
   if (quantas > 0) {
@@ -45,7 +45,7 @@ export async function criarLinha(
   _prev: GestaoState,
   formData: FormData,
 ): Promise<GestaoState> {
-  await requireSession();
+  await requireAdmin();
 
   const parsed = linhaSchema.safeParse({
     name: formData.get("name"),
@@ -75,7 +75,7 @@ export async function criarLinha(
 }
 
 export async function renomearLinha(id: string, nome: string) {
-  await requireSession();
+  await requireAdmin();
   const limpo = nome.trim();
   if (limpo.length < 2) return;
 
@@ -85,7 +85,7 @@ export async function renomearLinha(id: string, nome: string) {
 
 /** Sobe ou desce a linha na tabela, trocando de lugar com a vizinha. */
 export async function moverLinha(id: string, direcao: "cima" | "baixo") {
-  await requireSession();
+  await requireAdmin();
 
   const linhas = await prisma.expenseLine.findMany({
     orderBy: { order: "asc" },
@@ -112,7 +112,7 @@ export async function moverLinha(id: string, direcao: "cima" | "baixo") {
 
 /** Some da tabela sem perder o histórico. */
 export async function arquivarLinha(id: string, ativa: boolean) {
-  await requireSession();
+  await requireAdmin();
   await prisma.expenseLine.update({ where: { id }, data: { active: ativa } });
   refresh();
 }
@@ -122,7 +122,7 @@ export async function arquivarLinha(id: string, ativa: boolean) {
  * arquivar: apagar levaria junto meses de histórico.
  */
 export async function excluirLinha(id: string): Promise<GestaoState> {
-  await requireSession();
+  await requireAdmin();
 
   const lancamentos = await prisma.expenseEntry.count({ where: { lineId: id } });
   if (lancamentos > 0) {
@@ -147,7 +147,7 @@ export async function lancarDespesa(
   mes: number,
   bruto: string,
 ): Promise<GestaoState> {
-  const session = await requireSession();
+  const session = await requireAdmin();
 
   if (!anoValido(ano) || mes < 1 || mes > 12) {
     return { error: "Mês inválido." };

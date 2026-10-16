@@ -29,6 +29,8 @@ import {
   type Totais,
 } from "@/lib/treinamentos";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { avisar as mostrarAviso, avisarSeErro as avisar, confirmar } from "@/components/avisos";
+import Modal from "@/components/modal";
 
 /**
  * A aba Treinamentos da empresa, em quatro partes: a programação do ano (o
@@ -88,28 +90,8 @@ const botao =
 const botaoClaro =
   "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50";
 
-function avisar(r: TreinoState) {
-  if (r.error) alert(r.error);
-}
-
 function nomeDe(t: { codigo: string | null; nome: string }) {
   return t.codigo ? `${t.codigo} · ${t.nome}` : t.nome;
-}
-
-function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-xl rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
-        <div className="mb-4 flex items-start justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">{titulo}</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Fechar">
-            <X size={16} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
 }
 
 // ------------------------------------------------------------ programar
@@ -142,7 +124,7 @@ function FormularioDeTurma({
 
   if (ativos.length === 0) {
     return (
-      <Modal titulo="Programar treinamento" onClose={onClose}>
+      <Modal largura="xl" titulo="Programar treinamento" aoFechar={onClose}>
         <p className="text-sm text-slate-600">
           Cadastre antes os treinamentos da empresa em <strong>Catálogo e matriz</strong>.
         </p>
@@ -151,7 +133,7 @@ function FormularioDeTurma({
   }
 
   return (
-    <Modal titulo="Programar treinamento" onClose={onClose}>
+    <Modal largura="xl" titulo="Programar treinamento" aoFechar={onClose}>
       <form action={action} className="space-y-4">
         <input type="hidden" name="companyId" value={companyId} />
         <Field label="Treinamento *">
@@ -233,7 +215,7 @@ function FormularioDeTurma({
 function Resumo({ titulo, t, destaque }: { titulo: string; t: Totais; destaque?: boolean }) {
   return (
     <div className={`rounded-lg border p-3 ${destaque ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200 bg-white"}`}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{titulo}</p>
+      <p className="text-micro font-semibold uppercase tracking-wider text-slate-500">{titulo}</p>
       <p className="mt-1 text-lg font-semibold text-slate-900">
         {t.turmas} turma{t.turmas === 1 ? "" : "s"}
       </p>
@@ -280,7 +262,7 @@ function Programacao({
         <Resumo titulo="Total programado" t={totais.programado} />
         <Resumo titulo="Total realizado" t={totais.realizado} destaque />
         <div className="rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Cumprimento</p>
+          <p className="text-micro font-semibold uppercase tracking-wider text-slate-500">Cumprimento</p>
           <p className="mt-1 text-lg font-semibold text-slate-900">
             {totais.cumprimento == null ? "—" : `${totais.cumprimento}%`}
           </p>
@@ -297,8 +279,8 @@ function Programacao({
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full text-left text-[12px]">
-            <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+          <table className="w-full text-left text-mini">
+            <thead className="bg-slate-50 text-micro uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="px-3 py-2 font-semibold">Ação de treinamento</th>
                 <th className="px-2 py-2 font-semibold">Instrutor</th>
@@ -320,7 +302,7 @@ function Programacao({
                     <Link href={`/empresas/${companyId}/reunioes/${t.reuniaoId}`} className="font-medium text-slate-800 hover:text-brand-700">
                       {t.treinamento}
                     </Link>
-                    <span className="block text-[10px] text-slate-400">
+                    <span className="block text-micro text-slate-500">
                       {[
                         ROTULO_DA_CATEGORIA[t.categoria],
                         t.modalidade === "EXTERNO" ? "externo" : "interno",
@@ -350,7 +332,7 @@ function Programacao({
                     {t.investimento == null ? "—" : escreverDinheiro(t.investimento)}
                   </td>
                   <td className="px-3 py-1.5">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${COR_DA_SITUACAO[t.situacao]}`} title={t.justificativa ?? undefined}>
+                    <span className={`rounded px-1.5 py-0.5 text-micro font-medium ${COR_DA_SITUACAO[t.situacao]}`} title={t.justificativa ?? undefined}>
                       {ROTULO_DA_TURMA[t.situacao]}
                     </span>
                   </td>
@@ -360,7 +342,7 @@ function Programacao({
           </table>
         </div>
       )}
-      <p className="mt-2 text-[11px] text-slate-400">
+      <p className="mt-2 text-micro text-slate-500">
         Part.: convocados; no realizado, presentes/convocados. Clique no treinamento para abrir a turma (convocados,
         presença, pauta e ata).
       </p>
@@ -385,7 +367,7 @@ function FormularioDeTreinamento({
   }, [state.ok, onClose]);
 
   return (
-    <Modal titulo={treinamento ? "Editar treinamento" : "Novo treinamento"} onClose={onClose}>
+    <Modal largura="xl" titulo={treinamento ? "Editar treinamento" : "Novo treinamento"} aoFechar={onClose}>
       <form action={action} className="space-y-4">
         <input type="hidden" name="companyId" value={companyId} />
         {treinamento ? <input type="hidden" name="treinamentoId" value={treinamento.id} /> : null}
@@ -455,12 +437,12 @@ function Cargos({ companyId, cargos }: { companyId: string; cargos: Cargo[] }) {
                   autoFocus
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  className="w-44 rounded-md border border-brand-400 px-2 py-0.5 text-[12px] outline-none"
+                  className="w-44 rounded-md border border-brand-400 px-2 py-0.5 text-mini outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                 />
                 <button type="submit" className="text-emerald-700" aria-label="Salvar">
                   <Check size={14} />
                 </button>
-                <button type="button" onClick={() => setEditando(null)} className="text-slate-400" aria-label="Cancelar">
+                <button type="button" onClick={() => setEditando(null)} className="text-slate-500" aria-label="Cancelar">
                   <X size={14} />
                 </button>
               </form>
@@ -468,30 +450,30 @@ function Cargos({ companyId, cargos }: { companyId: string; cargos: Cargo[] }) {
           ) : (
             <li
               key={c.id}
-              className="group inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1.5 text-[12px] text-slate-700"
+              className="group inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1.5 text-mini text-slate-700"
             >
               {c.nome}
-              <span className="text-[10px] text-slate-400">{c.pessoas}</span>
+              <span className="text-micro text-slate-500">{c.pessoas}</span>
               <button
                 type="button"
                 onClick={() => {
                   setEditando(c.id);
                   setNome(c.nome);
                 }}
-                className="text-slate-400 opacity-0 hover:text-brand-700 group-hover:opacity-100"
+                className="text-slate-500 opacity-0 hover:text-brand-700 group-hover:opacity-100"
                 aria-label={`Renomear ${c.nome}`}
               >
                 <Pencil size={11} />
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   const aviso = c.pessoas
                     ? `Excluir o cargo ${c.nome}? ${c.pessoas} pessoa(s) ficam sem cargo.`
                     : `Excluir o cargo ${c.nome}?`;
-                  if (confirm(aviso)) startTransition(async () => avisar(await excluirCargo(c.id)));
+                  if (await confirmar(aviso)) startTransition(async () => avisar(await excluirCargo(c.id)));
                 }}
-                className="text-slate-400 opacity-0 hover:text-red-600 group-hover:opacity-100"
+                className="text-slate-500 opacity-0 hover:text-red-600 group-hover:opacity-100"
                 aria-label={`Excluir ${c.nome}`}
               >
                 <X size={11} />
@@ -499,7 +481,7 @@ function Cargos({ companyId, cargos }: { companyId: string; cargos: Cargo[] }) {
             </li>
           ),
         )}
-        {cargos.length === 0 ? <li className="text-sm text-slate-400">Nenhum cargo ainda.</li> : null}
+        {cargos.length === 0 ? <li className="text-sm text-slate-500">Nenhum cargo ainda.</li> : null}
       </ul>
       <form
         onSubmit={(e) => {
@@ -576,7 +558,7 @@ function Catalogo({
                 <select
                   value={origem}
                   onChange={(e) => setOrigem(e.target.value)}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-[12px]"
+                  className="rounded-md border border-slate-300 px-2 py-1.5 text-mini"
                 >
                   {outrasEmpresas.map((e) => (
                     <option key={e.id} value={e.id}>
@@ -590,8 +572,8 @@ function Catalogo({
                   onClick={() =>
                     startTransition(async () => {
                       const r = await copiarCatalogo(companyId, origem);
-                      if (r.error) alert(r.error);
-                      else alert(`${r.copiados} treinamento(s) copiado(s).`);
+                      if (r.error) mostrarAviso(r.error);
+                      else mostrarAviso(`${r.copiados} treinamento(s) copiado(s).`);
                     })
                   }
                   className={botaoClaro}
@@ -613,15 +595,15 @@ function Catalogo({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="text-left text-[12px]">
+            <table className="text-left text-mini">
               <thead>
                 <tr>
-                  <th className="min-w-[16rem] px-2 py-1 align-bottom text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="min-w-[16rem] px-2 py-1 align-bottom text-micro font-semibold uppercase tracking-wider text-slate-500">
                     Treinamento
                   </th>
                   {cargos.map((c) => (
                     <th key={c.id} className="h-32 w-8 px-0 align-bottom">
-                      <div className="mx-auto w-5 whitespace-nowrap [writing-mode:vertical-rl] rotate-180 text-[11px] font-medium text-slate-600" title={`${c.pessoas} pessoa(s) ativas`}>
+                      <div className="mx-auto w-5 whitespace-nowrap [writing-mode:vertical-rl] rotate-180 text-micro font-medium text-slate-600" title={`${c.pessoas} pessoa(s) ativas`}>
                         {c.nome}
                       </div>
                     </th>
@@ -634,7 +616,7 @@ function Catalogo({
                   <tr key={t.id} className={`group ${t.ativo ? "" : "opacity-50"}`}>
                     <td className="px-2 py-1.5">
                       <span className="font-medium text-slate-800">{nomeDe(t)}</span>
-                      <span className="block text-[10px] text-slate-400">
+                      <span className="block text-micro text-slate-500">
                         {[ROTULO_DA_CATEGORIA[t.categoria], t.cargaHoraria || null, t.ativo ? null : "fora de uso", t.turmas ? `${t.turmas} turma(s)` : null]
                           .filter(Boolean)
                           .join(" · ")}
@@ -660,24 +642,24 @@ function Catalogo({
                     })}
                     <td className="whitespace-nowrap px-2 py-1.5">
                       <span className="flex gap-2 opacity-0 transition group-hover:opacity-100">
-                        <button type="button" onClick={() => setForm(t)} className="text-slate-400 hover:text-brand-700" aria-label="Editar">
+                        <button type="button" onClick={() => setForm(t)} className="text-slate-500 hover:text-brand-700" aria-label="Editar">
                           <Pencil size={13} />
                         </button>
                         <button
                           type="button"
                           onClick={() => startTransition(async () => avisar(await alternarTreinamentoAtivo(t.id, !t.ativo)))}
-                          className="text-[11px] text-slate-400 hover:text-slate-700"
+                          className="text-micro text-slate-500 hover:text-slate-700"
                         >
                           {t.ativo ? "tirar de uso" : "voltar a usar"}
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (confirm(`Excluir o treinamento ${nomeDe(t)}?`)) {
+                          onClick={async () => {
+                            if (await confirmar(`Excluir o treinamento ${nomeDe(t)}?`)) {
                               startTransition(async () => avisar(await excluirTreinamento(t.id)));
                             }
                           }}
-                          className="text-slate-400 hover:text-red-600"
+                          className="text-slate-500 hover:text-red-600"
                           aria-label="Excluir"
                         >
                           <Trash2 size={13} />
@@ -730,7 +712,7 @@ function Pendencias({
           Quantos da equipe ativa a matriz pede, quantos já fizeram e quem falta.
         </p>
         {exigidos.length === 0 ? (
-          <p className="text-sm text-slate-400">A matriz ainda não pede nenhum treinamento para quem está na equipe.</p>
+          <p className="text-sm text-slate-500">A matriz ainda não pede nenhum treinamento para quem está na equipe.</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {exigidos.map((t) => {
@@ -743,7 +725,7 @@ function Pendencias({
                       {t.fizeram}/{t.precisam} · {pct}%
                     </span>
                     {t.faltam.length > 0 ? (
-                      <button type="button" onClick={() => onProgramar(t.id)} className="text-[11px] text-brand-700 hover:text-brand-900">
+                      <button type="button" onClick={() => onProgramar(t.id)} className="text-micro text-brand-700 hover:text-brand-900">
                         Programar turma
                       </button>
                     ) : null}
@@ -752,7 +734,7 @@ function Pendencias({
                     <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
                   </div>
                   {t.faltam.length > 0 ? (
-                    <p className="mt-1 text-[11px] text-slate-500">Falta: {t.faltam.join(", ")}</p>
+                    <p className="mt-1 text-micro text-slate-500">Falta: {t.faltam.join(", ")}</p>
                   ) : null}
                 </li>
               );
@@ -773,7 +755,7 @@ function Pendencias({
                 <Link href={`/empresas/${companyId}/equipe/${p.id}`} className="truncate text-slate-700 hover:text-brand-700">
                   {p.nome}
                 </Link>
-                <span className="shrink-0 rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                <span className="shrink-0 rounded bg-orange-50 px-1.5 py-0.5 text-micro font-medium text-orange-700">
                   {p.pendentes}
                 </span>
               </li>
@@ -781,7 +763,7 @@ function Pendencias({
           </ul>
         )}
         {semCargo > 0 ? (
-          <p className="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-[11px] text-slate-500">
+          <p className="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-micro text-slate-500">
             {semCargo} pessoa(s) ativa(s) sem cargo no cadastro: a matriz não sabe o que pedir para elas.
           </p>
         ) : null}
@@ -930,12 +912,12 @@ export default function TreinamentosTela({
           >
             {a.rotulo}
             {a.slug === "pendencias" && pessoasComPendencia.length > 0 ? (
-              <span className="ml-1.5 rounded-full bg-orange-100 px-1.5 text-[10px] font-medium text-orange-700">
+              <span className="ml-1.5 rounded-full bg-orange-100 px-1.5 text-micro font-medium text-orange-700">
                 {pessoasComPendencia.length}
               </span>
             ) : null}
             {a.slug === "integracao" && integracaoAberta.length > 0 ? (
-              <span className="ml-1.5 rounded-full bg-violet-100 px-1.5 text-[10px] font-medium text-violet-700">
+              <span className="ml-1.5 rounded-full bg-violet-100 px-1.5 text-micro font-medium text-violet-700">
                 {integracaoAberta.length}
               </span>
             ) : null}

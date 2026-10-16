@@ -100,6 +100,7 @@ export default function EmployeesList({
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por nome, cargo ou setor…"
+              aria-label="Buscar na equipe"
               className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
             <p className="text-xs text-slate-500">
@@ -119,7 +120,7 @@ export default function EmployeesList({
                     href={`/empresas/${companyId}/equipe/${c.id}`}
                     className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-brand-300 hover:shadow-md"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-100">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-micro font-semibold text-brand-700 ring-1 ring-brand-100">
                       {iniciais(c.nome)}
                     </span>
 
@@ -136,37 +137,37 @@ export default function EmployeesList({
 
                     <span className="flex shrink-0 flex-wrap items-center gap-1.5">
                       {c.integracaoTotal > 0 && c.integracaoFeita < c.integracaoTotal ? (
-                        <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
+                        <span className="rounded bg-violet-50 px-1.5 py-0.5 text-micro font-medium text-violet-700">
                           integração {c.integracaoFeita}/{c.integracaoTotal}
                         </span>
                       ) : null}
                       {c.treinamentosPendentes > 0 ? (
-                        <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                        <span className="rounded bg-orange-50 px-1.5 py-0.5 text-micro font-medium text-orange-700">
                           {c.treinamentosPendentes} trein. pendente{c.treinamentosPendentes > 1 ? "s" : ""}
                         </span>
                       ) : null}
                       {c.planos > 0 ? (
-                        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">
+                        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-micro font-medium text-brand-700">
                           {c.planos} PDI
                         </span>
                       ) : null}
                       {c.advertencias > 0 ? (
-                        <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
+                        <span className="rounded bg-red-50 px-1.5 py-0.5 text-micro font-medium text-red-700">
                           {c.advertencias} advert.
                         </span>
                       ) : null}
                       {c.faltas > 0 ? (
-                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-micro font-medium text-amber-700">
                           {c.faltas} falta{c.faltas > 1 ? "s" : ""}
                         </span>
                       ) : null}
                       {c.atestados > 0 ? (
-                        <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700">
+                        <span className="rounded bg-sky-50 px-1.5 py-0.5 text-micro font-medium text-sky-700">
                           {c.atestados} atest.
                         </span>
                       ) : null}
                       <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        className={`rounded px-1.5 py-0.5 text-micro font-medium ${
                           STATUS_STYLE[c.status] ?? STATUS_STYLE.DESLIGADO
                         }`}
                       >

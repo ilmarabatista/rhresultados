@@ -226,7 +226,7 @@ export default async function RelatoriosPage({
         <header className="border-b border-slate-200 pb-5">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 pb-3">
             <p className="text-sm font-semibold text-slate-800">{settings.orgName}</p>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-micro text-slate-500">
               {[settings.orgDocument, settings.orgContact].filter(Boolean).join(" · ")}
             </p>
           </div>
@@ -259,7 +259,7 @@ export default async function RelatoriosPage({
                 <div key={produto} className="print-break">
                   <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wide text-brand-700">
                     {produto}
-                    <span className="font-normal normal-case text-slate-400">{itens.length} reunião(ões)</span>
+                    <span className="font-normal normal-case text-slate-500">{itens.length} reunião(ões)</span>
                   </h4>
                   <ul className="space-y-1">
                     {itens.map((r) => {
@@ -267,17 +267,17 @@ export default async function RelatoriosPage({
                       const combinados = r.items.filter((i) => i.kind === "COMBINADO").length;
                       return (
                         <li key={r.id} className="flex items-baseline gap-3 border-b border-slate-50 py-1.5 text-sm">
-                          <span className="w-16 shrink-0 text-xs text-slate-400">
+                          <span className="w-16 shrink-0 text-xs text-slate-500">
                             {r.date ? formatFullDate(r.date).slice(0, 5) : "—"}
                           </span>
                           <span className="min-w-0 flex-1 text-slate-700">
                             {r.title}
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-slate-500">
                               {" "}· {codigoDaReuniao(r.number)}
                               {r.plano ? ` · plano ${r.plano.titulo}` : ""}
                             </span>
                           </span>
-                          <span className="shrink-0 text-xs text-slate-400">
+                          <span className="shrink-0 text-xs text-slate-500">
                             {[
                               r._count.participants ? `${r._count.participants} presente(s)` : null,
                               decisoes ? `${decisoes} decisão(ões)` : null,
@@ -307,7 +307,7 @@ export default async function RelatoriosPage({
                     <div className="flex items-baseline justify-between gap-2 text-sm">
                       <span className="text-slate-700">
                         {p.titulo}
-                        {p.produto ? <span className="text-xs text-slate-400"> · {p.produto}</span> : null}
+                        {p.produto ? <span className="text-xs text-slate-500"> · {p.produto}</span> : null}
                       </span>
                       <span className="shrink-0 text-xs text-slate-500">
                         no período: {p.realizados}/{p.previstos} · no plano todo: {p.totalRealizados}/{p.total} ({pct}%)
@@ -331,11 +331,11 @@ export default async function RelatoriosPage({
             <ul className="mt-3 space-y-1">
               {cumpridos.map((c) => (
                 <li key={c.id} className="flex items-baseline gap-3 border-b border-slate-50 py-1.5 text-sm">
-                  <span className="w-16 shrink-0 text-xs text-slate-400">
+                  <span className="w-16 shrink-0 text-xs text-slate-500">
                     {c.doneAt ? formatFullDate(c.doneAt).slice(0, 5) : "—"}
                   </span>
                   <span className="min-w-0 flex-1 text-slate-700">{c.text}</span>
-                  {c.responsible ? <span className="shrink-0 text-xs text-slate-400">{c.responsible}</span> : null}
+                  {c.responsible ? <span className="shrink-0 text-xs text-slate-500">{c.responsible}</span> : null}
                 </li>
               ))}
             </ul>
@@ -351,11 +351,11 @@ export default async function RelatoriosPage({
                 const venceu = c.dueDate ? dateToDayKey(c.dueDate) < hoje : false;
                 return (
                   <li key={c.id} className="flex items-baseline gap-3 border-b border-slate-50 py-1.5 text-sm">
-                    <span className={`w-16 shrink-0 text-xs ${venceu ? "font-medium text-red-600" : "text-slate-400"}`}>
+                    <span className={`w-16 shrink-0 text-xs ${venceu ? "font-medium text-red-600" : "text-slate-500"}`}>
                       {c.dueDate ? formatFullDate(c.dueDate).slice(0, 5) : "sem data"}
                     </span>
                     <span className="min-w-0 flex-1 text-slate-700">{c.text}</span>
-                    {c.responsible ? <span className="shrink-0 text-xs text-slate-400">{c.responsible}</span> : null}
+                    {c.responsible ? <span className="shrink-0 text-xs text-slate-500">{c.responsible}</span> : null}
                   </li>
                 );
               })}
@@ -373,7 +373,7 @@ export default async function RelatoriosPage({
                   <li key={v.id} className="flex items-baseline gap-3 border-b border-slate-50 py-1.5 text-sm">
                     <span className="min-w-0 flex-1 text-slate-700">
                       {v.title}
-                      <span className="text-xs text-slate-400"> · {v.status.toLowerCase()}</span>
+                      <span className="text-xs text-slate-500"> · {v.status.toLowerCase()}</span>
                     </span>
                     <span className="shrink-0 text-xs text-slate-500">
                       {v.candidates.length} candidato(s) · {conta("EM_ANDAMENTO")} em andamento · {conta("APROVADO")} aprovado(s)
@@ -385,7 +385,7 @@ export default async function RelatoriosPage({
           </section>
         ) : null}
 
-        <footer className="mt-8 border-t border-slate-200 pt-4 text-[11px] leading-relaxed text-slate-400">
+        <footer className="mt-8 border-t border-slate-200 pt-4 text-micro leading-relaxed text-slate-500">
           {settings.reportFooter ? <p className="mb-1 text-slate-500">{settings.reportFooter}</p> : null}
           Emitido em {formatFullDate(dayKeyToDate(todayKey()))} por {settings.orgName}.
         </footer>

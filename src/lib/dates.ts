@@ -32,13 +32,9 @@ export function todayKey(): string {
   return momentDayKey(new Date());
 }
 
-/**
- * O mesmo dia, um ano depois: o "até" padrão de uma série semanal.
- * 29 de fevereiro sem ano bissexto à frente cai em 1º de março.
- */
-export function umAnoDepois(dia: string): string {
-  const [ano, mes, d] = dia.split("-").map(Number);
-  return dateToDayKey(new Date(Date.UTC(ano + 1, mes - 1, d)));
+/** A data no formato do campo <input type="date">, ou vazio. */
+export function paraCampoDeData(date: Date | null): string {
+  return date ? dateToDayKey(date) : "";
 }
 
 export function formatFullDate(date: Date | null | undefined): string {

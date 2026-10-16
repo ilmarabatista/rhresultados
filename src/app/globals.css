@@ -8,6 +8,13 @@
  * Fora dele só entram cinzas, e cor com significado: verde para o que foi
  * feito, âmbar para o que pede atenção, vermelho para o que apaga.
  */
+/*
+ * Formas, para manter o padrão ao criar tela nova:
+ *   rounded-lg  cartões, painéis, janelas e botões principais
+ *   rounded-md  campos, botões pequenos e chips de ação
+ *   rounded-full  etiquetas de situação e avatares
+ *   shadow-sm   cartões parados; shadow-xl janelas por cima da tela
+ */
 @theme {
   --color-brand-50: #eff5fb;
   --color-brand-100: #dbe8f6;
@@ -20,6 +27,18 @@
   --color-brand-800: #1b3a63;
   --color-brand-900: #14293f;
   --color-brand-950: #0d1b2a;
+
+  /* Fundo da área de trabalho: branco levemente azulado. */
+  --color-fundo: #f4f7fa;
+
+  /*
+   * Escala dos textos miúdos das telas densas (tabelas, quadros, agenda).
+   * Nada abaixo de 11 px: menor que isso não se lê bem. Sem altura de linha
+   * própria, como os valores soltos que estes tokens substituem.
+   */
+  --text-micro: 11px;
+  --text-mini: 12px;
+  --text-corpo: 13px;
 }
 
 :root {
@@ -33,9 +52,40 @@ body {
 
 body {
   /* Branco levemente azulado: separa os cartões do fundo sem sujar a tela. */
-  background-color: #f4f7fa;
+  background-color: var(--color-fundo);
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Foco visível para quem navega pelo teclado, em tudo o que não define o
+ * próprio. :where() deixa a especificidade zero: qualquer classe da tela vence.
+ */
+@layer base {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  /* Alvo mínimo de 24 px de altura (WCAG 2.5.8) nos botões miúdos das tabelas. */
+  :where(button) {
+    min-height: 24px;
+  }
+}
+
+/*
+ * Em tela de toque, botão só de ícone (setas, lixeira, fechar: os que têm
+ * aria-label porque não têm texto) ganha área mínima de 32 px, para o dedo
+ * acertar. No mouse o desenho fica como está.
+ */
+@media (pointer: coarse) {
+  button[aria-label]:has(> svg:only-child) {
+    min-width: 32px;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* Scrollbars discretos nas colunas do quadro */

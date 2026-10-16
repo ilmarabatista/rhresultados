@@ -7,7 +7,7 @@ import BranchesManager from "@/components/branches-manager";
 import CompanyForm from "@/components/company-form";
 import { updateCompany } from "../../actions";
 import {
-  dateToDayKey,
+  paraCampoDeData,
   dayKeyToDate,
   formatFullDate,
   todayKey,
@@ -17,10 +17,6 @@ import BriefingCard from "@/components/briefing-card";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dados — RH Resultados" };
-
-function paraInput(date: Date | null) {
-  return date ? dateToDayKey(date) : "";
-}
 
 export default async function InformacoesPage({
   params,
@@ -134,14 +130,14 @@ export default async function InformacoesPage({
           <ul className="divide-y divide-slate-50">
             {proximas.map((v) => (
               <li key={v.id} className="flex flex-wrap items-baseline gap-x-3 py-2">
-                <span className="w-36 shrink-0 text-xs text-slate-400">
+                <span className="w-36 shrink-0 text-xs text-slate-500">
                   {formatFullDate(v.date)} · {faixaHoraria(v.startTime, v.endTime)}
                 </span>
                 <span className="min-w-0 flex-1 text-sm text-slate-700">
                   {v.subject ?? v.service?.name ?? "sem assunto definido"}
                 </span>
                 {v.location ? (
-                  <span className="shrink-0 text-[11px] text-slate-400">
+                  <span className="shrink-0 text-micro text-slate-500">
                     {v.location}
                   </span>
                 ) : null}
@@ -200,8 +196,8 @@ export default async function InformacoesPage({
           contractValue: company.contractValue
             ? company.contractValue.toString()
             : "",
-          contractDate: paraInput(company.contractDate),
-          contractEndDate: paraInput(company.contractEndDate),
+          contractDate: paraCampoDeData(company.contractDate),
+          contractEndDate: paraCampoDeData(company.contractEndDate),
           contractStatus: company.contractStatus,
           paymentDay: company.paymentDay,
           notes: company.notes,

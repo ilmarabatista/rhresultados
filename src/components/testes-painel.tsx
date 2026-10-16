@@ -5,6 +5,7 @@ import { Copy, MessageCircle, Send, Trash2 } from "lucide-react";
 import { enviarTeste, excluirEnvio, type TestesState } from "@/app/(app)/testes/actions";
 import { Painel } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
+import { confirmar } from "@/components/avisos";
 
 /**
  * As peças da aba Testes que rodam no navegador: o envio (que devolve o link
@@ -26,7 +27,7 @@ function mensagem(pessoa: string, teste: string, link: string) {
 }
 
 const botao =
-  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700";
+  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700";
 
 export function EnviarTeste({
   testes,
@@ -101,7 +102,7 @@ export function EnviarTeste({
           <p className="text-sm font-medium text-emerald-900">
             Link de {enviado.pessoa} pronto — {enviado.teste}
           </p>
-          <code className="mt-1 block break-all rounded bg-white px-2 py-1 text-[11px] text-slate-700">{enviado.link}</code>
+          <code className="mt-1 block break-all rounded bg-white px-2 py-1 text-micro text-slate-700">{enviado.link}</code>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <button
               type="button"
@@ -182,12 +183,12 @@ export function AcoesDoEnvio({
         type="button"
         disabled={pendente}
         aria-label="Excluir envio"
-        className="px-1 text-slate-400 transition hover:text-red-600 disabled:opacity-50"
-        onClick={() => {
+        className="px-1 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
+        onClick={async () => {
           const aviso = respondido
             ? `Excluir o teste de ${pessoa}? As respostas e o resultado serão apagados.`
             : `Excluir o envio para ${pessoa}? O link para de funcionar.`;
-          if (confirm(aviso)) iniciar(async () => void (await excluirEnvio(id)));
+          if (await confirmar(aviso)) iniciar(async () => void (await excluirEnvio(id)));
         }}
       >
         <Trash2 size={13} />

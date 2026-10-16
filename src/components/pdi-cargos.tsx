@@ -16,6 +16,7 @@ import { criarCargo } from "@/app/(app)/empresas/[id]/treinamentos/actions";
 import { NIVEIS, ROTULO_DO_NIVEL, ROTULO_DO_TIPO, TIPOS_DE_COMPETENCIA, type TipoDeCompetencia } from "@/lib/pdi";
 import { Field, FormError, FormOk, Input, Select, SubmitButton, Textarea } from "./form";
 import { Etiqueta } from "./ui";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * As descrições de cargo da empresa: missão, responsabilidades, requisitos e
@@ -182,9 +183,9 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
                     />
                   ))}
                 </div>
-                <span className="text-[10px] text-slate-400">{ROTULO_DO_NIVEL[c.nivelEsperado]}</span>
+                <span className="text-micro text-slate-500">{ROTULO_DO_NIVEL[c.nivelEsperado]}</span>
               </div>
-              <div className="flex shrink-0 items-center gap-1 text-slate-400">
+              <div className="flex shrink-0 items-center gap-1 text-slate-500">
                 <button
                   type="button"
                   disabled={i === 0}
@@ -208,8 +209,8 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm(`Tirar ${c.nome} do cargo? As avaliações já feitas continuam como estão.`))
+                  onClick={async () => {
+                    if (await confirmar(`Tirar ${c.nome} do cargo? As avaliações já feitas continuam como estão.`))
                       startTransition(async () => void (await excluirCompetencia(c.id)));
                   }}
                   className="hover:text-red-600"
@@ -252,8 +253,8 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
                     onClick={() =>
                       startTransition(async () => {
                         const r = await copiarCompetencias(cargo.id, origem);
-                        if (r.error) alert(r.error);
-                        else alert(`${r.copiadas} competência(s) copiada(s).`);
+                        if (r.error) avisar(r.error);
+                        else avisar(`${r.copiadas} competência(s) copiada(s).`);
                         setOrigem("");
                       })
                     }
@@ -267,13 +268,13 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
         )}
         {editando === false ? (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Sugestões</span>
+            <span className="text-micro font-medium uppercase tracking-wider text-slate-500">Sugestões</span>
             {SUGESTOES.filter((s) => !jaTem.has(s.toLowerCase())).map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setEditando({ nome: s, tipo: "COMPORTAMENTAL", nivelEsperado: 3 })}
-                className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700"
+                className="rounded-full border border-slate-200 px-2 py-0.5 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700"
               >
                 + {s}
               </button>
@@ -307,7 +308,7 @@ export default function PdiCargos({
             <Link
               key={c.id}
               href={`?aba=cargos&cargo=${c.id}`}
-              className={`flex items-center justify-between gap-2 border-l-2 px-2.5 py-1.5 text-[12px] transition ${
+              className={`flex items-center justify-between gap-2 border-l-2 px-2.5 py-1.5 text-mini transition ${
                 cargo?.id === c.id
                   ? "border-brand-600 bg-brand-50/60 font-semibold text-brand-800"
                   : "border-transparent text-slate-600 hover:bg-slate-50"
@@ -315,21 +316,21 @@ export default function PdiCargos({
             >
               <span className="truncate">{c.nome}</span>
               <span
-                className={`shrink-0 text-[10px] ${c.competencias.length === 0 && c.pessoas > 0 ? "text-amber-700" : "text-slate-400"}`}
+                className={`shrink-0 text-micro ${c.competencias.length === 0 && c.pessoas > 0 ? "text-amber-700" : "text-slate-500"}`}
                 title={`${c.competencias.length} competência(s), ${c.pessoas} pessoa(s)`}
               >
                 {c.competencias.length === 0 ? "sem descrição" : `${c.competencias.length} comp.`}
               </span>
             </Link>
           ))}
-          {cargos.length === 0 ? <p className="px-3 py-2 text-sm text-slate-400">Nenhum cargo ainda.</p> : null}
+          {cargos.length === 0 ? <p className="px-3 py-2 text-sm text-slate-500">Nenhum cargo ainda.</p> : null}
         </nav>
         <form
           onSubmit={(e) => {
             e.preventDefault();
             startTransition(async () => {
               const r = await criarCargo(companyId, novo);
-              if (r.error) alert(r.error);
+              if (r.error) avisar(r.error);
               else {
                 setNovo("");
                 router.push(`?aba=cargos&cargo=${r.id}`);
@@ -355,7 +356,7 @@ export default function PdiCargos({
           <section className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-base font-semibold text-slate-900">{cargo.nome}</h2>
-              <span className="text-xs text-slate-400">{cargo.pessoas} pessoa(s) neste cargo</span>
+              <span className="text-xs text-slate-500">{cargo.pessoas} pessoa(s) neste cargo</span>
             </div>
             <Descricao cargo={cargo} />
           </section>

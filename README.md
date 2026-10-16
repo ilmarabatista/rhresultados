@@ -372,7 +372,8 @@ as duas obrigaria a remarcar etapa toda vez que uma visita mudasse de dia.
 
 **Gestão**, no menu lateral, é o painel do negócio da consultoria: quanto
 entrou, quanto saiu, o que sobrou e de onde veio. São quatro painéis, na
-barra escura do topo, com navegação por ano.
+barra escura do topo, com navegação por ano. Só administradores veem e
+mexem na Gestão (desde a auditoria de 2026-10-15).
 
 | Painel | O que traz |
 |---|---|
@@ -775,11 +776,13 @@ Clicar leva à ficha da pessoa.
 ## Testes
 
 ```bash
-npm test
+npm test          # testes
+npm run lint      # ESLint (next/core-web-vitals + next/typescript)
+npm run typecheck # TypeScript sem gerar arquivos
 ```
 
 Usa o runner do próprio Node (`node --test` via tsx), sem dependência de
-teste no projeto. São 217 testes sobre a lógica pura: datas em UTC, as grades
+teste no projeto. São 266 testes sobre a lógica pura: datas em UTC, as grades
 de mês e de semana da agenda, o encaixe dos horários e as datas das reuniões
 que se repetem, os formatos de arquivo
 aceitos e o reconhecimento do tipo de cargo, os prazos e a validade dos

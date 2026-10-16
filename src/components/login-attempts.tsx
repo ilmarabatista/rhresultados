@@ -31,14 +31,14 @@ function Linha({ item }: { item: TentativaItem }) {
     >
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm text-slate-800">{item.email}</p>
-        <p className="text-[11px] text-slate-400">
+        <p className="text-micro text-slate-500">
           {item.falhas} falha(s) · última às {quando(item.ultima)}
           {item.ip ? ` · ${item.ip}` : ""}
         </p>
       </div>
 
       {item.bloqueado ? (
-        <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">
+        <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-micro font-medium text-red-700">
           bloqueado
         </span>
       ) : null}

@@ -71,7 +71,7 @@ export default async function ImprimirPdiPage({
       </div>
 
       <header className="border-b-2 border-brand-900 pb-3">
-        <p className="text-[11px] uppercase tracking-wider text-slate-400">
+        <p className="text-micro uppercase tracking-wider text-slate-500">
           Plano de Desenvolvimento Individual · {pessoa.company.name}
         </p>
         <h1 className="mt-1 text-xl font-semibold">{pessoa.name}</h1>
@@ -89,7 +89,7 @@ export default async function ImprimirPdiPage({
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-brand-800">
             Diagnóstico · avaliação de {formatFullDate(plano.avaliacao.data)}
           </h2>
-          <table className="w-full border-collapse text-[12px]">
+          <table className="w-full border-collapse text-mini">
             <thead>
               <tr className="bg-slate-100 text-left">
                 <th className="border border-slate-200 px-2 py-1">Competência</th>
@@ -116,11 +116,11 @@ export default async function ImprimirPdiPage({
               })}
             </tbody>
           </table>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="mt-1 text-micro text-slate-500">
             Escala: 1 não conhece · 2 conhece, precisa de ajuda · 3 faz sozinho · 4 faz com excelência · 5 ensina os
             outros. Aderência ao cargo: {resumo.aderencia ?? "—"}%.
           </p>
-          <div className="mt-3 grid gap-3 text-[12px] sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 text-mini sm:grid-cols-2">
             {[
               ["Pontos fortes", plano.avaliacao.pontosFortes],
               ["O que quer desenvolver", plano.avaliacao.querDesenvolver],
@@ -144,7 +144,7 @@ export default async function ImprimirPdiPage({
         </h2>
         <div className="space-y-3">
           {plano.metas.map((m, i) => (
-            <div key={m.id} className="break-inside-avoid rounded border border-slate-300 p-3 text-[12px]">
+            <div key={m.id} className="break-inside-avoid rounded border border-slate-300 p-3 text-mini">
               <p className="text-sm font-semibold">
                 {i + 1}. {m.titulo}
                 {m.competencia ? <span className="font-normal text-slate-500"> · {m.competencia}</span> : null}
@@ -184,7 +184,7 @@ export default async function ImprimirPdiPage({
       {plano.conversas.length > 0 ? (
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-brand-800">Acompanhamento</h2>
-          <ul className="space-y-2 text-[12px]">
+          <ul className="space-y-2 text-mini">
             {plano.conversas.map((c) => (
               <li key={c.id} className="break-inside-avoid">
                 <strong>{formatFullDate(c.data)}:</strong> <span className="whitespace-pre-wrap">{c.resumo}</span>
@@ -193,7 +193,7 @@ export default async function ImprimirPdiPage({
             ))}
           </ul>
           {plano.proximaConversa ? (
-            <p className="mt-2 text-[12px]">Próxima conversa: {formatFullDate(plano.proximaConversa)}</p>
+            <p className="mt-2 text-mini">Próxima conversa: {formatFullDate(plano.proximaConversa)}</p>
           ) : null}
         </section>
       ) : null}
@@ -201,7 +201,7 @@ export default async function ImprimirPdiPage({
       {plano.balanco ? (
         <section>
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-brand-800">Balanço</h2>
-          <p className="whitespace-pre-wrap text-[12px]">{plano.balanco}</p>
+          <p className="whitespace-pre-wrap text-mini">{plano.balanco}</p>
         </section>
       ) : null}
     </main>

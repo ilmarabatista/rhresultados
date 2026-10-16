@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { criarVaga, editarVaga, excluirVaga, type SelecaoState } from "@/app/(app)/selecao/actions";
 import { Etiqueta, Painel, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * As vagas: a lista e a abertura de uma nova.
@@ -42,7 +43,7 @@ const ROTULO: Record<string, string> = {
 };
 
 const botao =
-  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
+  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
 
 function NovaVaga({
   empresas,
@@ -121,29 +122,29 @@ function LinhaDaVaga({ vaga, mostrarEmpresa }: { vaga: VagaNaLista; mostrarEmpre
   const mudarStatus = (status: string) =>
     startTransition(async () => {
       const r = await editarVaga(vaga.id, { status });
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
 
   const excluir = () =>
     startTransition(async () => {
-      if (!confirm(`Excluir a vaga de ${vaga.titulo}, com os candidatos dela?`)) return;
+      if (!(await confirmar(`Excluir a vaga de ${vaga.titulo}, com os candidatos dela?`))) return;
       const r = await excluirVaga(vaga.id);
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-100 px-3 py-2 last:border-0">
       <div className="min-w-[14rem] flex-1">
-        <Link href={`/selecao/${vaga.id}`} className="text-[13px] font-medium text-slate-800 hover:text-brand-700">
+        <Link href={`/selecao/${vaga.id}`} className="text-corpo font-medium text-slate-800 hover:text-brand-700">
           {vaga.titulo}
         </Link>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-micro text-slate-500">
           {mostrarEmpresa && vaga.empresa ? `${vaga.empresa.nome} · ` : ""}
           aberta em {vaga.aberta} · {vaga.etapas} etapa(s)
         </p>
       </div>
 
-      <div className="flex items-center gap-2 text-[11px] text-slate-600">
+      <div className="flex items-center gap-2 text-micro text-slate-600">
         <span>{vaga.emAndamento} em andamento</span>
         {vaga.aprovados > 0 ? <span className="text-emerald-700">{vaga.aprovados} aprovado(s)</span> : null}
         {vaga.pendentes > 0 ? <Etiqueta tom="atencao">{vaga.pendentes} pendente(s)</Etiqueta> : null}

@@ -21,7 +21,10 @@ export type SessionPayload = {
   role: "ADMIN" | "MEMBRO";
 };
 
-export async function createSession(payload: SessionPayload) {
+/** O que vai dentro do cookie: a sessão mais a versão da senha. */
+type CookiePayload = SessionPayload & { sessionVersion: number };
+
+export async function createSession(payload: CookiePayload) {
   const token = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -44,7 +47,7 @@ export async function destroySession() {
 }
 
 /** Apenas o conteúdo do cookie, sem consultar o banco. */
-async function readCookie(): Promise<SessionPayload | null> {
+async function readCookie(): Promise<CookiePayload | null> {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
   if (!token) return null;
@@ -55,6 +58,8 @@ async function readCookie(): Promise<SessionPayload | null> {
       email: String(payload.email),
       name: String(payload.name),
       role: payload.role === "ADMIN" ? "ADMIN" : "MEMBRO",
+      // Cookies emitidos antes da versão existir contam como 0.
+      sessionVersion: typeof payload.sessionVersion === "number" ? payload.sessionVersion : 0,
     };
   } catch {
     return null;
@@ -64,6 +69,8 @@ async function readCookie(): Promise<SessionPayload | null> {
 /**
  * Sessão válida de verdade: o cookie precisa ser legítimo E o usuário precisa
  * continuar existindo e ativo.
+ *
+ * Também confere a versão da senha: trocar a senha derruba os cookies antigos.
  *
  * Sem essa conferência, desativar alguém em Usuários não teria efeito até o
  * cookie expirar, o que leva até 7 dias. Nome e perfil também vêm do banco, e
@@ -78,10 +85,11 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
 
   const user = await prisma.user.findUnique({
     where: { id: doCookie.userId },
-    select: { id: true, email: true, name: true, role: true, active: true },
+    select: { id: true, email: true, name: true, role: true, active: true, sessionVersion: true },
   });
 
-  if (!user || !user.active) return null;
+  // A senha mudou depois que este cookie foi emitido: a sessão caiu.
+  if (!user || !user.active || user.sessionVersion !== doCookie.sessionVersion) return null;
 
   return {
     userId: user.id,

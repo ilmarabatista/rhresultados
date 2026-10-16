@@ -64,7 +64,7 @@ export default function PontoRegistro({ token, empresa }: { token: string; empre
   const c = state.comprovante;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f4f7fa] px-4 py-8">
+    <main className="flex min-h-screen items-center justify-center bg-fundo px-4 py-8">
       <div className="w-full max-w-sm">
         <p className="text-center text-xs uppercase tracking-[0.12em] text-brand-600">{empresa}</p>
         <h1 className="mb-5 mt-1 text-center text-base font-semibold text-slate-800">Registro de ponto</h1>
@@ -79,7 +79,7 @@ export default function PontoRegistro({ token, empresa }: { token: string; empre
                 {c.tipo} registrada às {c.hora}
               </p>
               <p className="text-sm text-emerald-800">{c.nome}</p>
-              <div className="mt-3 border-t border-emerald-200 pt-2 text-left text-[11px] leading-relaxed text-emerald-900/80">
+              <div className="mt-3 border-t border-emerald-200 pt-2 text-left text-micro leading-relaxed text-emerald-900/80">
                 <p className="font-semibold uppercase tracking-wider">Comprovante</p>
                 <p>{c.empresa}</p>
                 <p>
@@ -149,7 +149,7 @@ export default function PontoRegistro({ token, empresa }: { token: string; empre
           )}
         </div>
 
-        <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">
+        <p className="mt-4 text-center text-micro leading-relaxed text-slate-500">
           Esqueceu o PIN ou bateu errado? Fale com o RH — a correção é feita por lá.
         </p>
       </div>

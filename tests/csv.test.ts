@@ -36,3 +36,16 @@ test("montarCsv sem linhas devolve só o cabeçalho", () => {
   const csv = montarCsv(["Empresa", "Etapa"], []);
   assert.equal(csv.slice(1), '"Empresa";"Etapa"');
 });
+
+test("celula não deixa o Excel executar fórmula", () => {
+  assert.equal(celula("=HYPERLINK(\"x\")"), '"\'=HYPERLINK(""x"")"');
+  assert.equal(celula("+55 11 9999"), '"\'+55 11 9999"');
+  assert.equal(celula("@SOMA(A1)"), '"\'@SOMA(A1)"');
+  assert.equal(celula("-pessoa"), '"\'-pessoa"');
+});
+
+test("celula mantém números e horas negativos", () => {
+  assert.equal(celula("-1:30"), '"-1:30"');
+  assert.equal(celula("-12,5"), '"-12,5"');
+  assert.equal(celula("+3"), '"+3"');
+});

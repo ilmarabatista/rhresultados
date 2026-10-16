@@ -108,7 +108,7 @@ function Row({
       <Icon size={16} strokeWidth={1.75} className="shrink-0" />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.soon ? (
-        <span className="shrink-0 rounded bg-white/5 px-1.5 py-px text-[9px] font-medium uppercase tracking-wide text-zinc-500">
+        <span className="shrink-0 rounded bg-white/5 px-1.5 py-px text-micro font-medium uppercase tracking-wide text-zinc-500">
           em breve
         </span>
       ) : null}
@@ -116,7 +116,7 @@ function Row({
   );
 
   const base =
-    "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] leading-tight transition";
+    "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-corpo leading-tight transition";
 
   if (bloqueado) {
     return (
@@ -177,12 +177,12 @@ export default function Sidebar({
   const fechar = () => setAberto(false);
 
   const conteudo = (
-    <div className="flex h-full flex-col bg-[#0d1b2a]">
+    <div className="flex h-full flex-col bg-brand-950">
       <div className="flex items-center gap-2.5 px-3 py-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-[11px] font-bold text-white">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-micro font-bold text-white">
           RH
         </span>
-        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-100">
+        <p className="min-w-0 flex-1 truncate text-corpo font-semibold text-zinc-100">
           RH Resultados
         </p>
 
@@ -194,7 +194,7 @@ export default function Sidebar({
               setMenuUsuario((v) => !v);
               setSeletorEmpresa(false);
             }}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold text-zinc-300 transition hover:bg-white/20 hover:text-zinc-100"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-micro font-semibold text-zinc-300 transition hover:bg-white/20 hover:text-zinc-100"
             aria-label={`Conta de ${user.name}`}
             aria-expanded={menuUsuario}
           >
@@ -208,19 +208,19 @@ export default function Sidebar({
                 onClick={() => setMenuUsuario(false)}
                 aria-hidden
               />
-              <div className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-xl border border-white/10 bg-[#14293f] py-1 shadow-xl">
+              <div className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-xl border border-white/10 bg-brand-900 py-1 shadow-xl">
                 <div className="border-b border-white/8 px-3 py-2">
-                  <p className="truncate text-[13px] text-zinc-100">
+                  <p className="truncate text-corpo text-zinc-100">
                     {user.name}
                   </p>
-                  <p className="text-[10px] uppercase tracking-wide text-zinc-500">
+                  <p className="text-micro uppercase tracking-wide text-zinc-500">
                     {user.role === "ADMIN" ? "Administrador" : "Membro"}
                   </p>
                 </div>
                 <form action={logout}>
                   <button
                     type="submit"
-                    className="w-full px-3 py-2 text-left text-[13px] text-zinc-400 transition hover:bg-white/5 hover:text-zinc-100"
+                    className="w-full px-3 py-2 text-left text-corpo text-zinc-400 transition hover:bg-white/5 hover:text-zinc-100"
                   >
                     Sair da conta
                   </button>
@@ -250,7 +250,7 @@ export default function Sidebar({
           return (
             <div key={grupo.label ?? `grupo-${i}`} className="mb-1">
               {grupo.label ? (
-                <p className="px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-300/80">
+                <p className="px-2.5 pb-1 pt-3 text-micro font-semibold uppercase tracking-[0.12em] text-brand-300/80">
                   {grupo.label}
                 </p>
               ) : (
@@ -280,14 +280,14 @@ export default function Sidebar({
               onClick={() => setSeletorEmpresa(false)}
               aria-hidden
             />
-            <div className="absolute bottom-full left-3 right-3 z-20 mb-1 overflow-hidden rounded-xl border border-white/10 bg-[#14293f] shadow-xl">
-              <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-300/80">
+            <div className="absolute bottom-full left-3 right-3 z-20 mb-1 overflow-hidden rounded-xl border border-white/10 bg-brand-900 shadow-xl">
+              <p className="px-2.5 pb-1 pt-2 text-micro font-semibold uppercase tracking-[0.12em] text-brand-300/80">
                 Trabalhar em
               </p>
 
               <div className="scroll-thin max-h-64 overflow-y-auto pb-1">
                 {companies.length === 0 ? (
-                  <p className="px-3 py-3 text-[12px] text-zinc-500">
+                  <p className="px-3 py-3 text-mini text-zinc-500">
                     Nenhuma empresa cadastrada.
                   </p>
                 ) : (
@@ -307,14 +307,14 @@ export default function Sidebar({
                             : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
                         }`}
                       >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-semibold text-zinc-300">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-micro font-semibold text-zinc-300">
                           {iniciais(c.name)}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13px] leading-tight">
+                          <span className="block truncate text-corpo leading-tight">
                             {c.name}
                           </span>
-                          <span className="block truncate text-[10px] leading-tight text-zinc-500">
+                          <span className="block truncate text-micro leading-tight text-zinc-500">
                             {c.industry || "Ramo não informado"}
                           </span>
                         </span>
@@ -335,7 +335,7 @@ export default function Sidebar({
                     setSeletorEmpresa(false);
                     fechar();
                   }}
-                  className="flex items-center gap-2 px-3 py-2.5 text-[13px] text-zinc-400 transition hover:bg-white/5 hover:text-zinc-100"
+                  className="flex items-center gap-2 px-3 py-2.5 text-corpo text-zinc-400 transition hover:bg-white/5 hover:text-zinc-100"
                 >
                   <Plus size={14} className="shrink-0" />
                   Cadastrar nova empresa
@@ -355,7 +355,7 @@ export default function Sidebar({
           className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition hover:bg-white/5"
         >
           <span
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-micro font-semibold ${
               companyName
                 ? "bg-brand-600/20 text-brand-300 ring-1 ring-inset ring-brand-500/30"
                 : "bg-white/10 text-zinc-400"
@@ -364,10 +364,10 @@ export default function Sidebar({
             {companyName ? iniciais(companyName) : "—"}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] leading-tight text-zinc-100">
+            <span className="block truncate text-corpo leading-tight text-zinc-100">
               {companyName ?? "Selecionar empresa"}
             </span>
-            <span className="block truncate text-[10px] uppercase tracking-wide leading-tight text-zinc-500">
+            <span className="block truncate text-micro uppercase tracking-wide leading-tight text-zinc-500">
               {companyName
                 ? (empresaAtual?.industry ?? "Empresa cliente")
                 : `${companies.length} cadastrada${companies.length === 1 ? "" : "s"}`}

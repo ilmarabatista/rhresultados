@@ -77,6 +77,7 @@ export default function BriefingCard({
 
           <DictationTextarea
             name="briefing"
+            rotulo="Briefing da empresa"
             rows={10}
             defaultValue={briefing ?? ""}
             placeholder="O que a empresa contou na reunião…"

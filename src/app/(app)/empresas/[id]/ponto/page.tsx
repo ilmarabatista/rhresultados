@@ -139,11 +139,11 @@ export default async function PontoPage({
 
       <div className="no-print rounded-lg border border-slate-200 bg-white px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Link do registro</span>
+          <span className="text-micro font-medium uppercase tracking-wider text-slate-500">Link do registro</span>
           {config.ativo ? null : <Etiqueta tom="ruim">desligado</Etiqueta>}
           <LinkDoPonto companyId={id} caminho={`/ponto/${config.token}`} />
         </div>
-        <p className="mt-1 text-[11px] text-slate-400">
+        <p className="mt-1 text-micro text-slate-500">
           Deixe aberto num tablet na entrada ou mande para cada pessoa abrir no celular. Ela entra com CPF e PIN.
         </p>
       </div>
@@ -235,9 +235,9 @@ export default async function PontoPage({
           {comDados.length === 0 ? (
             <p className="px-3 py-4 text-sm text-slate-500">Ninguém no ponto neste mês.</p>
           ) : (
-            <table className="w-full text-[12px]">
+            <table className="w-full text-mini">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[10px] uppercase tracking-wider text-slate-400">
+                <tr className="border-b border-slate-200 text-left text-micro uppercase tracking-wider text-slate-500">
                   <th className="px-3 py-1.5 font-medium">Pessoa</th>
                   <th className="px-2 py-1.5 text-right font-medium">Previsto</th>
                   <th className="px-2 py-1.5 text-right font-medium">Trabalhado</th>
@@ -281,10 +281,10 @@ export default async function PontoPage({
                           <td className="px-2 py-1.5 text-right tabular-nums text-red-700">{horas(c.totais.debito)}</td>
                         </>
                       )}
-                      <td className={`px-2 py-1.5 text-right tabular-nums ${c.totais.faltas ? "text-red-700" : "text-slate-400"}`}>{c.totais.faltas}</td>
-                      <td className={`px-2 py-1.5 text-right tabular-nums ${c.totais.alertas ? "text-amber-700" : "text-slate-400"}`}>{c.totais.alertas}</td>
+                      <td className={`px-2 py-1.5 text-right tabular-nums ${c.totais.faltas ? "text-red-700" : "text-slate-500"}`}>{c.totais.faltas}</td>
+                      <td className={`px-2 py-1.5 text-right tabular-nums ${c.totais.alertas ? "text-amber-700" : "text-slate-500"}`}>{c.totais.alertas}</td>
                       <td className="px-2 py-1.5 text-right">
-                        <Link href={href({ ver: "espelho", pessoa: c.pessoa.id })} className="text-[11px] text-brand-700 hover:text-brand-900">
+                        <Link href={href({ ver: "espelho", pessoa: c.pessoa.id })} className="text-micro text-brand-700 hover:text-brand-900">
                           espelho ›
                         </Link>
                       </td>
@@ -355,7 +355,7 @@ export default async function PontoPage({
         <section className="rounded-lg border border-slate-200 bg-white">
           <header className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Espelho de ponto · {company!.name}</p>
+              <p className="text-micro font-medium uppercase tracking-wider text-slate-500">Espelho de ponto · {company!.name}</p>
               <h2 className="text-base font-semibold text-slate-900">{escolhida.nome}</h2>
               <p className="text-xs text-slate-500">
                 {[escolhida.cargo, escolhida.documento ? `CPF ${escolhida.documento}` : null, `jornada de ${horas(cargaSemanal(jornada))}/semana`]
@@ -411,7 +411,7 @@ export default async function PontoPage({
             <p>Faltas: <b className="tabular-nums">{t.faltas}</b></p>
           </div>
 
-          <p className="no-print border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
+          <p className="no-print border-t border-slate-100 px-4 py-2 text-micro text-slate-500">
             Passe o mouse numa batida para ver a origem e anular. <span className="rounded bg-amber-50 px-1 text-amber-800">08:00*</span> é
             batida incluída pelo RH; riscada é anulada. Nada é apagado.
           </p>
@@ -437,7 +437,7 @@ export default async function PontoPage({
                     <span className="w-20 tabular-nums text-slate-500">{formatFullDate(l.dia)}</span>
                     <span className={`w-16 text-right font-medium tabular-nums ${cor(l.minutos)}`}>{saldoEscrito(l.minutos)}</span>
                     <span className="flex-1 text-slate-700">{l.descricao}</span>
-                    <span className="text-slate-400">{l.criadoPor}</span>
+                    <span className="text-slate-500">{l.criadoPor}</span>
                     <ExcluirLancamento id={l.id} />
                   </li>
                 ))}
@@ -502,9 +502,9 @@ export default async function PontoPage({
                   <Etiqueta tom={o.tipo === "FERIADO" ? "azul" : "neutro"}>{NOME_DA_OCORRENCIA[o.tipo]}</Etiqueta>
                   <span className="flex-1 text-slate-700">
                     {o.employee?.name ?? "Empresa toda"}
-                    {o.descricao ? <span className="text-slate-400"> · {o.descricao}</span> : null}
+                    {o.descricao ? <span className="text-slate-500"> · {o.descricao}</span> : null}
                   </span>
-                  <span className="text-slate-400">{o.criadoPor ? `${o.criadoPor}, ${formatMoment(o.createdAt)}` : null}</span>
+                  <span className="text-slate-500">{o.criadoPor ? `${o.criadoPor}, ${formatMoment(o.createdAt)}` : null}</span>
                   <ExcluirOcorrencia id={o.id} />
                 </li>
               ))}
@@ -517,5 +517,5 @@ export default async function PontoPage({
 }
 
 function cor(minutos: number) {
-  return minutos > 0 ? "text-emerald-700" : minutos < 0 ? "text-red-700" : "text-slate-400";
+  return minutos > 0 ? "text-emerald-700" : minutos < 0 ? "text-red-700" : "text-slate-500";
 }

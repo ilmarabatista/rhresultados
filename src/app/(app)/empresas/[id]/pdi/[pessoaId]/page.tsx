@@ -230,7 +230,7 @@ export default async function PdiDaPessoaPage({
                 }`}
               >
                 <span
-                  className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold ${
+                  className={`flex h-4 w-4 items-center justify-center rounded-full text-micro font-semibold ${
                     p.feito ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-600"
                   }`}
                 >
@@ -269,7 +269,7 @@ export default async function PdiDaPessoaPage({
             </summary>
             <div className="mt-3 grid gap-4 text-sm md:grid-cols-3">
               <div>
-                <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Responsabilidades</h3>
+                <h3 className="mb-1 text-micro font-semibold uppercase tracking-wider text-slate-500">Responsabilidades</h3>
                 {cargo.responsabilidades ? (
                   <ul className="list-disc space-y-0.5 pl-4 text-slate-600">
                     {linhasComoItens(cargo.responsabilidades).map((r, i) => (
@@ -277,15 +277,15 @@ export default async function PdiDaPessoaPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-slate-400">—</p>
+                  <p className="text-slate-500">—</p>
                 )}
               </div>
               <div>
-                <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Requisitos</h3>
+                <h3 className="mb-1 text-micro font-semibold uppercase tracking-wider text-slate-500">Requisitos</h3>
                 <p className="whitespace-pre-wrap text-slate-600">{cargo.requisitos || "—"}</p>
               </div>
               <div>
-                <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Competências e nível</h3>
+                <h3 className="mb-1 text-micro font-semibold uppercase tracking-wider text-slate-500">Competências e nível</h3>
                 {cargo.competencias.length === 0 ? (
                   <p className="text-amber-700">
                     Nenhuma ainda.{" "}
@@ -298,7 +298,7 @@ export default async function PdiDaPessoaPage({
                     {cargo.competencias.map((c) => (
                       <li key={c.nome} className="flex justify-between gap-2">
                         <span className="truncate">{c.nome}</span>
-                        <span className="tabular-nums text-slate-400">{c.nivelEsperado}</span>
+                        <span className="tabular-nums text-slate-500">{c.nivelEsperado}</span>
                       </li>
                     ))}
                   </ul>

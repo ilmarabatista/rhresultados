@@ -8,6 +8,7 @@ import { diaValido, horaValida } from "@/lib/agenda";
 import { dayKeyToDate, formatFullDate } from "@/lib/dates";
 import { textoSeguro } from "@/lib/texto-seguro";
 import { codigoDaReuniao, TIPOS_DE_ITEM, type TipoDeItem } from "@/lib/reunioes";
+import { TAMANHO_MAXIMO, TAMANHO_MAXIMO_TEXTO, tipoDaApresentacao } from "@/lib/apresentacao";
 import { acertarAgenda } from "@/lib/reuniao-agenda";
 
 /**
@@ -25,7 +26,6 @@ import { acertarAgenda } from "@/lib/reuniao-agenda";
 export type ReuniaoState = { error?: string; ok?: boolean; id?: string };
 
 /** Apresentação com imagens passa fácil dos 10 MB dos currículos. */
-const TAMANHO_MAXIMO = 25 * 1024 * 1024;
 
 function refresh(companyId: string) {
   // A lista, a reunião, o planejamento e a ficha da empresa moram no mesmo layout.
@@ -424,8 +424,10 @@ export async function enviarApresentacao(formData: FormData): Promise<ReuniaoSta
 
   if (!(arquivo instanceof File) || arquivo.size === 0) return { error: "Escolha o arquivo." };
   if (arquivo.size > TAMANHO_MAXIMO) {
-    return { error: "O arquivo passa de 25 MB. Diminua as imagens ou envie em PDF." };
+    return { error: `O arquivo passa de ${TAMANHO_MAXIMO_TEXTO}. Diminua as imagens ou envie em PDF.` };
   }
+  const tipo = tipoDaApresentacao(arquivo.name);
+  if (!tipo) return { error: "Envie a apresentação em PDF, PowerPoint, Keynote, ODP ou imagem." };
 
   const r = await prisma.meeting.findUnique({
     where: { id: reuniaoId },
@@ -438,7 +440,7 @@ export async function enviarApresentacao(formData: FormData): Promise<ReuniaoSta
     data: {
       meetingId: reuniaoId,
       name: nome,
-      mimeType: arquivo.type || "application/octet-stream",
+      mimeType: tipo,
       size: arquivo.size,
       data: new Uint8Array(await arquivo.arrayBuffer()),
     },

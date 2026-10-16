@@ -31,6 +31,7 @@ import {
 } from "@/lib/pdi";
 import { Field, FormError, Input, SubmitButton, Textarea } from "./form";
 import { Aviso, Etiqueta, Numeros } from "./ui";
+import { avisar, confirmar } from "@/components/avisos";
 
 /**
  * A avaliação de competências, feita junto com a pessoa: para cada competência
@@ -94,12 +95,12 @@ function Escala({
           aria-checked={valor === n}
           title={`${n} · ${ROTULO_DO_NIVEL[n]}`}
           onClick={() => onEscolher(valor === n ? null : n)}
-          className={`h-6 w-6 rounded text-[11px] font-medium tabular-nums transition ${
+          className={`h-6 w-6 rounded text-micro font-medium tabular-nums transition ${
             valor === n
               ? cor
               : n === esperado
                 ? "border border-dashed border-brand-400 text-slate-500 hover:bg-slate-100"
-                : "border border-slate-200 text-slate-400 hover:bg-slate-100"
+                : "border border-slate-200 text-slate-500 hover:bg-slate-100"
           }`}
         >
           {n}
@@ -117,7 +118,7 @@ function Comentario({ nota }: { nota: NotaDaTela }) {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="block max-w-full truncate text-left text-[11px] text-slate-400 hover:text-brand-700"
+        className="block max-w-full truncate text-left text-micro text-slate-500 hover:text-brand-700"
       >
         {nota.comentario || "+ comentário"}
       </button>
@@ -133,11 +134,11 @@ function Comentario({ nota }: { nota: NotaDaTela }) {
         setAberto(false);
         if (texto !== nota.comentario) {
           const r = await comentarNota(nota.id, texto);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
         }
       }}
       placeholder="Exemplos, combinados, por que esta nota"
-      className="w-full rounded-md border border-brand-300 px-2 py-1 text-[12px] outline-none"
+      className="w-full rounded-md border border-brand-300 px-2 py-1 text-mini outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
     />
   );
 }
@@ -153,14 +154,14 @@ function Grade({ avaliacao, anterior }: { avaliacao: AvaliacaoDaTela; anterior: 
     setNotas((atual) => atual.map((n) => (n.id === nota.id ? { ...n, [campo]: valor } : n)));
     startTransition(async () => {
       const r = await marcarNota(nota.id, campo, valor);
-      if (r.error) alert(r.error);
+      if (r.error) avisar(r.error);
     });
   }
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200">
       <div className="min-w-[860px]">
-        <div className="grid grid-cols-[minmax(0,1.6fr)_4.5rem_repeat(3,9.5rem)_4rem_minmax(0,1fr)_1.5rem] items-center gap-2 bg-brand-900 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+        <div className="grid grid-cols-[minmax(0,1.6fr)_4.5rem_repeat(3,9.5rem)_4rem_minmax(0,1fr)_1.5rem] items-center gap-2 bg-brand-900 px-3 py-1.5 text-micro font-semibold uppercase tracking-wider text-white">
           <span>Competência</span>
           <span>Esperado</span>
           {COLUNAS.map((c) => (
@@ -179,10 +180,10 @@ function Grade({ avaliacao, anterior }: { avaliacao: AvaliacaoDaTela; anterior: 
               className="grid grid-cols-[minmax(0,1.6fr)_4.5rem_repeat(3,9.5rem)_4rem_minmax(0,1fr)_1.5rem] items-center gap-2 border-b border-slate-100 px-3 py-1.5 last:border-b-0 even:bg-slate-50/60"
             >
               <div className="min-w-0">
-                <span className="block truncate text-[13px] font-medium text-slate-800" title={n.nome}>
+                <span className="block truncate text-corpo font-medium text-slate-800" title={n.nome}>
                   {n.nome}
                 </span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-micro text-slate-500">
                   {ROTULO_DO_TIPO[lerTipoDeCompetencia(n.tipo)]}
                   {c && c.antes != null ? ` · antes: ${c.antes}` : ""}
                   {c && c.mudou ? (
@@ -197,7 +198,7 @@ function Grade({ avaliacao, anterior }: { avaliacao: AvaliacaoDaTela; anterior: 
               <select
                 value={n.esperado}
                 onChange={(e) => marcar(n, "esperado", Number(e.target.value))}
-                className="w-14 rounded border border-slate-200 bg-transparent px-1 py-0.5 text-[12px] font-semibold text-brand-800"
+                className="w-14 rounded border border-slate-200 bg-transparent px-1 py-0.5 text-mini font-semibold text-brand-800"
                 aria-label="Nível esperado"
               >
                 {NIVEIS.map((x) => (
@@ -218,7 +219,7 @@ function Grade({ avaliacao, anterior }: { avaliacao: AvaliacaoDaTela; anterior: 
               ))}
               <span>
                 {g == null ? (
-                  <span className="text-[11px] text-slate-300">—</span>
+                  <span className="text-micro text-slate-300">—</span>
                 ) : g > 0 ? (
                   <Etiqueta tom={g >= 2 ? "ruim" : "atencao"}>−{g}</Etiqueta>
                 ) : (
@@ -228,8 +229,8 @@ function Grade({ avaliacao, anterior }: { avaliacao: AvaliacaoDaTela; anterior: 
               <Comentario nota={n} />
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(`Tirar ${n.nome} desta avaliação?`)) {
+                onClick={async () => {
+                  if (await confirmar(`Tirar ${n.nome} desta avaliação?`)) {
                     setNotas((atual) => atual.filter((x) => x.id !== n.id));
                     startTransition(async () => void (await tirarDaAvaliacao(n.id)));
                   }
@@ -258,7 +259,7 @@ function Grafico({ notas }: { notas: NotaDaTela[] }) {
         const g = n.esperado - f;
         return (
           <div key={n.id} className="grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_2.5rem] items-center gap-2">
-            <span className="truncate text-[12px] text-slate-600" title={n.nome}>
+            <span className="truncate text-mini text-slate-600" title={n.nome}>
               {n.nome}
             </span>
             <div className="relative h-3 rounded-full bg-slate-100">
@@ -272,13 +273,13 @@ function Grafico({ notas }: { notas: NotaDaTela[] }) {
                 title={`Esperado: ${n.esperado}`}
               />
             </div>
-            <span className="text-right text-[11px] tabular-nums text-slate-500">
+            <span className="text-right text-micro tabular-nums text-slate-500">
               {f}/{n.esperado}
             </span>
           </div>
         );
       })}
-      <p className="text-[10px] text-slate-400">A barra é o nível acordado; o traço escuro, o nível que o cargo pede.</p>
+      <p className="text-micro text-slate-500">A barra é o nível acordado; o traço escuro, o nível que o cargo pede.</p>
     </div>
   );
 }
@@ -301,7 +302,7 @@ function Conversa({ avaliacao }: { avaliacao: AvaliacaoDaTela }) {
             onBlur={async (e) => {
               if (e.target.value === avaliacao[p.campo]) return;
               const r = await mudarAvaliacao(avaliacao.id, p.campo, e.target.value);
-              if (r.error) alert(r.error);
+              if (r.error) avisar(r.error);
             }}
           />
         </Field>
@@ -329,7 +330,7 @@ function Incluir({ avaliacaoId }: { avaliacaoId: string }) {
         e.preventDefault();
         startTransition(async () => {
           const r = await incluirNaAvaliacao(avaliacaoId, nome, tipo, esperado);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
           else {
             setNome("");
             setAberto(false);
@@ -364,7 +365,7 @@ function Incluir({ avaliacaoId }: { avaliacaoId: string }) {
       <button type="submit" disabled={pending} className={botaoClaro}>
         Incluir
       </button>
-      <button type="button" onClick={() => setAberto(false)} className="text-xs text-slate-400">
+      <button type="button" onClick={() => setAberto(false)} className="text-xs text-slate-500">
         cancelar
       </button>
     </form>
@@ -451,7 +452,7 @@ function NovoPlano({
             </ul>
           )}
           {gaps.length > 3 ? (
-            <p className="mt-1 text-[11px] text-slate-400">Dica: de 2 a 4 metas por plano. Mais que isso dispersa.</p>
+            <p className="mt-1 text-micro text-slate-500">Dica: de 2 a 4 metas por plano. Mais que isso dispersa.</p>
           ) : null}
         </fieldset>
         <FormError message={state.error} />
@@ -505,7 +506,7 @@ export default function PdiAvaliacao({
         e.preventDefault();
         startTransition(async () => {
           const r = await criarAvaliacao(employeeId, dia);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
           else router.push(`?avaliacao=${r.id}#avaliacao`);
         });
       }}
@@ -553,7 +554,7 @@ export default function PdiAvaliacao({
         <div className="space-y-3">
           {avaliacoes.length > 1 ? (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Avaliações</span>
+              <span className="text-micro font-medium uppercase tracking-wider text-slate-500">Avaliações</span>
               {avaliacoes.map((a, j) => (
                 <Link
                   key={a.id}
@@ -579,7 +580,7 @@ export default function PdiAvaliacao({
                 onBlur={async (e) => {
                   if (e.target.value === avaliacao.dia) return;
                   const r = await mudarAvaliacao(avaliacao.id, "data", e.target.value);
-                  if (r.error) alert(r.error);
+                  if (r.error) avisar(r.error);
                 }}
                 className="rounded border border-slate-200 px-1.5 py-0.5"
               />
@@ -588,17 +589,17 @@ export default function PdiAvaliacao({
             {anterior ? <span>· comparando com {anterior.data}</span> : null}
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 const aviso = avaliacao.planos
                   ? "Excluir esta avaliação? O PDI que saiu dela continua, mas perde o vínculo com os gaps."
                   : "Excluir esta avaliação?";
-                if (confirm(aviso))
+                if (await confirmar(aviso))
                   startTransition(async () => {
                     await excluirAvaliacao(avaliacao.id);
                     router.push(`/empresas/${companyId}/pdi/${employeeId}#avaliacao`);
                   });
               }}
-              className="ml-auto text-slate-400 hover:text-red-600"
+              className="ml-auto text-slate-500 hover:text-red-600"
             >
               Excluir avaliação
             </button>
@@ -643,11 +644,11 @@ export default function PdiAvaliacao({
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Mapa dos gaps</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Mapa dos gaps</h3>
               <Grafico notas={avaliacao.notas} />
             </div>
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">A conversa</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">A conversa</h3>
               <Conversa key={avaliacao.id} avaliacao={avaliacao} />
             </div>
           </div>

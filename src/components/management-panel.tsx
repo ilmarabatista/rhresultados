@@ -27,11 +27,11 @@ const CARTAO =
 function Cartao({ metrica }: { metrica: Metrica }) {
   return (
     <div className={CARTAO}>
-      <p className="text-[10px] uppercase tracking-wide text-slate-400">
+      <p className="text-micro uppercase tracking-wide text-slate-500">
         {metrica.rotulo}
       </p>
       <p className="mt-0.5 text-lg font-semibold text-slate-300">—</p>
-      <p className="mt-0.5 text-[10px] leading-snug text-slate-400">
+      <p className="mt-0.5 text-micro leading-snug text-slate-500">
         {metrica.definicao}
       </p>
     </div>
@@ -42,7 +42,7 @@ function Grafico({ titulo, nota }: { titulo: string; nota: string }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-3">
       <h3 className="text-xs font-semibold text-slate-800">{titulo}</h3>
-      <p className="mt-0.5 text-[10px] text-slate-400">{nota}</p>
+      <p className="mt-0.5 text-micro text-slate-500">{nota}</p>
       <div className="mt-2 flex h-24 items-end gap-1">
         {MESES_CURTOS.map((m, i) => (
           <div key={m} className="flex flex-1 flex-col items-center gap-1">
@@ -51,7 +51,7 @@ function Grafico({ titulo, nota }: { titulo: string; nota: string }) {
               style={{ height: `${20 + ((i * 37) % 60)}%` }}
               aria-hidden
             />
-            <span className="text-[9px] text-slate-300">{m}</span>
+            <span className="text-micro text-slate-300">{m}</span>
           </div>
         ))}
       </div>
@@ -71,11 +71,11 @@ function TabelaVazia({
   return (
     <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
       <div className="border-b border-slate-100 px-3 py-1.5">
-        <h3 className="text-[11px] font-semibold text-slate-800">{titulo}</h3>
+        <h3 className="text-micro font-semibold text-slate-800">{titulo}</h3>
       </div>
-      <table className="w-full min-w-[420px] text-[11px]">
+      <table className="w-full min-w-[420px] text-micro">
         <thead>
-          <tr className="bg-slate-50/70 text-[10px] uppercase tracking-wide text-slate-400">
+          <tr className="bg-slate-50/70 text-micro uppercase tracking-wide text-slate-500">
             <th className="px-3 py-1.5 text-left font-medium">{colunas[0]}</th>
             {colunas.slice(1).map((c) => (
               <th key={c} className="px-3 py-1.5 text-right font-medium">
@@ -121,7 +121,7 @@ function Comercial() {
             "Ticket médio do contrato",
           ].map((r) => (
             <div key={r} className={CARTAO}>
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">
+              <p className="text-micro uppercase tracking-wide text-slate-500">
                 {r}
               </p>
               <p className="mt-0.5 text-base font-semibold text-slate-300">—</p>
@@ -198,7 +198,7 @@ function Comercial() {
         linhas={["—", "—", "—"]}
       />
 
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-micro leading-relaxed text-slate-500">
         As tabelas ficam vazias porque a proposta ainda não é registrada no
         sistema. Ela é o próximo passo: hoje o funil vai do lead
         (aba <strong>Leads</strong>) direto para a empresa cadastrada, sem a
@@ -229,7 +229,7 @@ function Gerenciamento() {
         linhas={["Boleto", "Pix", "Cartão", "Transferência", "Total"]}
       />
 
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-micro leading-relaxed text-slate-500">
         A despesa já é real e vem da aba <strong>Despesas</strong>. Falta o
         outro lado: a receita, que depende de registrar contrato e recebimento.
         Enquanto isso, lucro e margem ficam sem base.
@@ -252,7 +252,7 @@ function Metas() {
             {ETAPAS_DO_FUNIL.map((e, i) => (
               <li
                 key={e}
-                className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-600"
+                className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-micro text-slate-600"
               >
                 <span>
                   <span className="mr-1.5 text-slate-300">{i + 1}</span>
@@ -277,7 +277,7 @@ function Metas() {
         linhas={[...MESES_CURTOS, "Total"]}
       />
 
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-micro leading-relaxed text-slate-500">
         Depende das abas <strong>Leads</strong> e <strong>Tráfego pago</strong>:
         o funil sai do CRM, o investimento sai da conta de anúncios.
         <strong className="font-medium text-slate-500">
@@ -315,7 +315,7 @@ export default function ManagementPanel({
           <div className="flex items-center gap-1.5">
             <Link
               href={link(painel, ano - 1)}
-              className="rounded px-1 text-slate-400 transition hover:text-white"
+              className="rounded px-1 text-slate-500 transition hover:text-white"
               aria-label="Ano anterior"
             >
               ‹
@@ -325,7 +325,7 @@ export default function ManagementPanel({
             </span>
             <Link
               href={link(painel, ano + 1)}
-              className="rounded px-1 text-slate-400 transition hover:text-white"
+              className="rounded px-1 text-slate-500 transition hover:text-white"
               aria-label="Próximo ano"
             >
               ›
@@ -337,10 +337,10 @@ export default function ManagementPanel({
               <Link
                 key={p.valor}
                 href={link(p.valor, ano)}
-                className={`border-b-2 py-1 text-[11px] uppercase tracking-wide transition ${
+                className={`border-b-2 py-1 text-micro uppercase tracking-wide transition ${
                   p.valor === painel
                     ? "border-amber-400 text-white"
-                    : "border-transparent text-slate-400 hover:text-slate-100"
+                    : "border-transparent text-slate-500 hover:text-slate-100"
                 }`}
               >
                 {p.label}
@@ -348,7 +348,7 @@ export default function ManagementPanel({
             ))}
           </nav>
 
-          <span className="ml-auto text-[11px] text-slate-400">
+          <span className="ml-auto text-micro text-slate-500">
             {painel === "despesas" && totalDoAno > 0
               ? `R$ ${formatarValor(totalDoAno)} no ano`
               : atual.resumo}
@@ -364,7 +364,7 @@ export default function ManagementPanel({
                 <h1 className="text-sm font-semibold text-slate-900">
                   Despesas de {ano}
                 </h1>
-                <p className="mt-0.5 text-[11px] text-slate-500">
+                <p className="mt-0.5 text-micro text-slate-500">
                   Cada linha é uma conta; cada coluna, um mês. As linhas são
                   suas: renomeie, reordene e crie as que faltarem.
                 </p>

@@ -25,6 +25,8 @@
  * Puro: a tela de cadastro, o link do candidato, a ficha e os testes leem daqui.
  */
 
+import { semAcento } from "./text";
+
 export type ModoDoTeste = "ESCOLHA" | "NOTAS";
 
 export const MODOS_DO_TESTE: { valor: ModoDoTeste; rotulo: string; explicacao: string }[] = [
@@ -70,9 +72,6 @@ export const MODELO_DE_ESTRUTURA = [
   "b) Segunda alternativa [A]",
 ].join("\n");
 
-function semAcento(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
-}
 
 function cortar(s: string, max = 50): string {
   return s.length > max ? `${s.slice(0, max)}…` : s;

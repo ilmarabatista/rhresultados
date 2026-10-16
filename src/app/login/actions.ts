@@ -19,6 +19,13 @@ const schema = z.object({
 
 export type LoginState = { error?: string };
 
+/**
+ * Hash de uma senha aleatória que ninguém conhece. Conferir a senha contra ele
+ * quando o e-mail não existe faz a resposta levar o mesmo tempo nos dois
+ * casos, e o tempo deixa de revelar quais e-mails têm acesso.
+ */
+const HASH_FICTICIO = "$2b$10$wCrVvGvhIoJXIuwzUW0jM.OrLyvTylfEj3Qa7PIM5HsbtLiQKgEoO";
+
 export async function login(
   _prev: LoginState,
   formData: FormData,
@@ -48,6 +55,7 @@ export async function login(
   const invalid = { error: "E-mail ou senha incorretos." };
 
   if (!user || !user.active) {
+    await verifyPassword(password, HASH_FICTICIO);
     await recordLoginAttempt(email, ip, false);
     return invalid;
   }
@@ -66,6 +74,7 @@ export async function login(
     email: user.email,
     name: user.name,
     role: user.role,
+    sessionVersion: user.sessionVersion,
   });
 
   redirect("/empresas");

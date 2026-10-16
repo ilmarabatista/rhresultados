@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido, horaValida } from "@/lib/agenda";
 import { dayKeyToDate, formatFullDate } from "@/lib/dates";
-import { textoSeguro } from "@/lib/texto-seguro";
+import { textoDoFormulario, textoSeguro } from "@/lib/texto-seguro";
 import { acertarAgenda } from "@/lib/reuniao-agenda";
 import {
   lerCategoria,
@@ -37,7 +37,7 @@ function refresh(companyId: string) {
 }
 
 function texto(valor: FormDataEntryValue | string | null, max = 200): string {
-  return textoSeguro(String(valor ?? "")).trim().slice(0, max);
+  return textoDoFormulario(valor, max);
 }
 
 // ------------------------------------------------------------------ cargos
@@ -217,25 +217,28 @@ export async function copiarCatalogo(companyId: string, origemId: string): Promi
   const jaTem = (t: { codigo: string | null; nome: string }) =>
     aqui.some((a) => (t.codigo && a.codigo === t.codigo) || mesmoCargo(a.nome, t.nome));
 
-  let copiados = 0;
-  for (const t of origem) {
-    if (jaTem(t)) continue;
-    const cargos = t.cargos
-      .map((m) => cargosAqui.find((c) => mesmoCargo(c.nome, m.cargo.nome))?.id)
-      .filter((id): id is string => Boolean(id));
-    await prisma.treinamento.create({
-      data: {
-        companyId,
-        codigo: t.codigo,
-        nome: t.nome,
-        categoria: t.categoria,
-        cargaHoraria: t.cargaHoraria,
-        descricao: t.descricao,
-        cargos: { create: cargos.map((cargoId) => ({ cargoId })) },
-      },
-    });
-    copiados++;
-  }
+  // Tudo numa transação: ou o catálogo vem inteiro, ou nada muda.
+  const novos = origem.filter((t) => !jaTem(t));
+  await prisma.$transaction(
+    novos.map((t) => {
+      const cargos = t.cargos
+        .map((m) => cargosAqui.find((c) => mesmoCargo(c.nome, m.cargo.nome))?.id)
+        .filter((id): id is string => Boolean(id));
+      return prisma.treinamento.create({
+        data: {
+          companyId,
+          codigo: t.codigo,
+          nome: t.nome,
+          categoria: t.categoria,
+          cargaHoraria: t.cargaHoraria,
+          descricao: t.descricao,
+          cargos: { create: cargos.map((cargoId) => ({ cargoId })) },
+        },
+        select: { id: true },
+      });
+    }),
+  );
+  const copiados = novos.length;
 
   await log(companyId, session.userId, "CRIOU", companyId, `Copiou ${copiados} treinamento(s) do catálogo de ${empresa.name}.`);
   refresh(companyId);

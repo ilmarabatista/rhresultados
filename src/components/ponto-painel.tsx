@@ -34,7 +34,7 @@ import { Field, FormError, FormOk, Input, Select, SmallSubmitButton, SubmitButto
  */
 
 const botaoLeve =
-  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:text-brand-700";
+  "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700";
 
 function useFechaQuandoOk(state: PontoState, fechar?: () => void) {
   useEffect(() => {
@@ -69,7 +69,7 @@ export function LinkDoPonto({ companyId, caminho }: { companyId: string; caminho
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <code className="max-w-full truncate rounded bg-slate-100 px-2 py-1 text-[11px] text-slate-700">{url}</code>
+      <code className="max-w-full truncate rounded bg-slate-100 px-2 py-1 text-micro text-slate-700">{url}</code>
       <button
         type="button"
         className={botaoLeve}
@@ -107,7 +107,7 @@ function CamposDaJornada({ jornada, prefixo = "jornada" }: { jornada: number[]; 
     <div className="grid grid-cols-7 gap-1.5">
       {DIAS_DA_SEMANA.map((nome, i) => (
         <label key={nome} className="block text-center">
-          <span className="mb-0.5 block text-[10px] font-medium uppercase tracking-wider text-slate-400">{nome}</span>
+          <span className="mb-0.5 block text-micro font-medium uppercase tracking-wider text-slate-500">{nome}</span>
           <input
             name={`${prefixo}${i}`}
             defaultValue={jornada[i] ? horas(jornada[i]) : ""}
@@ -171,7 +171,7 @@ export function ConfigForm({ companyId, config }: { companyId: string; config: C
 
         <p className="mb-1.5 mt-4 text-sm font-medium text-slate-700">Jornada de cada dia</p>
         <CamposDaJornada jornada={config.jornada} />
-        <p className="mt-1 text-[11px] text-slate-400">
+        <p className="mt-1 text-micro text-slate-500">
           Horas por dia (8:00, 8:48, 4). Em branco é dia sem jornada. Pessoa com escala diferente ganha a própria em “Pessoas e PIN”.
         </p>
 
@@ -234,7 +234,7 @@ export function PessoaPonto({ pessoa, jornadaDaEmpresa }: { pessoa: PessoaDaTela
     <div className="border-b border-slate-100 px-3 py-2 last:border-b-0 even:bg-slate-50/60">
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium text-slate-800">
+          <p className="text-corpo font-medium text-slate-800">
             {pessoa.nome}
             {pessoa.status !== "ATIVO" ? (
               <span className="ml-1.5">
@@ -242,7 +242,7 @@ export function PessoaPonto({ pessoa, jornadaDaEmpresa }: { pessoa: PessoaDaTela
               </span>
             ) : null}
           </p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-micro text-slate-500">
             {[pessoa.cargo, pessoa.documento ? `CPF ${pessoa.documento}` : "sem CPF"].filter(Boolean).join(" · ")}
             {pessoa.jornada ? ` · jornada própria de ${horas(pessoa.jornada.reduce((s, m) => s + m, 0))}/semana` : ""}
           </p>
@@ -252,7 +252,7 @@ export function PessoaPonto({ pessoa, jornadaDaEmpresa }: { pessoa: PessoaDaTela
           {aberto ? "Fechar" : pessoa.temPin ? "Ajustar" : "Liberar ponto"}
         </button>
       </div>
-      {!aberto && state.mensagem ? <p className="mt-1 text-[11px] text-emerald-700">{state.mensagem}</p> : null}
+      {!aberto && state.mensagem ? <p className="mt-1 text-micro text-emerald-700">{state.mensagem}</p> : null}
 
       {aberto ? (
         <form action={action} className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
@@ -330,23 +330,23 @@ function Batida({ m, podeMexer }: { m: MarcacaoDaTela; podeMexer: boolean }) {
   return (
     <span
       title={titulo}
-      className={`group inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[12px] tabular-nums ${
+      className={`group inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-mini tabular-nums ${
         m.anulada
-          ? "bg-slate-100 text-slate-400 line-through"
+          ? "bg-slate-100 text-slate-500 line-through"
           : m.origem === "MANUAL"
             ? "bg-amber-50 text-amber-800"
             : "bg-brand-50 text-brand-800"
       }`}
     >
       {relogio(m.minuto)}
-      {m.minuto >= 1440 ? <sup className="text-[8px]">+1</sup> : null}
-      {m.origem === "MANUAL" ? <span className="text-[9px]">*</span> : null}
+      {m.minuto >= 1440 ? <sup className="text-micro">+1</sup> : null}
+      {m.origem === "MANUAL" ? <span className="text-micro">*</span> : null}
       {podeMexer ? (
         <button
           type="button"
           disabled={pendente}
           aria-label={m.anulada ? "Restaurar batida" : "Anular batida"}
-          className="no-print ml-0.5 hidden text-slate-400 hover:text-red-600 group-hover:inline"
+          className="no-print ml-0.5 hidden text-slate-500 hover:text-red-600 group-hover:inline"
           onClick={() => {
             if (m.anulada) {
               iniciar(async () => void (await restaurarMarcacao(m.id)));
@@ -363,7 +363,7 @@ function Batida({ m, podeMexer }: { m: MarcacaoDaTela; podeMexer: boolean }) {
           {m.anulada ? <RotateCcw size={10} /> : <X size={10} />}
         </button>
       ) : null}
-      {erro ? <span className="ml-1 text-[10px] text-red-600 no-underline">{erro}</span> : null}
+      {erro ? <span className="ml-1 text-micro text-red-600 no-underline">{erro}</span> : null}
     </span>
   );
 }
@@ -376,7 +376,7 @@ function IncluirBatida({ employeeId, dia, fechar }: { employeeId: string; dia: s
       <input type="hidden" name="employeeId" value={employeeId} />
       <input type="hidden" name="dia" value={dia} />
       <input type="time" name="hora" required autoFocus className="rounded border border-slate-300 px-1.5 py-1 text-xs" />
-      <label className="flex items-center gap-1 text-[11px] text-slate-500">
+      <label className="flex items-center gap-1 text-micro text-slate-500">
         <input type="checkbox" name="diaSeguinte" /> dia seguinte
       </label>
       <input
@@ -386,10 +386,10 @@ function IncluirBatida({ employeeId, dia, fechar }: { employeeId: string; dia: s
         className="min-w-[14rem] flex-1 rounded border border-slate-300 px-1.5 py-1 text-xs"
       />
       <SmallSubmitButton>Incluir</SmallSubmitButton>
-      <button type="button" onClick={fechar} className="text-[11px] text-slate-500">
+      <button type="button" onClick={fechar} className="text-micro text-slate-500">
         cancelar
       </button>
-      {state.error ? <p className="w-full text-[11px] text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="w-full text-micro text-red-600">{state.error}</p> : null}
     </form>
   );
 }
@@ -410,10 +410,10 @@ function OcorrenciaDoDia({ companyId, employeeId, dia, fechar }: { companyId: st
       </select>
       <input name="descricao" placeholder="Observação" className="min-w-[12rem] flex-1 rounded border border-slate-300 px-1.5 py-1 text-xs" />
       <SmallSubmitButton>Lançar</SmallSubmitButton>
-      <button type="button" onClick={fechar} className="text-[11px] text-slate-500">
+      <button type="button" onClick={fechar} className="text-micro text-slate-500">
         cancelar
       </button>
-      {state.error ? <p className="w-full text-[11px] text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="w-full text-micro text-red-600">{state.error}</p> : null}
     </form>
   );
 }
@@ -425,7 +425,7 @@ function TirarOcorrencia({ id }: { id: string }) {
       type="button"
       disabled={pendente}
       aria-label="Tirar ocorrência"
-      className="no-print ml-0.5 text-slate-400 hover:text-red-600"
+      className="no-print ml-0.5 text-slate-500 hover:text-red-600"
       onClick={() => {
         if (confirm("Tirar esta ocorrência do dia?")) iniciar(async () => void (await excluirOcorrencia(id)));
       }}
@@ -453,9 +453,9 @@ export function Espelho({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-[12px]">
+      <table className="w-full min-w-[760px] text-mini">
         <thead>
-          <tr className="border-b border-slate-200 text-left text-[10px] uppercase tracking-wider text-slate-400">
+          <tr className="border-b border-slate-200 text-left text-micro uppercase tracking-wider text-slate-500">
             <th className="px-2 py-1.5 font-medium">Dia</th>
             <th className="px-2 py-1.5 font-medium">Marcações</th>
             <th className="px-2 py-1.5 text-right font-medium">Previsto</th>
@@ -481,7 +481,7 @@ export function Espelho({
                   <span className="font-medium text-slate-700">
                     {String(dia).padStart(2, "0")}/{NOME_CURTO_DO_MES[mes - 1]}
                   </span>{" "}
-                  <span className="text-slate-400">{DIAS_DA_SEMANA[d.semana]}</span>
+                  <span className="text-slate-500">{DIAS_DA_SEMANA[d.semana]}</span>
                 </td>
                 <td className="px-2 py-1.5">
                   <div className="flex flex-wrap gap-1">
@@ -509,11 +509,11 @@ export function Espelho({
                   }`}
                 >
                   {d.foraDoPeriodo || d.emAndamento ? "" : d.saldo ? saldoEscrito(d.saldo) : "0:00"}
-                  {regime === "HORAS_EXTRAS" && d.extras100 > 0 ? <span className="block text-[10px] font-normal">100%</span> : null}
+                  {regime === "HORAS_EXTRAS" && d.extras100 > 0 ? <span className="block text-micro font-normal">100%</span> : null}
                 </td>
                 <td className="px-2 py-1.5">
                   <div className="flex flex-wrap items-center gap-1">
-                    {d.foraDoPeriodo ? <span className="text-[11px]">fora do período</span> : null}
+                    {d.foraDoPeriodo ? <span className="text-micro">fora do período</span> : null}
                     {d.emAndamento ? <Etiqueta tom="azul">hoje</Etiqueta> : null}
                     {d.ocorrencia ? (
                       <span className="inline-flex items-center">
@@ -524,7 +524,7 @@ export function Espelho({
                         {d.ocorrenciaId && d.ocorrencia !== "FERIADO" ? <TirarOcorrencia id={d.ocorrenciaId} /> : null}
                       </span>
                     ) : null}
-                    {d.abonado > 0 ? <span className="text-[10px] text-slate-500">abonado {horas(d.abonado)}</span> : null}
+                    {d.abonado > 0 ? <span className="text-micro text-slate-500">abonado {horas(d.abonado)}</span> : null}
                     {d.alertas.map((a) => (
                       <Etiqueta key={a} tom={a === "Falta" ? "ruim" : "atencao"}>
                         {a}
@@ -612,7 +612,7 @@ export function OcorrenciaForm({
             <Input name="descricao" placeholder={tipo === "FERIADO" ? "Ex.: Independência" : "Opcional"} />
           </Field>
         </div>
-        <p className="mt-1 text-[11px] text-slate-400">
+        <p className="mt-1 text-micro text-slate-500">
           Feriado, folga e férias tiram a jornada do dia. Abono e atestado mantêm a jornada e dão por cumprido o que faltou.
         </p>
         <div className="mt-2 space-y-2">
@@ -632,7 +632,7 @@ export function ExcluirOcorrencia({ id }: { id: string }) {
       type="button"
       disabled={pendente}
       aria-label="Excluir"
-      className="text-slate-400 transition hover:text-red-600"
+      className="text-slate-500 transition hover:text-red-600"
       onClick={() => {
         if (confirm("Excluir esta ocorrência?")) iniciar(async () => void (await excluirOcorrencia(id)));
       }}
@@ -684,7 +684,7 @@ export function ExcluirLancamento({ id }: { id: string }) {
       type="button"
       disabled={pendente}
       aria-label="Excluir lançamento"
-      className="no-print text-slate-400 transition hover:text-red-600"
+      className="no-print text-slate-500 transition hover:text-red-600"
       onClick={() => {
         if (confirm("Excluir este lançamento do banco?")) iniciar(async () => void (await excluirLancamento(id)));
       }}

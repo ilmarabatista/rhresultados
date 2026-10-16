@@ -30,7 +30,6 @@ import {
 import {
   agoraNoEscritorio,
   colunasDoDia,
-  emMinutos,
   HORA_FIM,
   HORA_INICIO,
   passouSemCheck,
@@ -68,6 +67,8 @@ import {
   type AgendaState,
 } from "@/app/(app)/agenda/actions";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { avisar, confirmar } from "@/components/avisos";
+import Modal from "@/components/modal";
 
 export type VisitaItem = {
   id: string;
@@ -136,8 +137,8 @@ function visualDoCompromisso(v: VisitaItem, atrasado: boolean) {
 
   if (v.status === "CANCELADA")
     return {
-      caixa: "border-slate-200 border-l-slate-300 bg-slate-50 text-slate-400 line-through opacity-70",
-      rotulo: "text-slate-400",
+      caixa: "border-slate-200 border-l-slate-300 bg-slate-50 text-slate-500 line-through opacity-70",
+      rotulo: "text-slate-500",
     };
   if (v.status === "REALIZADA")
     return {
@@ -171,7 +172,7 @@ function Legenda() {
     </span>
   );
   return (
-    <span className="hidden items-center gap-2.5 text-[11px] text-slate-500 xl:flex">
+    <span className="hidden items-center gap-2.5 text-micro text-slate-500 xl:flex">
       {item("bg-brand-500", "reunião")}
       {item("bg-violet-500", "tarefa")}
       {item("bg-emerald-500", "feito")}
@@ -311,7 +312,7 @@ function CartaoDeDetalhes({
   const linha = (rotulo: string, valor: string | null | undefined) =>
     valor ? (
       <div className="flex gap-2">
-        <dt className="w-20 shrink-0 text-slate-400">{rotulo}</dt>
+        <dt className="w-20 shrink-0 text-slate-500">{rotulo}</dt>
         <dd className="min-w-0 flex-1 text-slate-700">{valor}</dd>
       </div>
     ) : null;
@@ -325,7 +326,7 @@ function CartaoDeDetalhes({
     >
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <span
-          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-micro font-semibold uppercase tracking-wide ${
             ehTarefa(visita) ? "bg-violet-100 text-violet-800" : "bg-brand-100 text-brand-800"
           }`}
         >
@@ -333,11 +334,11 @@ function CartaoDeDetalhes({
           {ehTarefa(visita) ? "Tarefa" : "Reunião"}
         </span>
         {visita.tipo === "BRIEFING" ? (
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-micro font-semibold uppercase tracking-wide text-amber-800">
             briefing
           </span>
         ) : null}
-        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${situacao.cor}`}>
+        <span className={`rounded px-1.5 py-0.5 text-micro font-medium ${situacao.cor}`}>
           {situacao.texto}
         </span>
       </div>
@@ -365,7 +366,7 @@ function CartaoDeDetalhes({
 
       {visita.pauta.length > 0 ? (
         <div className="mt-2 border-t border-slate-100 pt-2">
-          <p className="mb-1 text-[10px] uppercase tracking-wide text-slate-400">
+          <p className="mb-1 text-micro uppercase tracking-wide text-slate-500">
             {ehTarefa(visita) ? "itens" : "pauta"} ·{" "}
             {visita.pauta.filter((a) => a.feito).length} de {visita.pauta.length}
           </p>
@@ -373,7 +374,7 @@ function CartaoDeDetalhes({
             {visita.pauta.slice(0, 8).map((a) => (
               <li
                 key={a.id}
-                className={`flex items-start gap-1.5 ${a.feito ? "text-slate-400 line-through" : "text-slate-600"}`}
+                className={`flex items-start gap-1.5 ${a.feito ? "text-slate-500 line-through" : "text-slate-600"}`}
               >
                 <span
                   className={`mt-px flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border ${
@@ -386,7 +387,7 @@ function CartaoDeDetalhes({
               </li>
             ))}
             {visita.pauta.length > 8 ? (
-              <li className="text-slate-400">+ {visita.pauta.length - 8} assunto(s)</li>
+              <li className="text-slate-500">+ {visita.pauta.length - 8} assunto(s)</li>
             ) : null}
           </ul>
         </div>
@@ -398,7 +399,7 @@ function CartaoDeDetalhes({
         </p>
       ) : null}
 
-      <p className="mt-2 border-t border-slate-100 pt-2 text-[10px] text-slate-400">
+      <p className="mt-2 border-t border-slate-100 pt-2 text-micro text-slate-500">
         Clique para abrir a ficha da empresa.
         {atrasado ? " Use o relógio para reagendar." : ""}
       </p>
@@ -754,36 +755,6 @@ function VisitaForm({
   );
 }
 
-function Modal({
-  titulo,
-  aoFechar,
-  children,
-}: {
-  titulo: string;
-  aoFechar: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:p-8">
-      <div className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-4 shadow-xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <h2 className="text-sm font-semibold text-slate-900">{titulo}</h2>
-          <button
-            type="button"
-            onClick={aoFechar}
-            className="text-slate-400 transition hover:text-slate-700"
-            aria-label="Fechar"
-          >
-            <X size={18} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-
 /**
  * A pauta de uma reunião.
  *
@@ -800,7 +771,7 @@ function Pauta({ visita }: { visita: VisitaItem }) {
   return (
     <div className={`mt-2 ${pending ? "opacity-60" : ""}`}>
       {visita.pauta.length > 0 ? (
-        <p className="mb-1 text-[10px] uppercase tracking-wide text-slate-400">
+        <p className="mb-1 text-micro uppercase tracking-wide text-slate-500">
           {ehTarefa(visita) ? "itens" : "pauta"} · {feitos} de {visita.pauta.length}
         </p>
       ) : null}
@@ -828,7 +799,7 @@ function Pauta({ visita }: { visita: VisitaItem }) {
 
             <span
               className={`min-w-0 flex-1 text-xs ${
-                a.feito ? "text-slate-400 line-through" : "text-slate-600"
+                a.feito ? "text-slate-500 line-through" : "text-slate-600"
               }`}
             >
               {a.titulo}
@@ -873,7 +844,7 @@ function Pauta({ visita }: { visita: VisitaItem }) {
         />
       </form>
 
-      {erro ? <p className="text-[11px] text-red-700">{erro}</p> : null}
+      {erro ? <p className="text-micro text-red-700">{erro}</p> : null}
     </div>
   );
 }
@@ -898,7 +869,7 @@ function ChipExame({ exame }: { exame: ExameNaAgenda }) {
       title={`${exame.hora ?? ""} Exame ${rotuloDoExame(exame.tipo).toLowerCase()} · ${
         exame.pessoa
       }${exame.clinica ? ` · ${exame.clinica}` : ""} — abrir a ficha`}
-      className="block rounded-md border border-sky-200 bg-sky-50 px-1.5 py-1 text-left text-[11px] leading-tight text-sky-800 transition hover:bg-sky-100"
+      className="block rounded-md border border-sky-200 bg-sky-50 px-1.5 py-1 text-left text-micro leading-tight text-sky-800 transition hover:bg-sky-100"
     >
       <span className="block truncate font-medium">
         {exame.hora ? `${exame.hora} ` : ""}
@@ -944,7 +915,7 @@ function BotoesDoCanto({
       <button
         type="button"
         onClick={() => interacao.aoEditar(visita)}
-        className="rounded p-0.5 text-slate-400 opacity-0 transition hover:bg-white hover:text-slate-700 focus:opacity-100 group-hover:opacity-100"
+        className="rounded p-0.5 text-slate-500 opacity-0 transition hover:bg-white hover:text-slate-700 focus:opacity-100 group-hover:opacity-100"
         aria-label={`Editar o agendamento de ${visita.empresa}`}
       >
         <Pencil size={11} />
@@ -974,12 +945,12 @@ function Chip({
         className={`block rounded-md border border-l-[3px] py-1 pl-1.5 pr-5 text-left leading-tight transition ${visual.caixa}`}
       >
         <span
-          className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide ${visual.rotulo}`}
+          className={`flex items-center gap-1 text-micro font-semibold uppercase tracking-wide ${visual.rotulo}`}
         >
           <IconeNatureza visita={visita} size={9} />
           <span className="truncate">{rotuloDoCompromisso(visita)}</span>
         </span>
-        <span className="block truncate text-[11px] font-semibold">
+        <span className="block truncate text-micro font-semibold">
           <span className="font-normal opacity-70">{visita.startTime}</span> {visita.empresa}
         </span>
       </Link>
@@ -1285,7 +1256,7 @@ function MesGrade({
         {DIAS_SEMANA.map((d) => (
           <div
             key={d}
-            className="px-2 py-2 text-center text-[11px] font-medium uppercase tracking-wide text-slate-400"
+            className="px-2 py-2 text-center text-micro font-medium uppercase tracking-wide text-slate-500"
           >
             {d}
           </div>
@@ -1306,7 +1277,7 @@ function MesGrade({
             >
               <div className="mb-1 flex items-center justify-between">
                 <span
-                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] ${
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-micro ${
                     dia.key === hoje
                       ? "bg-brand-600 font-semibold text-white"
                       : dia.doMes
@@ -1381,13 +1352,13 @@ function BlocoSemana({
         className={`flex h-full flex-col overflow-hidden rounded-md border border-l-[3px] py-px pl-1.5 pr-5 text-left leading-tight transition ${visual.caixa}`}
       >
         <span
-          className={`flex shrink-0 items-center gap-1 text-[9px] font-semibold uppercase tracking-wide ${visual.rotulo}`}
+          className={`flex shrink-0 items-center gap-1 text-micro font-semibold uppercase tracking-wide ${visual.rotulo}`}
         >
           <IconeNatureza visita={visita} size={9} />
           <span className="truncate">{rotuloDoCompromisso(visita)}</span>
         </span>
-        <span className="shrink-0 truncate text-[11px] font-semibold">{visita.empresa}</span>
-        <span className="shrink-0 truncate text-[10px] opacity-70">
+        <span className="shrink-0 truncate text-micro font-semibold">{visita.empresa}</span>
+        <span className="shrink-0 truncate text-micro opacity-70">
           {faixaHoraria(visita.startTime, visita.endTime)}
           {faixa.cortado ? " ⋯" : ""}
           {atrasado ? " · sem check" : visita.status === "REALIZADA" ? " · feito" : ""}
@@ -1481,15 +1452,15 @@ function SemanaGrade({
               }`}
             >
               <div className="flex items-baseline justify-center gap-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                <span className="text-micro font-semibold uppercase tracking-wide text-slate-300">
                   {DIAS_SEMANA[i]}
                 </span>
                 <span className="text-lg font-semibold tabular-nums">{d.dia}</span>
-                <span className="text-[10px] uppercase text-slate-300">
+                <span className="text-micro uppercase text-slate-300">
                   {MESES_CURTOS[Number(d.key.slice(5, 7)) - 1]}
                 </span>
               </div>
-              <div className="mt-0.5 truncate text-[10px] text-slate-300">
+              <div className="mt-0.5 truncate text-micro text-slate-300">
                 {total === 0
                   ? "—"
                   : `${total} agendamento${total > 1 ? "s" : ""}${feitos ? ` · ${feitos} feito${feitos > 1 ? "s" : ""}` : ""}`}
@@ -1506,7 +1477,7 @@ function SemanaGrade({
           (examesPorDia.get(d.key) ?? []).length > 0,
       ) ? (
         <div className="scroll-thin flex max-h-24 shrink-0 overflow-y-auto border-b border-amber-100 bg-amber-50/50">
-          <div className="w-11 shrink-0 px-1 py-1 text-right text-[9px] leading-tight text-amber-700">
+          <div className="w-11 shrink-0 px-1 py-1 text-right text-micro leading-tight text-amber-700">
             exames e fora do horário
           </div>
           {dias.map((d) => (
@@ -1530,7 +1501,7 @@ function SemanaGrade({
           {horas.map((h, i) => (
             <span
               key={h}
-              className="absolute right-1.5 -translate-y-1/2 text-[10px] font-semibold tabular-nums text-slate-500"
+              className="absolute right-1.5 -translate-y-1/2 text-micro font-semibold tabular-nums text-slate-500"
               style={{ top: `${(i / intervalos.length) * 100}%` }}
             >
               {h}
@@ -1756,7 +1727,7 @@ export default function AgendaCalendar({
 
         <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
           <Legenda />
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-500">
             {visitas.length} {semanal ? "na semana" : "no mês"}
             {atrasados > 0 ? (
               <span className="font-medium text-red-700"> · {atrasados} sem check</span>
@@ -1849,14 +1820,14 @@ export default function AgendaCalendar({
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <BotaoCheck visita={v} />
                 <span
-                  className={`w-24 shrink-0 text-xs ${atrasado ? "font-medium text-red-700" : "text-slate-400"}`}
+                  className={`w-24 shrink-0 text-xs ${atrasado ? "font-medium text-red-700" : "text-slate-500"}`}
                 >
                   {v.dia.split("-").reverse().slice(0, 2).join("/")}{" "}
                   {faixaHoraria(v.startTime, v.endTime)}
                 </span>
 
                 <span
-                  className={`flex w-20 shrink-0 items-center gap-1 text-[11px] font-medium ${
+                  className={`flex w-20 shrink-0 items-center gap-1 text-micro font-medium ${
                     ehTarefa(v) ? "text-violet-700" : "text-brand-700"
                   }`}
                 >
@@ -1867,21 +1838,21 @@ export default function AgendaCalendar({
                 <Link
                   href={fichaDe(v.companyId)}
                   className={`min-w-0 flex-1 text-sm transition hover:text-brand-700 ${
-                    v.status === "CANCELADA" ? "text-slate-400 line-through" : "text-slate-800"
+                    v.status === "CANCELADA" ? "text-slate-500 line-through" : "text-slate-800"
                   }`}
                 >
                   <span className="font-medium">{v.empresa}</span>
                   {v.servico ? (
-                    <span className="text-slate-400"> · {v.servico}</span>
+                    <span className="text-slate-500"> · {v.servico}</span>
                   ) : null}
                   {v.subject ? (
-                    <span className="text-slate-400"> · {v.subject}</span>
+                    <span className="text-slate-500"> · {v.subject}</span>
                   ) : null}
                 </Link>
 
                 {v.naSerie ? (
                   <span
-                    className="flex shrink-0 items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500"
+                    className="flex shrink-0 items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-micro text-slate-500"
                     title={`${rotuloDaFrequencia(v.frequencia ?? "")} · ${v.naSerie.total} reuniões`}
                   >
                     <Repeat size={10} />
@@ -1890,13 +1861,13 @@ export default function AgendaCalendar({
                 ) : null}
 
                 {v.location ? (
-                  <span className="flex shrink-0 items-center gap-1 text-[11px] text-slate-400">
+                  <span className="flex shrink-0 items-center gap-1 text-micro text-slate-500">
                     <MapPin size={11} /> {v.location}
                   </span>
                 ) : null}
 
                 {v.consultor ? (
-                  <span className="hidden shrink-0 text-[11px] text-slate-400 sm:block">
+                  <span className="hidden shrink-0 text-micro text-slate-500 sm:block">
                     {v.consultor}
                   </span>
                 ) : null}
@@ -1915,7 +1886,7 @@ export default function AgendaCalendar({
                     });
                   }}
                   aria-label={`Situação do agendamento de ${v.empresa}`}
-                  className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] text-slate-600 outline-none"
+                  className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-micro text-slate-600 outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                 >
                   {Object.entries(STATUS_LABEL).map(([valor, rotulo]) => (
                     <option key={valor} value={valor}>
@@ -1928,7 +1899,7 @@ export default function AgendaCalendar({
                   <button
                     type="button"
                     onClick={() => setReagendar(v)}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-300 bg-white px-2 py-0.5 text-[11px] font-medium text-red-700 transition hover:bg-red-100"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-300 bg-white px-2 py-0.5 text-micro font-medium text-red-700 transition hover:bg-red-100"
                   >
                     <CalendarClock size={12} /> reagendar
                   </button>
@@ -1949,32 +1920,31 @@ export default function AgendaCalendar({
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => {
+                  onClick={async () => {
                     const dia = v.dia.split("-").reverse().join("/");
 
                     // Numa série, apagar só esta ou desta em diante são
                     // decisões diferentes — e quem escolhe é quem marcou.
                     if (v.seriesId && v.naSerie && v.naSerie.total > 1) {
-                      const serie = confirm(
-                        `Esta reunião faz parte de uma série (${v.naSerie.posicao} de ${v.naSerie.total}).\n\n` +
-                          "OK cancela esta e todas as seguintes.\n" +
-                          "Cancelar apaga só a deste dia.",
+                      const serie = await confirmar(
+                        `Esta reunião faz parte de uma série (${v.naSerie.posicao} de ${v.naSerie.total}). Excluir só a deste dia, ou esta e todas as seguintes?`,
+                        { sim: "Esta e as seguintes", nao: "Só este dia" },
                       );
 
                       if (serie) {
                         startTransition(async () => {
                           const r = await excluirSerie(v.seriesId!, v.dia);
-                          if (r.error) alert(r.error);
+                          if (r.error) avisar(r.error);
                         });
                         return;
                       }
                     }
 
-                    if (!confirm(`Excluir o agendamento de ${v.empresa} em ${dia}?`))
+                    if (!(await confirmar(`Excluir o agendamento de ${v.empresa} em ${dia}?`)))
                       return;
                     startTransition(async () => {
                       const r = await excluirVisita(v.id);
-                      if (r.error) alert(r.error);
+                      if (r.error) avisar(r.error);
                     });
                   }}
                   className="shrink-0 text-slate-300 transition hover:text-red-600"
@@ -2071,7 +2041,7 @@ function BotaoDaReuniao({ visitaId, companyId, reuniaoId }: { visitaId: string; 
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const classe =
-    "shrink-0 rounded-md border px-2 py-0.5 text-[11px] transition disabled:opacity-50";
+    "shrink-0 rounded-md border px-2 py-0.5 text-micro transition disabled:opacity-50";
 
   if (reuniaoId) {
     return (
@@ -2087,7 +2057,7 @@ function BotaoDaReuniao({ visitaId, companyId, reuniaoId }: { visitaId: string; 
       onClick={() =>
         iniciar(async () => {
           const r = await mandarParaReuniao(visitaId);
-          if (r.error) alert(r.error);
+          if (r.error) avisar(r.error);
           else if (r.id) router.push(`/empresas/${companyId}/reunioes/${r.id}`);
         })
       }

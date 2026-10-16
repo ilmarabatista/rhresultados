@@ -91,7 +91,7 @@ export function Numeros({
           key={n.rotulo}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2"
         >
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          <p className="text-micro font-medium uppercase tracking-wider text-slate-500">
             {n.rotulo}
           </p>
           <p
@@ -102,7 +102,7 @@ export function Numeros({
             {n.valor}
           </p>
           {n.detalhe ? (
-            <p className="mt-0.5 text-[11px] leading-snug text-slate-400">
+            <p className="mt-0.5 text-micro leading-snug text-slate-500">
               {n.detalhe}
             </p>
           ) : null}
@@ -139,7 +139,7 @@ export function Aviso({
       className={`rounded-lg border border-transparent border-l-4 px-3 py-1.5 ${TOM_DO_AVISO[tom]}`}
     >
       {rotulo ? (
-        <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
+        <p className="text-micro font-semibold uppercase tracking-wider opacity-70">
           {rotulo}
         </p>
       ) : null}
@@ -168,7 +168,7 @@ export function Filtros({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {rotulo ? (
-        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+        <span className="text-micro font-medium uppercase tracking-wider text-slate-500">
           {rotulo}
         </span>
       ) : null}
@@ -186,7 +186,7 @@ export function Filtros({
           {f.rotulo}
           {f.contagem !== undefined ? (
             <span
-              className={`tabular-nums ${f.ativo ? "text-white/70" : "text-slate-400"}`}
+              className={`tabular-nums ${f.ativo ? "text-white/70" : "text-slate-500"}`}
             >
               {f.contagem}
             </span>
@@ -257,11 +257,11 @@ export function Tabela({
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-900 px-3 py-1.5">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-white">
+        <h3 className="text-micro font-semibold uppercase tracking-wider text-white">
           {titulo}
         </h3>
         {direita ? (
-          <span className="text-[11px] font-medium uppercase tracking-wider text-brand-200">
+          <span className="text-micro font-medium uppercase tracking-wider text-brand-200">
             {direita}
           </span>
         ) : null}
@@ -272,41 +272,6 @@ export function Tabela({
           {children}
         </div>
       </div>
-    </div>
-  );
-}
-
-const BARRA_DA_LINHA: Record<string, string> = {
-  neutro: "bg-slate-300",
-  azul: "bg-brand-500",
-  bom: "bg-emerald-500",
-  atencao: "bg-amber-400",
-  ruim: "bg-red-400",
-};
-
-/**
- * Linha de tabela: barrinha de cor à esquerda, conteúdo, ações à direita.
- * As linhas alternam um fundo levíssimo, como no print.
- */
-export function Linha({
-  tom = "neutro",
-  acoes,
-  children,
-}: {
-  tom?: "neutro" | "azul" | "bom" | "atencao" | "ruim";
-  acoes?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 border-b border-slate-100 px-3 py-1.5 last:border-b-0 even:bg-slate-50/60 hover:bg-brand-50/40">
-      <span
-        aria-hidden
-        className={`h-4 w-1 shrink-0 rounded-full ${BARRA_DA_LINHA[tom]}`}
-      />
-      <div className="min-w-0 flex-1 text-[13px] leading-snug text-slate-700">{children}</div>
-      {acoes ? (
-        <div className="flex shrink-0 items-center gap-1.5">{acoes}</div>
-      ) : null}
     </div>
   );
 }
@@ -329,45 +294,10 @@ export function Etiqueta({
 
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cores[tom]}`}
+      className={`rounded px-1.5 py-0.5 text-micro font-medium ${cores[tom]}`}
     >
       {children}
     </span>
-  );
-}
-
-// ------------------------------------------------------------- progresso
-
-/** Barra de progresso com rótulo e fração, como no painel do print. */
-export function Progresso({
-  rotulo,
-  feito,
-  total,
-  sufixo,
-}: {
-  rotulo: string;
-  feito: number;
-  total: number;
-  /** Texto no lugar de "3/8", quando a unidade não é contagem. */
-  sufixo?: string;
-}) {
-  const pct = total > 0 ? Math.round((feito / total) * 100) : 0;
-
-  return (
-    <div>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] text-slate-500">{rotulo}</span>
-        <span className="text-[11px] tabular-nums text-slate-400">
-          {sufixo ?? `${feito}/${total}`}
-        </span>
-      </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full rounded-full bg-brand-600 transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
   );
 }
 

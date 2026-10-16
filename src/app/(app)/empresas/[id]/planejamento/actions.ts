@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { diaValido, horaValida } from "@/lib/agenda";
 import { dateToDayKey, dayKeyToDate, formatFullDate } from "@/lib/dates";
-import { textoSeguro } from "@/lib/texto-seguro";
+import { textoDoFormulario as texto, textoSeguro } from "@/lib/texto-seguro";
 import { atividade } from "@/lib/atividade";
 import { acertarAgenda } from "@/lib/reuniao-agenda";
 import { codigoDaReuniao } from "@/lib/reunioes";
@@ -38,9 +38,6 @@ function refresh(companyId: string) {
   revalidatePath("/inicio");
 }
 
-function texto(v: FormDataEntryValue | null): string {
-  return textoSeguro(String(v ?? "")).trim();
-}
 
 function assunto(plano: string, tema: string) {
   return `${plano}: ${tema}`;
@@ -192,16 +189,20 @@ export async function editarPlano(_prev: PlanoState, formData: FormData): Promis
     },
   });
 
-  // O nome e o produto do plano estão em cada compromisso da agenda.
-  for (const e of plano.encontros) {
-    if (e.meetingId) await acertarAgenda(e.meetingId, session.userId);
-    else if (e.visitId) {
-      await prisma.visit.updateMany({
-        where: { id: e.visitId },
-        data: { subject: assunto(titulo, e.tema), serviceId },
-      });
-    }
-  }
+  // O nome e o produto do plano estão em cada compromisso da agenda. Cada
+  // encontro é independente dos outros, então vão todos ao mesmo tempo.
+  await Promise.all(
+    plano.encontros.map((e) =>
+      e.meetingId
+        ? acertarAgenda(e.meetingId, session.userId)
+        : e.visitId
+          ? prisma.visit.updateMany({
+              where: { id: e.visitId },
+              data: { subject: assunto(titulo, e.tema), serviceId },
+            })
+          : null,
+    ),
+  );
 
   await log(plano.companyId, session.userId, "ATUALIZOU", id, `Editou o plano "${titulo}".`);
   refresh(plano.companyId);
@@ -568,17 +569,19 @@ export async function remarcarPendentes(_prev: PlanoState, formData: FormData): 
   const periodicidade = plano.periodicidade === "LIVRE" ? "SEMANAL" : (plano.periodicidade as Periodicidade);
   const datas = datasDoPlano(aPartirDe, periodicidade, pendentes.length);
 
-  for (let i = 0; i < pendentes.length; i++) {
-    const e = pendentes[i];
-    const dia = dayKeyToDate(datas[i]!);
-    await prisma.encontroDoPlano.update({ where: { id: e.id }, data: { data: dia, hora } });
-    if (e.meetingId) {
-      await prisma.meeting.update({ where: { id: e.meetingId }, data: { date: dia, startTime: hora } });
-      await acertarAgenda(e.meetingId, session.userId);
-    } else if (e.visitId) {
-      await prisma.visit.update({ where: { id: e.visitId }, data: { date: dia, startTime: hora } });
-    }
-  }
+  // Cada encontro é remarcado por conta própria; vão todos ao mesmo tempo.
+  await Promise.all(
+    pendentes.map(async (e, i) => {
+      const dia = dayKeyToDate(datas[i]!);
+      await prisma.encontroDoPlano.update({ where: { id: e.id }, data: { data: dia, hora } });
+      if (e.meetingId) {
+        await prisma.meeting.update({ where: { id: e.meetingId }, data: { date: dia, startTime: hora } });
+        await acertarAgenda(e.meetingId, session.userId);
+      } else if (e.visitId) {
+        await prisma.visit.update({ where: { id: e.visitId }, data: { date: dia, startTime: hora } });
+      }
+    }),
+  );
 
   await log(
     plano.companyId,
@@ -620,10 +623,9 @@ export async function replicarPlano(_prev: PlanoState, formData: FormData): Prom
     orderBy: { ordem: "asc" },
     include: {
       meeting: {
-        select: {
-          agenda: true,
-          files: { select: { name: true, mimeType: true, size: true, data: true } },
-        },
+        // Só a contagem: os arquivos são copiados dentro do banco, sem
+        // trazer os bytes (até 4 MB cada) para o servidor e de volta.
+        select: { id: true, agenda: true, _count: { select: { files: true } } },
       },
     },
   });
@@ -657,7 +659,8 @@ export async function replicarPlano(_prev: PlanoState, formData: FormData): Prom
       const m = modelo[i];
       const dia = datas[i] ? dayKeyToDate(datas[i]!) : null;
       const pauta = m.meeting?.agenda ?? m.pauta ?? null;
-      const preparado = Boolean(pauta?.trim()) || (m.meeting?.files.length ?? 0) > 0;
+      const temArquivos = (m.meeting?._count.files ?? 0) > 0;
+      const preparado = Boolean(pauta?.trim()) || temArquivos;
 
       const novo = await prisma.encontroDoPlano.create({
         data: { planoId, branchId, ordem: m.ordem, tema: m.tema, pauta, data: dia, hora: dia ? hora : null },
@@ -681,10 +684,15 @@ export async function replicarPlano(_prev: PlanoState, formData: FormData): Prom
             ordemNoPlano: m.ordem,
             branchId,
             createdById: session.userId,
-            files: m.meeting?.files.length ? { create: m.meeting.files } : undefined,
           },
           select: { id: true },
         });
+        if (temArquivos && m.meeting) {
+          await prisma.$executeRaw`
+            INSERT INTO "MeetingFile" ("id", "meetingId", "name", "mimeType", "size", "data", "createdAt")
+            SELECT gen_random_uuid()::text, ${reuniao.id}, "name", "mimeType", "size", "data", now()
+            FROM "MeetingFile" WHERE "meetingId" = ${m.meeting.id}`;
+        }
         await prisma.encontroDoPlano.update({ where: { id: novo.id }, data: { meetingId: reuniao.id } });
       }
     }

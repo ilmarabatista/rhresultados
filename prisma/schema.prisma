@@ -26,14 +26,16 @@ enum Role {
 /// Quem usa o sistema pela consultoria. Não confundir com Employee, que é a
 /// equipe da empresa cliente.
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         Role     @default(MEMBRO)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String
+  role           Role     @default(MEMBRO)
+  active         Boolean  @default(true)
+  /// Sobe a cada troca de senha: os cookies emitidos antes deixam de valer.
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   companiesCreated Company[]                 @relation("CompanyCreatedBy")
   activities       Activity[]
@@ -282,6 +284,8 @@ model Meeting {
   files        MeetingFile[]
 
   @@index([companyId, date])
+  @@index([planoId])
+  @@index([serviceId])
 }
 
 /// Um arquivo da reunião: a apresentação usada nela, como veio.
@@ -411,6 +415,8 @@ model Employee {
   pontoLancamentos PontoLancamento[]
 
   @@index([companyId, name])
+  @@index([branchId])
+  @@index([cargoId])
 }
 
 enum RecordKind {
@@ -503,6 +509,7 @@ model DevelopmentPlan {
   conversas ConversaDoPdi[]
 
   @@index([employeeId])
+  @@index([avaliacaoId])
 }
 
 /// Uma meta SMART do PDI: específica (titulo), mensurável (indicador),
@@ -537,6 +544,7 @@ model MetaDoPdi {
   progressos ProgressoDaMeta[]
 
   @@index([planId])
+  @@index([notaId])
 }
 
 /// Ação do PDI, marcada conforme é cumprida.
@@ -575,6 +583,7 @@ model DevelopmentAction {
   @@index([planId])
   @@index([metaId])
   @@index([done, dueDate])
+  @@index([treinamentoId])
 }
 
 /// Uma conversa de acompanhamento do PDI: o que foi conversado, o que ficou
@@ -610,6 +619,7 @@ model ProgressoDaMeta {
   comentario String? @db.Text
 
   @@index([metaId])
+  @@index([conversaId])
 }
 
 /// Uma competência da descrição de cargo, com o nível que o cargo pede.
@@ -661,6 +671,7 @@ model AvaliacaoDeCompetencias {
   planos DevelopmentPlan[]
 
   @@index([employeeId, data])
+  @@index([cargoId])
 }
 
 /// A nota de uma competência numa avaliação: como a pessoa se vê, como o
@@ -687,6 +698,7 @@ model NotaDeCompetencia {
   metas MetaDoPdi[]
 
   @@index([avaliacaoId])
+  @@index([competenciaId])
 }
 
 /// Autoavaliação técnica respondida pelo colaborador. É a base do plano de
@@ -795,6 +807,8 @@ model Visit {
   @@index([date])
   @@index([companyId, date])
   @@index([seriesId])
+  @@index([consultantId])
+  @@index([serviceId])
 }
 
 /// Assunto da pauta de um compromisso.
@@ -1218,6 +1232,7 @@ model Candidate {
 
   @@index([companyId, jobOpeningId])
   @@index([jobOpeningId, etapaId])
+  @@index([etapaId])
 }
 
 // ------------------------------------------------------ Testes cadastrados
@@ -1400,6 +1415,7 @@ model PlanoDeTreinamento {
   encontros EncontroDoPlano[]
 
   @@index([companyId])
+  @@index([serviceId])
 }
 
 // ------------------------------------------------------------------- testes
@@ -1438,6 +1454,8 @@ model TesteEnviado {
 
   @@index([enviadoEm])
   @@index([candidateId])
+  @@index([companyId])
+  @@index([customTestId])
 }
 
 /// Um encontro do plano de treinamento, numa filial (ou na empresa toda).
@@ -1472,6 +1490,7 @@ model EncontroDoPlano {
   updatedAt DateTime @updatedAt
 
   @@index([planoId])
+  @@index([branchId])
 }
 
 // ------------------------------------------- treinamento e desenvolvimento
@@ -1539,6 +1558,7 @@ model TreinamentoDoCargo {
   cargo         Cargo       @relation(fields: [cargoId], references: [id], onDelete: Cascade)
 
   @@id([treinamentoId, cargoId])
+  @@index([cargoId])
 }
 
 /// Uma turma: o treinamento acontecendo numa data, para um grupo de pessoas.

@@ -23,11 +23,11 @@ export default async function VagaPage({ params }: { params: Promise<{ vagaId: s
         acao={
           <span className="flex gap-3">
             {vaga.empresa ? (
-              <Link href={`/empresas/${vaga.empresa.id}/selecao`} className="text-[11px] text-slate-500 hover:text-brand-700">
+              <Link href={`/empresas/${vaga.empresa.id}/selecao`} className="text-micro text-slate-500 hover:text-brand-700">
                 ← vagas de {vaga.empresa.nome}
               </Link>
             ) : null}
-            <Link href="/selecao" className="text-[11px] text-slate-500 hover:text-brand-700">
+            <Link href="/selecao" className="text-micro text-slate-500 hover:text-brand-700">
               ← todas as vagas
             </Link>
           </span>

@@ -65,6 +65,7 @@ export default function DictationTextarea({
   defaultValue = "",
   required,
   id,
+  rotulo,
   onValueChange,
 }: {
   name: string;
@@ -73,6 +74,8 @@ export default function DictationTextarea({
   defaultValue?: string;
   required?: boolean;
   id?: string;
+  /** Nome lido pelo leitor de tela quando não há <label> ligado ao campo. */
+  rotulo?: string;
   /** Avisa o pai a cada mudança, para quem precisa do texto fora do form. */
   onValueChange?: (valor: string) => void;
 }) {
@@ -150,6 +153,7 @@ export default function DictationTextarea({
       <div className="relative">
         <textarea
           id={id}
+          aria-label={rotulo}
           name={name}
           rows={rows}
           required={required}
@@ -200,7 +204,7 @@ export default function DictationTextarea({
           Ouvindo… fale normalmente e clique em Parar quando terminar.
         </p>
       ) : !suportado ? (
-        <p className="mt-1.5 text-xs text-slate-400">
+        <p className="mt-1.5 text-xs text-slate-500">
           O ditado por voz está disponível no Chrome e no Edge.
         </p>
       ) : null}

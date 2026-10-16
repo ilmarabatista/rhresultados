@@ -91,10 +91,10 @@ export default async function EquipePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-sm font-semibold text-slate-900">{u.name}</h2>
                     {u.id === session.userId ? (
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">você</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-micro font-medium text-slate-600">você</span>
                     ) : null}
                     {u.role === "ADMIN" ? (
-                      <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">ADMIN</span>
+                      <span className="rounded bg-brand-50 px-1.5 py-0.5 text-micro font-medium text-brand-700">ADMIN</span>
                     ) : null}
                   </div>
                   <p className="truncate text-xs text-slate-500">{u.email}</p>
@@ -102,7 +102,7 @@ export default async function EquipePage() {
 
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-semibold text-slate-900">{dele.length}</p>
-                  <p className="text-[11px] text-slate-400">compromissos</p>
+                  <p className="text-micro text-slate-500">compromissos</p>
                 </div>
               </div>
 
@@ -115,7 +115,7 @@ export default async function EquipePage() {
                   <ul className="mt-3 space-y-1 border-t border-slate-100 pt-3">
                     {dele.slice(0, 5).map((c) => (
                       <li key={c.id} className="flex gap-3 text-xs">
-                        <span className="w-36 shrink-0 text-slate-400">
+                        <span className="w-36 shrink-0 text-slate-500">
                           {formatFullDate(c.date)} · {faixaHoraria(c.startTime, c.endTime)}
                         </span>
                         <Link
@@ -123,12 +123,12 @@ export default async function EquipePage() {
                           className="min-w-0 truncate text-slate-700 transition hover:text-brand-700"
                         >
                           {c.company.name}
-                          {c.subject ? <span className="text-slate-400"> · {c.subject}</span> : null}
+                          {c.subject ? <span className="text-slate-500"> · {c.subject}</span> : null}
                         </Link>
                       </li>
                     ))}
                     {dele.length > 5 ? (
-                      <li className="text-[11px] text-slate-400">e mais {dele.length - 5}…</li>
+                      <li className="text-micro text-slate-500">e mais {dele.length - 5}…</li>
                     ) : null}
                   </ul>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -136,7 +136,7 @@ export default async function EquipePage() {
                       <Link
                         key={id}
                         href={`/empresas/${id}/dados`}
-                        className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] text-slate-600 transition hover:bg-brand-50 hover:text-brand-700"
+                        className="rounded-full bg-slate-100 px-2.5 py-0.5 text-micro text-slate-600 transition hover:bg-brand-50 hover:text-brand-700"
                       >
                         {nome}
                       </Link>
@@ -144,7 +144,7 @@ export default async function EquipePage() {
                   </div>
                 </>
               ) : (
-                <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
+                <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
                   Nenhum compromisso nos próximos {JANELA} dias.
                 </p>
               )}

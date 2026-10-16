@@ -57,7 +57,7 @@ function FormularioServico({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700"
+            className="text-slate-500 transition hover:text-slate-700"
             aria-label="Fechar"
           >
             ✕
@@ -140,7 +140,7 @@ function CardServico({
               {servico.nome}
             </h3>
             {!servico.ativo ? (
-              <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+              <span className="rounded bg-slate-200 px-1.5 py-0.5 text-micro font-medium text-slate-600">
                 INATIVO
               </span>
             ) : null}
@@ -151,7 +151,7 @@ function CardServico({
             </p>
           ) : null}
         </div>
-        <span className="shrink-0 text-[11px] text-slate-400">
+        <span className="shrink-0 text-micro text-slate-500">
           {servico.usos > 0 ? `em uso · ${servico.usos}` : "sem uso ainda"}
         </span>
       </div>
@@ -160,7 +160,7 @@ function CardServico({
         <button
           type="button"
           onClick={onEditar}
-          className="text-[11px] text-brand-600 transition hover:text-brand-700"
+          className="text-micro text-brand-600 transition hover:text-brand-700"
         >
           Editar
         </button>
@@ -172,7 +172,7 @@ function CardServico({
               void toggleServiceActive(servico.id, !servico.ativo);
             })
           }
-          className="ml-auto text-[11px] text-slate-500 transition hover:text-slate-800"
+          className="ml-auto text-micro text-slate-500 transition hover:text-slate-800"
         >
           {servico.ativo ? "Desativar" : "Reativar"}
         </button>

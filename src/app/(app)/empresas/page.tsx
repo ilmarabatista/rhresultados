@@ -88,6 +88,7 @@ export default async function SelecionarEmpresaPage({
         <input
           type="search"
           name="q"
+          aria-label="Buscar empresa"
           defaultValue={busca}
           placeholder="Buscar por nome, CNPJ ou ramo…"
           className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
@@ -126,7 +127,7 @@ export default async function SelecionarEmpresaPage({
           )}
         </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {companies.map((c) => {
             const pendentes = pendentesPorEmpresa.get(c.id) ?? 0;
             return (
@@ -152,25 +153,25 @@ export default async function SelecionarEmpresaPage({
 
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+                      className={`rounded-full px-2 py-0.5 text-micro font-medium ring-1 ring-inset ${
                         STATUS_STYLE[c.contractStatus] ?? STATUS_STYLE.ENCERRADO
                       }`}
                     >
                       {c.contractStatus}
                     </span>
                     {c.employeeCount ? (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-micro font-medium text-slate-600">
                         {c.employeeCount} func.
                       </span>
                     ) : null}
                     {pendentes > 0 ? (
-                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-micro font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
                         {pendentes} combinado{pendentes > 1 ? "s" : ""} atrasado{pendentes > 1 ? "s" : ""}
                       </span>
                     ) : null}
                   </div>
 
-                  <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-400">
+                  <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
                     {c._count.planos + c._count.meetings > 0
                       ? `${c._count.planos} plano(s) · ${c._count.meetings} reunião(ões)`
                       : "Nenhum plano nem reunião ainda"}
