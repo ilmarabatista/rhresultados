@@ -102,10 +102,10 @@ export async function exigirAdmin() {
 }
 
 /** O colaborador logado. Quem ainda está com a senha padrão vai trocá-la antes de tudo. */
-export async function exigirColaborador({ podeComSenhaPadrao = false } = {}) {
+export async function exigirColaborador() {
   const s = await sessaoAtual();
   if (!s) redirect("/entrar");
   if (s.tipo !== "colaborador") redirect("/admin");
-  if (s.trocarSenha && !podeComSenhaPadrao) redirect("/trocar-senha");
+  if (s.trocarSenha) redirect("/trocar-senha");
   return s;
 }

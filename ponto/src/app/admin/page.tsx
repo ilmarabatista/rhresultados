@@ -23,7 +23,7 @@ export default async function AdminPage() {
 
   return (
     <>
-      <Topo titulo="Ponto · Administração" nome={s.nome} />
+      <Topo titulo="Ponto · Administração" nome={s.nome} links={[{ href: "/trocar-senha", rotulo: "Minha senha" }]} />
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
         <Cartao titulo="Empresas com ponto">
           {empresas.length === 0 ? (

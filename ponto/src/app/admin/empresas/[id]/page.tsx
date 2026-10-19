@@ -35,7 +35,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <Topo titulo="Ponto · Administração" nome={s.nome} links={[{ href: "/admin", rotulo: "Empresas" }]} />
+      <Topo titulo="Ponto · Administração" nome={s.nome} links={[{ href: "/admin", rotulo: "Empresas" }, { href: "/trocar-senha", rotulo: "Minha senha" }]} />
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/admin" className="text-sm text-slate-500 hover:text-marca-700">

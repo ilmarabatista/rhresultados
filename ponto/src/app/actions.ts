@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/senha";
-import { abrirSessao, exigirColaborador, fecharSessao } from "@/lib/sessao";
+import { abrirSessao, fecharSessao, sessaoAtual } from "@/lib/sessao";
 import { ipDoCliente, loginBloqueado, MINUTOS_DE_BLOQUEIO, registrarTentativa } from "@/lib/tentativas";
 import { SENHA_PADRAO } from "@/lib/integracao";
 
@@ -59,9 +59,10 @@ const novaSenha = z
   .refine((d) => d.nova === d.confirma, { message: "As duas senhas novas não são iguais.", path: ["confirma"] })
   .refine((d) => d.nova !== SENHA_PADRAO, { message: "Escolha uma senha diferente da padrão.", path: ["nova"] });
 
-/** Troca de senha do colaborador: obrigatória no primeiro acesso. */
+/** Troca de senha: obrigatória no primeiro acesso do colaborador; o administrador troca a dele também. */
 export async function trocarSenha(_prev: Estado, formData: FormData): Promise<Estado> {
-  const s = await exigirColaborador({ podeComSenhaPadrao: true });
+  const s = await sessaoAtual();
+  if (!s) redirect("/entrar");
   const parsed = novaSenha.safeParse({
     atual: formData.get("atual"),
     nova: formData.get("nova"),
@@ -69,14 +70,23 @@ export async function trocarSenha(_prev: Estado, formData: FormData): Promise<Es
   });
   if (!parsed.success) return { erro: parsed.error.issues[0]?.message };
 
-  const atual = await prisma.colaborador.findUniqueOrThrow({ where: { id: s.id } });
+  const atual =
+    s.tipo === "admin"
+      ? await prisma.admin.findUniqueOrThrow({ where: { id: s.id } })
+      : await prisma.colaborador.findUniqueOrThrow({ where: { id: s.id } });
   if (!(await verifyPassword(parsed.data.atual, atual.senhaHash))) return { erro: "A senha atual não confere." };
 
-  const c = await prisma.colaborador.update({
-    where: { id: s.id },
-    data: { senhaHash: await hashPassword(parsed.data.nova), trocarSenha: false, sessionVersion: { increment: 1 } },
-  });
-  await abrirSessao({ tipo: "colaborador", id: c.id, versao: c.sessionVersion });
+  const senhaHash = await hashPassword(parsed.data.nova);
+  const versao =
+    s.tipo === "admin"
+      ? (await prisma.admin.update({ where: { id: s.id }, data: { senhaHash, sessionVersion: { increment: 1 } } })).sessionVersion
+      : (
+          await prisma.colaborador.update({
+            where: { id: s.id },
+            data: { senhaHash, trocarSenha: false, sessionVersion: { increment: 1 } },
+          })
+        ).sessionVersion;
+  await abrirSessao({ tipo: s.tipo, id: s.id, versao });
   // Quem redireciona é a tela: o redirect daqui renderizaria a página com o
   // cookie antigo, que a troca de senha acabou de invalidar.
   return { ok: "Senha trocada." };

@@ -35,7 +35,7 @@ export function FormEntrar() {
 export function FormTrocarSenha() {
   const [estado, acao] = useActionState<Estado, FormData>(trocarSenha, {});
   useEffect(() => {
-    if (estado.ok) window.location.assign("/");
+    if (estado.ok) window.location.assign("/"); // a página inicial manda o administrador para /admin
   }, [estado]);
   return (
     <form action={acao} className="space-y-4">
