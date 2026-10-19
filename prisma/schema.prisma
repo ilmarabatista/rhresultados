@@ -109,16 +109,12 @@ model Company {
   jobOpenings JobOpening[]
   candidates  Candidate[]
 
-  pontoConfig      PontoConfig?
   planos           PlanoDeTreinamento[]
   cargos           Cargo[]
   treinamentos     Treinamento[]
   turmas           TurmaDeTreinamento[]
   modeloIntegracao ItemDoModeloDeIntegracao[]
   testesEnviados   TesteEnviado[]
-  pontoMarcacoes   PontoMarcacao[]
-  pontoOcorrencias PontoOcorrencia[]
-  pontoLancamentos PontoLancamento[]
 
   @@index([name])
 }
@@ -194,8 +190,7 @@ model Service {
 
 /// Cada tentativa de login, para travar ataque de força bruta.
 /// Fica no banco (e não em memória) para valer também quando a aplicação
-/// roda em várias instâncias, como na Vercel. O ponto eletrônico usa a mesma
-/// tabela para travar o PIN, com a chave "ponto:<empresa>:<cpf>".
+/// roda em várias instâncias, como na Vercel.
 model LoginAttempt {
   id      String  @id @default(cuid())
   email   String
@@ -404,15 +399,6 @@ model Employee {
   assessments SkillAssessment[]
   avaliacoes  AvaliacaoDeCompetencias[]
   exams       HealthExam[]
-
-  /// PIN do ponto eletrônico, guardado como hash. Sem PIN a pessoa não bate ponto.
-  pontoPin     String?
-  /// Minutos previstos de domingo (0) a sábado (6). Vazio: usa a jornada da empresa.
-  pontoJornada Int[]   @default([])
-
-  pontoMarcacoes   PontoMarcacao[]
-  pontoOcorrencias PontoOcorrencia[]
-  pontoLancamentos PontoLancamento[]
 
   @@index([companyId, name])
   @@index([branchId])
@@ -1265,125 +1251,6 @@ model CustomTest {
   updatedAt DateTime @updatedAt
 
   testeEnviados TesteEnviado[]
-}
-
-// ------------------------------------------------------------ ponto eletrônico
-
-enum RegimePonto {
-  BANCO_DE_HORAS
-  HORAS_EXTRAS
-}
-
-/// As regras do ponto de uma empresa: cada cliente tem as suas.
-model PontoConfig {
-  id        String  @id @default(cuid())
-  companyId String  @unique
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  regime             RegimePonto @default(BANCO_DE_HORAS)
-  /// Minutos previstos de domingo (0) a sábado (6). O padrão é 44h: 8h de
-  /// segunda a sexta e 4h no sábado.
-  jornada            Int[]       @default([0, 480, 480, 480, 480, 480, 240])
-  /// Variação diária que não conta nem como extra nem como atraso (CLT art. 58, §1º).
-  tolerancia         Int         @default(10)
-  /// Intervalo mínimo para quem trabalha mais de 6h (CLT art. 71).
-  intervaloMinimo    Int         @default(60)
-  /// Prazo para compensar o banco de horas.
-  validadeBancoMeses Int         @default(6)
-  /// O saldo do banco começa a contar deste dia.
-  inicio             DateTime
-
-  /// O endereço do registro: /ponto/<token>.
-  token String  @unique
-  ativo Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-enum OrigemMarcacao {
-  RELOGIO
-  MANUAL
-  /// Veio do relógio próprio da empresa, pelo arquivo AFD.
-  IMPORTADA
-}
-
-/// Uma batida de ponto. Nunca é apagada: quando está errada, é anulada com
-/// motivo, e a marcação incluída pelo RH fica identificada como manual.
-model PontoMarcacao {
-  id  String @id @default(cuid())
-  /// Número sequencial do registro, impresso no comprovante.
-  nsr Int    @unique @default(autoincrement())
-
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  /// A jornada a que a batida pertence (UTC 00:00). Quem entra às 22h e sai
-  /// às 6h tem as duas batidas no mesmo dia de trabalho.
-  dia     DateTime
-  momento DateTime
-  origem  OrigemMarcacao @default(RELOGIO)
-  /// Por que o RH incluiu a marcação à mão.
-  motivo  String?
-  ip      String?
-
-  anuladaEm     DateTime?
-  anuladaMotivo String?
-  criadoPor     String?
-
-  createdAt DateTime @default(now())
-
-  @@index([employeeId, dia])
-  @@index([companyId, dia])
-}
-
-enum TipoOcorrenciaPonto {
-  FERIADO
-  FOLGA
-  FERIAS
-  ABONO
-  ATESTADO
-}
-
-/// O que muda a jornada prevista de um dia. Sem pessoa, vale para a empresa
-/// toda (feriado).
-model PontoOcorrencia {
-  id         String    @id @default(cuid())
-  companyId  String
-  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId String?
-  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  dia       DateTime
-  tipo      TipoOcorrenciaPonto
-  descricao String?
-  criadoPor String?
-
-  createdAt DateTime @default(now())
-
-  @@index([companyId, dia])
-}
-
-/// Movimento no banco de horas fora do dia a dia: saldo trazido de antes,
-/// horas pagas em folha, ajuste combinado.
-model PontoLancamento {
-  id         String   @id @default(cuid())
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  dia       DateTime
-  /// Positivo soma ao banco, negativo desconta.
-  minutos   Int
-  descricao String
-  criadoPor String?
-
-  createdAt DateTime @default(now())
-
-  @@index([employeeId, dia])
 }
 
 // ------------------------------------------------------ plano de treinamento
