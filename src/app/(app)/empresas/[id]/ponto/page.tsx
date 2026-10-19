@@ -3,48 +3,60 @@ import { notFound } from "next/navigation";
 import { Download } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { dateToDayKey, dayKeyToDate, formatFullDate, formatMoment, todayKey } from "@/lib/dates";
+import { todayKey } from "@/lib/dates";
 import {
   cargaSemanal,
   diasDoMes,
+  horarioDaPessoa,
   horas,
   NOME_DA_OCORRENCIA,
   nomeDoMes,
   outroMes,
+  relogio,
   saldoEscrito,
-  jornadaDaPessoa,
 } from "@/lib/ponto";
 import {
-  calcularPessoas,
-  configDoPonto,
-  pessoasDoPonto,
-  presentesAgora,
-  saldosDoBanco,
-} from "@/lib/ponto-dados";
+  calculosNoPonto,
+  empresaNoPonto,
+  enderecoDoPonto,
+  ErroDoPonto,
+  lancamentosNoPonto,
+  ocorrenciasNoPonto,
+  pontoConfigurado,
+  presentesNoPonto,
+  relatoriosNoPonto,
+  saldosNoPonto,
+  type ColaboradorNoPonto,
+} from "@/lib/ponto-api";
 import { Aviso, Etiqueta, Filtros, Numeros, Painel, Tabela, TituloDaSecao, Vazio } from "@/components/ui";
 import PrintButton from "@/components/print-button";
 import {
-  AtivarPonto,
   ConfigForm,
+  EnviarRelatorio,
   Espelho,
   ExcluirLancamento,
   ExcluirOcorrencia,
-  ImportarAfd,
+  HorarioDoColaborador,
   LancamentoForm,
-  LinkDoPonto,
   OcorrenciaForm,
-  PessoaPonto,
 } from "@/components/ponto-painel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ponto — RH Resultados" };
 
+/**
+ * O ponto da empresa, visto e ajustado do RH. As batidas moram no sistema de
+ * ponto, à parte; esta tela lê e escreve lá pela API.
+ *
+ * Empresa → Ponto → Colaboradores → horários do colaborador, com os ajustes,
+ * e o relatório individual que vai para o colaborador conferir.
+ */
+
 const VISOES = [
-  ["resumo", "Resumo do mês"],
-  ["espelho", "Espelho"],
-  ["pessoas", "Pessoas e PIN"],
+  ["colaboradores", "Colaboradores"],
+  ["horarios", "Horários"],
+  ["relatorio", "Relatório"],
   ["ocorrencias", "Feriados e ocorrências"],
-  ["importar", "Importar AFD"],
   ["regras", "Regras"],
 ] as const;
 type Visao = (typeof VISOES)[number][0];
@@ -54,7 +66,7 @@ export default async function PontoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ver?: string; mes?: string; pessoa?: string }>;
+  searchParams: Promise<{ ver?: string; mes?: string; colaborador?: string }>;
 }) {
   await requireSession();
   const { id } = await params;
@@ -63,32 +75,67 @@ export default async function PontoPage({
   const company = await prisma.company.findUnique({ where: { id }, select: { id: true, name: true } });
   if (!company) notFound();
 
-  const config = await configDoPonto(id);
-  if (!config) {
+  const titulo = <TituloDaSecao antes="Ponto" destaque="Eletrônico" />;
+  const urlDoPonto = enderecoDoPonto();
+
+  if (!pontoConfigurado()) {
     return (
       <main className="space-y-3.5">
-        <TituloDaSecao antes="Ponto" destaque="Eletrônico" />
-        <Vazio acao={<AtivarPonto companyId={id} />}>
-          O ponto desta empresa ainda não está ligado. Ao ativar, ela ganha um link próprio de registro
-          (para tablet ou celular) e regras próprias: banco de horas ou horas extras, jornada e tolerância.
+        {titulo}
+        <Vazio>
+          A ligação com o sistema de ponto ainda não está configurada. Faltam as variáveis PONTO_URL e INTEGRACAO_SECRET no servidor do RH.
         </Vazio>
       </main>
     );
   }
 
+  let dados: Awaited<ReturnType<typeof empresaNoPonto>>;
+  try {
+    dados = await empresaNoPonto(id);
+  } catch (e) {
+    return (
+      <main className="space-y-3.5">
+        {titulo}
+        <Aviso tom="ruim" rotulo="Sem resposta do ponto">
+          {e instanceof ErroDoPonto ? e.message : "Não foi possível falar com o sistema de ponto."}
+        </Aviso>
+      </main>
+    );
+  }
+
+  if (!dados) {
+    return (
+      <main className="space-y-3.5">
+        {titulo}
+        <Vazio
+          acao={
+            urlDoPonto ? (
+              <a href={`${urlDoPonto}/admin`} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-700 underline">
+                Abrir o sistema de ponto
+              </a>
+            ) : null
+          }
+        >
+          Esta empresa ainda não tem ponto. O ponto é criado no sistema de ponto, na área do administrador: lá você escolhe a empresa, informa o
+          horário padrão e cadastra os colaboradores pelo email.
+        </Vazio>
+      </main>
+    );
+  }
+
+  const { empresa, colaboradores } = dados;
   const hoje = todayKey();
   const mes = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : hoje.slice(0, 7);
-  const visao: Visao = VISOES.some(([v]) => v === sp.ver) ? (sp.ver as Visao) : "resumo";
-  const banco = config.regime === "BANCO_DE_HORAS";
-
-  const todas = await pessoasDoPonto(id);
-  const noPonto = todas.filter((p) => p.status !== "DESLIGADO" || p.desligamento);
-  const habilitadas = todas.filter((p) => p.temPin && p.status !== "DESLIGADO").length;
-  const agora = await presentesAgora(id);
+  const visao: Visao = VISOES.some(([v]) => v === sp.ver) ? (sp.ver as Visao) : "colaboradores";
+  const banco = empresa.regime === "BANCO_DE_HORAS";
+  const ativos = colaboradores.filter((c) => c.ativo);
+  const dias = diasDoMes(mes);
+  const primeiroDia = dias[0];
+  const ultimoDia = dias.at(-1)!;
 
   const href = (mudar: Record<string, string | undefined>) => {
     const q = new URLSearchParams();
-    const final = { ver: visao, mes, pessoa: sp.pessoa, ...mudar };
+    const final = { ver: visao, mes, colaborador: sp.colaborador, ...mudar };
     for (const [k, v] of Object.entries(final)) if (v) q.set(k, v);
     return `/empresas/${id}/ponto?${q.toString()}`;
   };
@@ -105,27 +152,26 @@ export default async function PontoPage({
     </div>
   );
 
-  const dias = diasDoMes(mes);
-  const primeiroDia = dias[0];
-  const ultimoDia = dias.at(-1)!;
+  const escolhido = colaboradores.find((c) => c.id === sp.colaborador) ?? ativos[0] ?? colaboradores[0];
+  const agora = await presentesNoPonto(id);
 
   return (
     <main className="space-y-3.5">
       <div className="no-print">
-        <TituloDaSecao antes="Ponto" destaque="Eletrônico" />
+        {titulo}
         <Numeros
           colunas={4}
           itens={[
             {
               rotulo: "Regime",
               valor: banco ? "Banco de horas" : "Horas extras",
-              detalhe: `${horas(cargaSemanal(config.jornada))} semanais · tolerância ${config.tolerancia} min`,
+              detalhe: `${horas(cargaSemanal(empresa.horario))} semanais · tolerância ${empresa.tolerancia} min`,
             },
             {
-              rotulo: "Batem ponto",
-              valor: habilitadas,
-              detalhe: `de ${todas.filter((p) => p.status !== "DESLIGADO").length} na equipe`,
-              tom: habilitadas === 0 ? "atencao" : "neutro",
+              rotulo: "Colaboradores",
+              valor: ativos.length,
+              detalhe: `${ativos.filter((c) => c.trocarSenha).length} sem o primeiro acesso`,
+              tom: ativos.length === 0 ? "atencao" : "neutro",
             },
             { rotulo: "Bateram hoje", valor: agora.bateramHoje },
             {
@@ -137,22 +183,24 @@ export default async function PontoPage({
         />
       </div>
 
-      <div className="no-print rounded-lg border border-slate-200 bg-white px-3 py-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-micro font-medium uppercase tracking-wider text-slate-500">Link do registro</span>
-          {config.ativo ? null : <Etiqueta tom="ruim">desligado</Etiqueta>}
-          <LinkDoPonto companyId={id} caminho={`/ponto/${config.token}`} />
+      {!empresa.ativo ? (
+        <div className="no-print">
+          <Aviso rotulo="Ponto desligado">Os colaboradores desta empresa não conseguem bater ponto. Para religar, use Regras.</Aviso>
         </div>
-        <p className="mt-1 text-micro text-slate-500">
-          Deixe aberto num tablet na entrada ou mande para cada pessoa abrir no celular. Ela entra com CPF e PIN.
-        </p>
-      </div>
+      ) : null}
 
-      {habilitadas === 0 ? (
+      {colaboradores.length === 0 ? (
         <div className="no-print">
           <Aviso rotulo="Para começar">
-            Ninguém tem PIN ainda. Em <Link className="underline" href={href({ ver: "pessoas" })}>Pessoas e PIN</Link>, libere o
-            ponto de cada pessoa (CPF + PIN). As pessoas vêm da aba Equipe.
+            Ninguém cadastrado no ponto desta empresa. Os colaboradores são cadastrados pelo email no{" "}
+            {urlDoPonto ? (
+              <a className="underline" href={`${urlDoPonto}/admin`} target="_blank" rel="noreferrer">
+                sistema de ponto
+              </a>
+            ) : (
+              "sistema de ponto"
+            )}
+            .
           </Aviso>
         </div>
       ) : null}
@@ -161,50 +209,71 @@ export default async function PontoPage({
         <Filtros itens={VISOES.map(([v, rotulo]) => ({ rotulo, href: href({ ver: v }), ativo: v === visao }))} />
       </div>
 
-      {visao === "resumo" ? (
-        <Resumo />
-      ) : visao === "espelho" ? (
-        <EspelhoDaPessoa />
-      ) : visao === "pessoas" ? (
-        <Pessoas />
+      {visao === "colaboradores" ? (
+        <Colaboradores />
+      ) : visao === "horarios" ? (
+        <Horarios />
+      ) : visao === "relatorio" ? (
+        <Relatorio />
       ) : visao === "ocorrencias" ? (
         <Ocorrencias />
-      ) : visao === "importar" ? (
-        <ImportarAfd companyId={id} />
       ) : (
         <ConfigForm
           companyId={id}
           config={{
-            regime: config.regime,
-            jornada: config.jornada,
-            tolerancia: config.tolerancia,
-            intervaloMinimo: config.intervaloMinimo,
-            validadeBancoMeses: config.validadeBancoMeses,
-            inicio: dateToDayKey(config.inicio),
-            ativo: config.ativo,
+            regime: empresa.regime,
+            horario: empresa.horario,
+            tolerancia: empresa.tolerancia,
+            intervaloMinimo: empresa.intervaloMinimo,
+            validadeBancoMeses: empresa.validadeBancoMeses,
+            inicio: empresa.inicio,
+            ativo: empresa.ativo,
           }}
         />
       )}
     </main>
   );
 
-  // ------------------------------------------------------------- resumo
+  function seletorDoColaborador(ver: Visao, atual: ColaboradorNoPonto) {
+    return (
+      <form method="get" className="no-print flex flex-wrap items-center gap-2">
+        <input type="hidden" name="ver" value={ver} />
+        <input type="hidden" name="mes" value={mes} />
+        <select name="colaborador" defaultValue={atual.id} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm">
+          {colaboradores.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+              {c.ativo ? "" : " (desativado)"}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="rounded-md bg-brand-700 px-2.5 py-1 text-xs font-medium text-white">
+          Ver
+        </button>
+        <span className="flex-1" />
+        {navegaMes}
+      </form>
+    );
+  }
 
-  async function Resumo() {
-    const calculos = await calcularPessoas(id, config!, noPonto, primeiroDia, ultimoDia);
-    const comDados = calculos.filter((c) => c.dias.some((d) => !d.foraDoPeriodo));
-    const saldos = banco ? await saldosDoBanco(id, config!, noPonto) : null;
+  // ------------------------------------------------------- colaboradores
 
-    const soma = comDados.reduce(
+  async function Colaboradores() {
+    const [calculos, saldos] = await Promise.all([
+      calculosNoPonto(id, primeiroDia, ultimoDia),
+      banco ? saldosNoPonto(id) : Promise.resolve(null),
+    ]);
+    const lista = calculos.filter((c) => c.pessoa.ativo || c.dias.some((d) => d.marcacoes.length > 0));
+
+    const soma = lista.reduce(
       (s, c) => ({
         trabalhado: s.trabalhado + c.totais.trabalhado,
-        extras50: s.extras50 + c.totais.extras50,
-        extras100: s.extras100 + c.totais.extras100,
+        extras: s.extras + c.totais.extras50 + c.totais.extras100,
         debito: s.debito + c.totais.debito,
         faltas: s.faltas + c.totais.faltas,
         alertas: s.alertas + c.totais.alertas,
       }),
-      { trabalhado: 0, extras50: 0, extras100: 0, debito: 0, faltas: 0, alertas: 0 },
+      { trabalhado: 0, extras: 0, debito: 0, faltas: 0, alertas: 0 },
     );
 
     return (
@@ -223,69 +292,59 @@ export default async function PontoPage({
           colunas={4}
           itens={[
             { rotulo: "Horas trabalhadas", valor: horas(soma.trabalhado) },
-            banco
-              ? { rotulo: "Saldo do mês", valor: saldoEscrito(comDados.reduce((s, c) => s + c.totais.saldo, 0)) }
-              : { rotulo: "Extras 50% / 100%", valor: `${horas(soma.extras50)} / ${horas(soma.extras100)}` },
+            { rotulo: "Horas extras", valor: horas(soma.extras), detalhe: "fora do horário padrão" },
             { rotulo: "Faltas", valor: soma.faltas, tom: soma.faltas ? "ruim" : "neutro", detalhe: `atrasos e saídas: ${horas(soma.debito)}` },
-            { rotulo: "Alertas", valor: soma.alertas, tom: soma.alertas ? "atencao" : "bom", detalhe: "batida ímpar, intervalo, descanso" },
+            { rotulo: "Alertas", valor: soma.alertas, tom: soma.alertas ? "atencao" : "bom", detalhe: "batida faltando, intervalo, descanso" },
           ]}
         />
 
-        <Tabela titulo={`Resumo de ${nomeDoMes(mes)}`} minLargura={760}>
-          {comDados.length === 0 ? (
+        <Tabela titulo={`Colaboradores em ${nomeDoMes(mes)}`} minLargura={760}>
+          {lista.length === 0 ? (
             <p className="px-3 py-4 text-sm text-slate-500">Ninguém no ponto neste mês.</p>
           ) : (
             <table className="w-full text-mini">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-micro uppercase tracking-wider text-slate-500">
-                  <th className="px-3 py-1.5 font-medium">Pessoa</th>
+                  <th className="px-3 py-1.5 font-medium">Colaborador</th>
                   <th className="px-2 py-1.5 text-right font-medium">Previsto</th>
                   <th className="px-2 py-1.5 text-right font-medium">Trabalhado</th>
-                  {banco ? (
-                    <>
-                      <th className="px-2 py-1.5 text-right font-medium">Saldo do mês</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Banco até ontem</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-2 py-1.5 text-right font-medium">Extra 50%</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Extra 100%</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Atraso/saída</th>
-                    </>
-                  )}
-                  <th className="px-2 py-1.5 text-right font-medium">Faltas</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Extra 50%</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Extra 100%</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Atraso/falta</th>
+                  {banco ? <th className="px-2 py-1.5 text-right font-medium">Banco</th> : null}
                   <th className="px-2 py-1.5 text-right font-medium">Alertas</th>
                   <th className="px-2 py-1.5" />
                 </tr>
               </thead>
               <tbody>
-                {comDados.map((c) => {
-                  const saldo = saldos?.get(c.pessoa.id)?.total ?? 0;
+                {lista.map((c) => {
+                  const saldo = saldos?.[c.pessoa.id]?.total ?? 0;
                   return (
                     <tr key={c.pessoa.id} className="border-b border-slate-100 last:border-b-0 even:bg-slate-50/60">
                       <td className="px-3 py-1.5">
-                        <span className="font-medium text-slate-800">{c.pessoa.nome}</span>
-                        {!c.pessoa.temPin ? <span className="ml-1.5"><Etiqueta tom="atencao">sem PIN</Etiqueta></span> : null}
+                        <Link href={href({ ver: "horarios", colaborador: c.pessoa.id })} className="font-medium text-slate-800 hover:text-brand-700">
+                          {c.pessoa.nome}
+                        </Link>
+                        {c.pessoa.nome !== c.pessoa.email ? <span className="ml-1.5 text-micro text-slate-500">{c.pessoa.email}</span> : null}
+                        {!c.pessoa.ativo ? (
+                          <span className="ml-1.5"><Etiqueta>desativado</Etiqueta></span>
+                        ) : c.pessoa.trocarSenha ? (
+                          <span className="ml-1.5"><Etiqueta tom="atencao">sem 1º acesso</Etiqueta></span>
+                        ) : null}
                       </td>
                       <td className="px-2 py-1.5 text-right tabular-nums text-slate-500">{horas(c.totais.previsto)}</td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{horas(c.totais.trabalhado)}</td>
-                      {banco ? (
-                        <>
-                          <td className={`px-2 py-1.5 text-right tabular-nums ${cor(c.totais.saldo)}`}>{saldoEscrito(c.totais.saldo)}</td>
-                          <td className={`px-2 py-1.5 text-right font-semibold tabular-nums ${cor(saldo)}`}>{saldoEscrito(saldo)}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-2 py-1.5 text-right tabular-nums text-emerald-700">{horas(c.totais.extras50)}</td>
-                          <td className="px-2 py-1.5 text-right tabular-nums text-emerald-700">{horas(c.totais.extras100)}</td>
-                          <td className="px-2 py-1.5 text-right tabular-nums text-red-700">{horas(c.totais.debito)}</td>
-                        </>
-                      )}
-                      <td className={`px-2 py-1.5 text-right tabular-nums ${c.totais.faltas ? "text-red-700" : "text-slate-500"}`}>{c.totais.faltas}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums text-emerald-700">{horas(c.totais.extras50)}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums text-emerald-700">{horas(c.totais.extras100)}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums text-red-700">
+                        {horas(c.totais.debito)}
+                        {c.totais.faltas ? <span className="ml-1 text-micro">({c.totais.faltas} falta{c.totais.faltas > 1 ? "s" : ""})</span> : null}
+                      </td>
+                      {banco ? <td className={`px-2 py-1.5 text-right font-semibold tabular-nums ${cor(saldo)}`}>{saldoEscrito(saldo)}</td> : null}
                       <td className={`px-2 py-1.5 text-right tabular-nums ${c.totais.alertas ? "text-amber-700" : "text-slate-500"}`}>{c.totais.alertas}</td>
                       <td className="px-2 py-1.5 text-right">
-                        <Link href={href({ ver: "espelho", pessoa: c.pessoa.id })} className="text-micro text-brand-700 hover:text-brand-900">
-                          espelho ›
+                        <Link href={href({ ver: "horarios", colaborador: c.pessoa.id })} className="text-micro text-brand-700 hover:text-brand-900">
+                          horários ›
                         </Link>
                       </td>
                     </tr>
@@ -301,7 +360,8 @@ export default async function PontoPage({
             <ul className="flex flex-wrap gap-2 text-xs text-slate-600">
               {agora.presentes.map((p) => (
                 <li key={p.nome} className="rounded-md bg-emerald-50 px-2 py-1 text-emerald-800">
-                  {p.nome} · desde {new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(p.desde)}
+                  {p.nome} · desde{" "}
+                  {new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date(p.desde))}
                 </li>
               ))}
             </ul>
@@ -311,185 +371,175 @@ export default async function PontoPage({
     );
   }
 
-  // ------------------------------------------------------------ espelho
+  // ------------------------------------------------------------ horários
 
-  async function EspelhoDaPessoa() {
-    const escolhida = noPonto.find((p) => p.id === sp.pessoa) ?? noPonto.find((p) => p.temPin) ?? noPonto[0];
-    if (!escolhida) {
-      return <Vazio>Cadastre as pessoas na aba Equipe para ver o espelho de ponto.</Vazio>;
-    }
+  async function Horarios() {
+    if (!escolhido) return <Vazio>Cadastre os colaboradores no sistema de ponto para ver os horários.</Vazio>;
 
-    const [calculo] = await calcularPessoas(id, config!, [escolhida], primeiroDia, ultimoDia);
-    const saldo = banco ? (await saldosDoBanco(id, config!, [escolhida])).get(escolhida.id) : null;
-    const lancamentos = banco
-      ? await prisma.pontoLancamento.findMany({
-          where: { employeeId: escolhida.id },
-          orderBy: { dia: "desc" },
-          take: 20,
-        })
-      : [];
+    const [[calculo], saldo, lancamentos] = await Promise.all([
+      calculosNoPonto(id, primeiroDia, ultimoDia, escolhido.id),
+      banco ? saldosNoPonto(id, escolhido.id).then((s) => s[escolhido.id]) : Promise.resolve(null),
+      banco ? lancamentosNoPonto(id, escolhido.id) : Promise.resolve([]),
+    ]);
     const t = calculo.totais;
-    const jornada = jornadaDaPessoa(config!.jornada, escolhida.jornada);
+    const horario = horarioDaPessoa(empresa.horario, escolhido.horario);
 
     return (
       <div className="space-y-3">
-        <form method="get" className="no-print flex flex-wrap items-center gap-2">
-          <input type="hidden" name="ver" value="espelho" />
-          <input type="hidden" name="mes" value={mes} />
-          <select name="pessoa" defaultValue={escolhida.id} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm">
-            {noPonto.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-                {p.status === "DESLIGADO" ? " (desligado)" : ""}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="rounded-md bg-brand-700 px-2.5 py-1 text-xs font-medium text-white">
-            Ver
-          </button>
-          <span className="flex-1" />
-          {navegaMes}
-          <PrintButton />
-        </form>
+        {seletorDoColaborador("horarios", escolhido)}
 
         <section className="rounded-lg border border-slate-200 bg-white">
           <header className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
             <div>
-              <p className="text-micro font-medium uppercase tracking-wider text-slate-500">Espelho de ponto · {company!.name}</p>
-              <h2 className="text-base font-semibold text-slate-900">{escolhida.nome}</h2>
+              <p className="text-micro font-medium uppercase tracking-wider text-slate-500">Horários · {company!.name}</p>
+              <h2 className="text-base font-semibold text-slate-900">{escolhido.nome}</h2>
               <p className="text-xs text-slate-500">
-                {[escolhida.cargo, escolhida.documento ? `CPF ${escolhida.documento}` : null, `jornada de ${horas(cargaSemanal(jornada))}/semana`]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {[escolhido.email, `${horas(cargaSemanal(horario))} semanais${escolhido.horario ? " (horário próprio)" : ""}`].join(" · ")}
               </p>
             </div>
-            <p className="text-sm font-medium capitalize text-slate-700">{nomeDoMes(mes)}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <HorarioDoColaborador
+                companyId={id}
+                colaborador={{ id: escolhido.id, horario: escolhido.horario, admissao: escolhido.admissao }}
+                horarioDaEmpresa={empresa.horario}
+              />
+              <Link href={href({ ver: "relatorio", colaborador: escolhido.id })} className="text-xs text-brand-700 underline">
+                Relatório do mês
+              </Link>
+            </div>
           </header>
 
-          <Espelho
-            companyId={id}
-            employeeId={escolhida.id}
-            regime={config!.regime}
-            dias={calculo.dias.map((d) => ({
-              dia: d.dia,
-              semana: d.semana,
-              marcacoes: d.marcacoes,
-              ocorrencia: d.ocorrencia,
-              ocorrenciaId: d.ocorrenciaId,
-              ocorrenciaDescricao: d.ocorrenciaDescricao,
-              previsto: d.previsto,
-              trabalhado: d.trabalhado,
-              abonado: d.abonado,
-              saldo: d.saldo,
-              extras50: d.extras50,
-              extras100: d.extras100,
-              alertas: d.alertas,
-              emAndamento: d.emAndamento,
-              foraDoPeriodo: d.foraDoPeriodo,
-            }))}
-          />
+          <Espelho companyId={id} colaboradorId={escolhido.id} regime={empresa.regime} dias={calculo.dias} />
 
-          <div className="grid gap-x-6 gap-y-1 border-t border-slate-200 px-4 py-3 text-xs text-slate-600 sm:grid-cols-3">
-            <p>Previsto: <b className="tabular-nums">{horas(t.previsto)}</b></p>
-            <p>Trabalhado: <b className="tabular-nums">{horas(t.trabalhado)}</b></p>
-            <p>Abonado: <b className="tabular-nums">{horas(t.abonado)}</b></p>
-            {banco ? (
-              <>
-                <p>Saldo do mês: <b className={`tabular-nums ${cor(t.saldo)}`}>{saldoEscrito(t.saldo)}</b></p>
-                <p>
-                  Banco de horas até ontem:{" "}
-                  <b className={`tabular-nums ${cor(saldo?.total ?? 0)}`}>{saldoEscrito(saldo?.total ?? 0)}</b>
-                </p>
-              </>
-            ) : (
-              <>
-                <p>Extras 50%: <b className="tabular-nums text-emerald-700">{horas(t.extras50)}</b></p>
-                <p>Extras 100%: <b className="tabular-nums text-emerald-700">{horas(t.extras100)}</b></p>
-                <p>Atrasos e saídas antecipadas: <b className="tabular-nums text-red-700">{horas(t.debito)}</b></p>
-              </>
-            )}
-            <p>Faltas: <b className="tabular-nums">{t.faltas}</b></p>
-          </div>
+          <Totais t={t} saldoBanco={saldo?.total ?? null} />
 
           <p className="no-print border-t border-slate-100 px-4 py-2 text-micro text-slate-500">
-            Passe o mouse numa batida para ver a origem e anular. <span className="rounded bg-amber-50 px-1 text-amber-800">08:00*</span> é
-            batida incluída pelo RH; riscada é anulada. Nada é apagado.
+            Clique numa batida para ver a foto, o local e anular. <span className="rounded bg-amber-50 px-1 text-amber-800">08:00*</span> é batida
+            incluída pelo RH; riscada é anulada. Nada é apagado.
           </p>
-
-          <div className="hidden grid-cols-2 gap-10 px-6 pb-6 pt-14 text-center text-xs text-slate-600 print:grid">
-            <p className="border-t border-slate-400 pt-1">{escolhida.nome}</p>
-            <p className="border-t border-slate-400 pt-1">{company!.name}</p>
-          </div>
         </section>
 
         {banco ? (
           <Painel
             titulo="Banco de horas"
-            descricao={`Saldo dos dias desde ${formatFullDate(config!.inicio)}: ${saldoEscrito(saldo?.dias ?? 0)} · lançamentos: ${saldoEscrito(
+            descricao={`Saldo dos dias desde ${empresa.inicio.split("-").reverse().join("/")}: ${saldoEscrito(saldo?.dias ?? 0)} · lançamentos: ${saldoEscrito(
               saldo?.lancamentos ?? 0,
-            )} · prazo para compensar: ${config!.validadeBancoMeses} meses.`}
+            )} · prazo para compensar: ${empresa.validadeBancoMeses} meses.`}
             className="no-print"
           >
             {lancamentos.length > 0 ? (
               <ul className="mb-3 divide-y divide-slate-100 text-xs">
                 {lancamentos.map((l) => (
                   <li key={l.id} className="flex items-center gap-3 py-1.5">
-                    <span className="w-20 tabular-nums text-slate-500">{formatFullDate(l.dia)}</span>
+                    <span className="w-20 tabular-nums text-slate-500">{l.dia.split("-").reverse().join("/")}</span>
                     <span className={`w-16 text-right font-medium tabular-nums ${cor(l.minutos)}`}>{saldoEscrito(l.minutos)}</span>
                     <span className="flex-1 text-slate-700">{l.descricao}</span>
                     <span className="text-slate-500">{l.criadoPor}</span>
-                    <ExcluirLancamento id={l.id} />
+                    <ExcluirLancamento companyId={id} id={l.id} />
                   </li>
                 ))}
               </ul>
             ) : null}
-            <LancamentoForm employeeId={escolhida.id} hoje={hoje} />
+            <LancamentoForm companyId={id} colaboradorId={escolhido.id} hoje={hoje} />
           </Painel>
         ) : null}
       </div>
     );
   }
 
-  // ------------------------------------------------------------- pessoas
+  // ----------------------------------------------------------- relatório
 
-  function Pessoas() {
-    const ativos = todas.filter((p) => p.status !== "DESLIGADO");
-    if (ativos.length === 0) {
-      return (
-        <Vazio acao={<Link href={`/empresas/${id}/equipe`} className="text-sm text-brand-700 underline">Ir para Equipe</Link>}>
-          Ninguém na equipe desta empresa ainda.
-        </Vazio>
-      );
-    }
+  async function Relatorio() {
+    if (!escolhido) return <Vazio>Cadastre os colaboradores no sistema de ponto para emitir o relatório.</Vazio>;
+    const [[calculo], saldo, enviados] = await Promise.all([
+      calculosNoPonto(id, primeiroDia, ultimoDia, escolhido.id),
+      banco ? saldosNoPonto(id, escolhido.id).then((s) => s[escolhido.id]) : Promise.resolve(null),
+      relatoriosNoPonto(id, mes),
+    ]);
+    const enviado = enviados.find((r) => r.colaboradorId === escolhido.id);
+    const quando = (iso: string) =>
+      new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+
     return (
-      <Tabela titulo="Quem bate ponto" direita={`${habilitadas} com PIN`}>
-        {ativos.map((p) => (
-          <PessoaPonto
-            key={p.id}
-            jornadaDaEmpresa={config!.jornada}
-            pessoa={{ id: p.id, nome: p.nome, cargo: p.cargo, documento: p.documento, status: p.status, temPin: p.temPin, jornada: p.jornada }}
-          />
-        ))}
-      </Tabela>
+      <div className="space-y-3">
+        {seletorDoColaborador("relatorio", escolhido)}
+
+        <div className="no-print flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+          {enviado ? (
+            <span>
+              Enviado em {quando(enviado.enviadoEm)}
+              {enviado.enviadoPor ? ` por ${enviado.enviadoPor}` : ""} ·{" "}
+              {enviado.cienteEm ? (
+                <Etiqueta tom="bom">conferido pelo colaborador em {quando(enviado.cienteEm)}</Etiqueta>
+              ) : (
+                <Etiqueta tom="atencao">aguardando o colaborador conferir</Etiqueta>
+              )}
+            </span>
+          ) : (
+            <span>Ainda não enviado ao colaborador.</span>
+          )}
+          <span className="flex-1" />
+          <PrintButton />
+          <EnviarRelatorio companyId={id} colaboradorId={escolhido.id} mes={mes} jaEnviado={Boolean(enviado)} />
+        </div>
+
+        <section className="rounded-lg border border-slate-200 bg-white">
+          <header className="border-b border-slate-100 px-4 py-3">
+            <p className="text-micro font-medium uppercase tracking-wider text-slate-500">Espelho de ponto · {company!.name}</p>
+            <h2 className="text-base font-semibold text-slate-900">{escolhido.nome}</h2>
+            <p className="text-xs capitalize text-slate-500">{nomeDoMes(mes)}</p>
+          </header>
+          <table className="w-full text-mini">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-micro uppercase tracking-wider text-slate-500">
+                <th className="px-3 py-1.5 font-medium">Dia</th>
+                <th className="px-3 py-1.5 font-medium">Marcações</th>
+                <th className="px-3 py-1.5 text-right font-medium">Trabalhado</th>
+                <th className="px-3 py-1.5 text-right font-medium">Extra</th>
+                <th className="px-3 py-1.5 text-right font-medium">Atraso/falta</th>
+                <th className="px-3 py-1.5 font-medium">Obs.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calculo.dias
+                .filter((d) => !d.foraDoPeriodo)
+                .map((d) => (
+                  <tr key={d.dia} className="border-b border-slate-100">
+                    <td className="whitespace-nowrap px-3 py-1 tabular-nums">{d.dia.split("-").reverse().slice(0, 2).join("/")}</td>
+                    <td className="px-3 py-1 tabular-nums">
+                      {d.marcacoes
+                        .filter((m) => !m.anulada)
+                        .map((m) => `${relogio(m.minuto)}${m.origem === "MANUAL" ? "*" : ""}`)
+                        .join("  ")}
+                    </td>
+                    <td className="px-3 py-1 text-right tabular-nums">{d.trabalhado ? horas(d.trabalhado) : ""}</td>
+                    <td className="px-3 py-1 text-right tabular-nums">{d.emAndamento || !(d.extras50 + d.extras100) ? "" : horas(d.extras50 + d.extras100)}</td>
+                    <td className="px-3 py-1 text-right tabular-nums">{d.emAndamento || !d.debito ? "" : horas(d.debito)}</td>
+                    <td className="px-3 py-1 text-micro text-slate-600">
+                      {[d.ocorrencia ? NOME_DA_OCORRENCIA[d.ocorrencia] : null, ...d.alertas].filter(Boolean).join(" · ")}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          <Totais t={calculo.totais} saldoBanco={saldo?.total ?? null} />
+          <p className="border-t border-slate-100 px-4 py-2 text-micro text-slate-500">* batida incluída pelo RH.</p>
+          <div className="hidden grid-cols-2 gap-10 px-6 pb-6 pt-14 text-center text-xs text-slate-600 print:grid">
+            <p className="border-t border-slate-400 pt-1">{escolhido.nome}</p>
+            <p className="border-t border-slate-400 pt-1">{company!.name}</p>
+          </div>
+        </section>
+      </div>
     );
   }
 
   // --------------------------------------------------------- ocorrências
 
   async function Ocorrencias() {
-    const lista = await prisma.pontoOcorrencia.findMany({
-      where: { companyId: id, dia: { gte: dayKeyToDate(primeiroDia), lte: dayKeyToDate(ultimoDia) } },
-      orderBy: [{ dia: "asc" }],
-      include: { employee: { select: { name: true } } },
-    });
-
+    const lista = await ocorrenciasNoPonto(id, primeiroDia, ultimoDia);
     return (
       <div className="space-y-3">
-        <OcorrenciaForm
-          companyId={id}
-          hoje={hoje}
-          pessoas={todas.filter((p) => p.status !== "DESLIGADO").map((p) => ({ id: p.id, nome: p.nome }))}
-        />
+        <OcorrenciaForm companyId={id} hoje={hoje} pessoas={ativos.map((c) => ({ id: c.id, nome: c.nome }))} />
         <div className="flex items-center justify-between">{navegaMes}</div>
         <Tabela titulo={`Ocorrências de ${nomeDoMes(mes)}`} direita={`${lista.length}`}>
           {lista.length === 0 ? (
@@ -498,14 +548,14 @@ export default async function PontoPage({
             <ul className="divide-y divide-slate-100 text-xs">
               {lista.map((o) => (
                 <li key={o.id} className="flex items-center gap-3 px-3 py-1.5">
-                  <span className="w-20 tabular-nums text-slate-500">{formatFullDate(o.dia)}</span>
+                  <span className="w-20 tabular-nums text-slate-500">{o.dia.split("-").reverse().join("/")}</span>
                   <Etiqueta tom={o.tipo === "FERIADO" ? "azul" : "neutro"}>{NOME_DA_OCORRENCIA[o.tipo]}</Etiqueta>
                   <span className="flex-1 text-slate-700">
-                    {o.employee?.name ?? "Empresa toda"}
+                    {o.colaborador ?? "Empresa toda"}
                     {o.descricao ? <span className="text-slate-500"> · {o.descricao}</span> : null}
                   </span>
-                  <span className="text-slate-500">{o.criadoPor ? `${o.criadoPor}, ${formatMoment(o.createdAt)}` : null}</span>
-                  <ExcluirOcorrencia id={o.id} />
+                  <span className="text-slate-500">{o.criadoPor}</span>
+                  <ExcluirOcorrencia companyId={id} id={o.id} />
                 </li>
               ))}
             </ul>
@@ -514,8 +564,25 @@ export default async function PontoPage({
       </div>
     );
   }
+
+  function Totais({ t, saldoBanco }: { t: Awaited<ReturnType<typeof calculosNoPonto>>[number]["totais"]; saldoBanco: number | null }) {
+    return (
+      <div className="grid gap-x-6 gap-y-1 border-t border-slate-200 px-4 py-3 text-xs text-slate-600 sm:grid-cols-3">
+        <p>Previsto: <b className="tabular-nums">{horas(t.previsto)}</b></p>
+        <p>Trabalhado: <b className="tabular-nums">{horas(t.trabalhado)}</b></p>
+        <p>Abonado: <b className="tabular-nums">{horas(t.abonado)}</b></p>
+        <p>Extras 50%: <b className="tabular-nums text-emerald-700">{horas(t.extras50)}</b></p>
+        <p>Extras 100%: <b className="tabular-nums text-emerald-700">{horas(t.extras100)}</b></p>
+        <p>Atrasos e saídas antecipadas: <b className="tabular-nums text-red-700">{horas(t.debito)}</b></p>
+        <p>Faltas: <b className="tabular-nums">{t.faltas}</b></p>
+        {banco ? <p>Saldo do mês: <b className={`tabular-nums ${cor(t.saldo)}`}>{saldoEscrito(t.saldo)}</b></p> : null}
+        {saldoBanco !== null ? <p>Banco de horas: <b className={`tabular-nums ${cor(saldoBanco)}`}>{saldoEscrito(saldoBanco)}</b></p> : null}
+      </div>
+    );
+  }
 }
 
 function cor(minutos: number) {
   return minutos > 0 ? "text-emerald-700" : minutos < 0 ? "text-red-700" : "text-slate-500";
 }
+

@@ -1,36 +1,40 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { Copy, Link2, Plus, RotateCcw, Trash2, Upload, X } from "lucide-react";
+import { Camera, MapPin, Plus, RotateCcw, Send, Trash2, X } from "lucide-react";
 import {
   anularMarcacao,
-  ativarPonto,
+  enviarRelatorio,
   excluirLancamento,
   excluirOcorrencia,
-  importarAfd,
   incluirMarcacao,
   lancarNoBanco,
   restaurarMarcacao,
-  salvarConfig,
+  salvarColaborador,
   salvarOcorrencia,
-  salvarPessoa,
-  trocarLink,
+  salvarRegras,
   type PontoState,
 } from "@/app/(app)/empresas/[id]/ponto/actions";
 import {
   DIAS_DA_SEMANA,
+  horarioEscrito,
   horas,
   NOME_DA_OCORRENCIA,
   relogio,
   saldoEscrito,
+  type Horario,
   type TipoOcorrencia,
 } from "@/lib/ponto";
+import type { DiaNoPonto, MarcacaoNoPonto } from "@/lib/ponto-api";
+import Modal from "./modal";
+import { avisar, avisarSeErro, confirmar } from "./avisos";
 import { Etiqueta, Painel } from "./ui";
 import { Field, FormError, FormOk, Input, Select, SmallSubmitButton, SubmitButton } from "./form";
 
 /**
- * As peças interativas da aba Ponto. A página monta os dados no servidor e
- * passa para cá só o que cada formulário precisa.
+ * As peças interativas da aba Ponto. Os dados vêm do sistema de ponto (à
+ * parte); a página monta tudo no servidor e passa para cá só o que cada
+ * formulário precisa.
  */
 
 const botaoLeve =
@@ -42,77 +46,19 @@ function useFechaQuandoOk(state: PontoState, fechar?: () => void) {
   }, [state, fechar]);
 }
 
-// -------------------------------------------------------------- ativar
+// ----------------------------------------------------------------- horário
 
-export function AtivarPonto({ companyId }: { companyId: string }) {
-  const [pendente, iniciar] = useTransition();
+function CamposDoHorario({ horario }: { horario: Horario }) {
   return (
-    <button
-      type="button"
-      disabled={pendente}
-      onClick={() => iniciar(async () => void (await ativarPonto(companyId)))}
-      className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
-    >
-      {pendente ? "Ativando…" : "Ativar o ponto desta empresa"}
-    </button>
-  );
-}
-
-// ------------------------------------------------------------------ link
-
-export function LinkDoPonto({ companyId, caminho }: { companyId: string; caminho: string }) {
-  const [copiado, setCopiado] = useState(false);
-  const [pendente, iniciar] = useTransition();
-  const [url, setUrl] = useState(caminho);
-
-  useEffect(() => setUrl(`${window.location.origin}${caminho}`), [caminho]);
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <code className="max-w-full truncate rounded bg-slate-100 px-2 py-1 text-micro text-slate-700">{url}</code>
-      <button
-        type="button"
-        className={botaoLeve}
-        onClick={async () => {
-          await navigator.clipboard.writeText(url);
-          setCopiado(true);
-          setTimeout(() => setCopiado(false), 2000);
-        }}
-      >
-        <Copy size={12} /> {copiado ? "Copiado" : "Copiar"}
-      </button>
-      <a href={caminho} target="_blank" rel="noreferrer" className={botaoLeve}>
-        <Link2 size={12} /> Abrir
-      </a>
-      <button
-        type="button"
-        disabled={pendente}
-        className={botaoLeve}
-        onClick={() => {
-          if (confirm("Trocar o link? O endereço atual para de funcionar na hora — o tablet e os celulares vão precisar do novo.")) {
-            iniciar(async () => void (await trocarLink(companyId)));
-          }
-        }}
-      >
-        <RotateCcw size={12} /> Trocar link
-      </button>
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------- jornada
-
-function CamposDaJornada({ jornada, prefixo = "jornada" }: { jornada: number[]; prefixo?: string }) {
-  return (
-    <div className="grid grid-cols-7 gap-1.5">
+    <div className="space-y-1.5">
       {DIAS_DA_SEMANA.map((nome, i) => (
-        <label key={nome} className="block text-center">
-          <span className="mb-0.5 block text-micro font-medium uppercase tracking-wider text-slate-500">{nome}</span>
+        <label key={nome} className="flex items-center gap-2">
+          <span className="w-9 text-micro font-medium uppercase tracking-wider text-slate-500">{nome}</span>
           <input
-            name={`${prefixo}${i}`}
-            defaultValue={jornada[i] ? horas(jornada[i]) : ""}
-            placeholder="—"
-            className="w-full rounded-md border border-slate-300 px-1 py-1.5 text-center text-sm tabular-nums outline-none focus:border-brand-500"
+            name={`horario${i}`}
+            defaultValue={horarioEscrito(horario[i] ?? []).replaceAll("–", "-")}
+            placeholder="sem expediente"
+            className="w-full max-w-sm rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums outline-none focus:border-brand-500"
           />
         </label>
       ))}
@@ -120,11 +66,11 @@ function CamposDaJornada({ jornada, prefixo = "jornada" }: { jornada: number[]; 
   );
 }
 
-// ------------------------------------------------------------ configuração
+// ------------------------------------------------------------------ regras
 
-export type ConfigDaTela = {
+export type RegrasDaTela = {
   regime: "BANCO_DE_HORAS" | "HORAS_EXTRAS";
-  jornada: number[];
+  horario: Horario;
   tolerancia: number;
   intervaloMinimo: number;
   validadeBancoMeses: number;
@@ -132,21 +78,29 @@ export type ConfigDaTela = {
   ativo: boolean;
 };
 
-export function ConfigForm({ companyId, config }: { companyId: string; config: ConfigDaTela }) {
-  const [state, action] = useActionState<PontoState, FormData>(salvarConfig, {});
+export function ConfigForm({ companyId, config }: { companyId: string; config: RegrasDaTela }) {
+  const [state, action] = useActionState<PontoState, FormData>(salvarRegras, {});
   const [regime, setRegime] = useState(config.regime);
 
   return (
     <form action={action}>
-      <Painel titulo="Regras do ponto desta empresa" descricao="Cada empresa tem as suas. Mudar aqui recalcula os espelhos na hora.">
+      <Painel titulo="Regras do ponto desta empresa" descricao="Mudar aqui recalcula os horários na hora.">
         <input type="hidden" name="companyId" value={companyId} />
 
-        <p className="mb-1.5 text-sm font-medium text-slate-700">O que acontece com a hora a mais</p>
+        <p className="mb-1.5 text-sm font-medium text-slate-700">Horário padrão</p>
+        <CamposDoHorario horario={config.horario} />
+        <p className="mt-1 text-micro text-slate-500">
+          Um ou mais trechos por dia, como 08:00-12:00 13:00-17:00. Em branco é dia sem expediente. O que for trabalhado fora deste horário
+          é hora extra; o que dele ficar sem trabalhar é atraso ou falta. Colaborador com escala diferente ganha o próprio horário na tela
+          dele.
+        </p>
+
+        <p className="mb-1.5 mt-4 text-sm font-medium text-slate-700">O que acontece com a hora a mais</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
-              ["BANCO_DE_HORAS", "Banco de horas", "O que passa da jornada vira crédito, o que falta vira débito, e a pessoa compensa com folga."],
-              ["HORAS_EXTRAS", "Horas extras", "O que passa da jornada é pago em folha: 50% em dia útil, 100% em domingo e feriado. O que falta é desconto."],
+              ["HORAS_EXTRAS", "Horas extras", "Paga em folha: 50% em dia útil, 100% em domingo e feriado. O que falta é desconto."],
+              ["BANCO_DE_HORAS", "Banco de horas", "A hora a mais vira crédito, a que falta vira débito, e o colaborador compensa com folga."],
             ] as const
           ).map(([valor, titulo, texto]) => (
             <label
@@ -155,25 +109,12 @@ export function ConfigForm({ companyId, config }: { companyId: string; config: C
                 regime === valor ? "border-brand-500 bg-brand-50/60" : "border-slate-200 hover:border-brand-300"
               }`}
             >
-              <input
-                type="radio"
-                name="regime"
-                value={valor}
-                checked={regime === valor}
-                onChange={() => setRegime(valor)}
-                className="sr-only"
-              />
+              <input type="radio" name="regime" value={valor} checked={regime === valor} onChange={() => setRegime(valor)} className="sr-only" />
               <span className="block text-sm font-semibold text-slate-800">{titulo}</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{texto}</span>
             </label>
           ))}
         </div>
-
-        <p className="mb-1.5 mt-4 text-sm font-medium text-slate-700">Jornada de cada dia</p>
-        <CamposDaJornada jornada={config.jornada} />
-        <p className="mt-1 text-micro text-slate-500">
-          Horas por dia (8:00, 8:48, 4). Em branco é dia sem jornada. Pessoa com escala diferente ganha a própria em “Pessoas e PIN”.
-        </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-4">
           <Field label="Tolerância diária (min)" hint="CLT: até 10 min no dia não contam.">
@@ -196,7 +137,7 @@ export function ConfigForm({ companyId, config }: { companyId: string; config: C
 
         <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" name="ativo" defaultChecked={config.ativo} />
-          Registro de ponto ligado (desligado, o link mostra “ponto desativado”)
+          Registro de ponto ligado (desligado, os colaboradores não conseguem bater ponto)
         </label>
 
         <div className="mt-3 space-y-2">
@@ -209,171 +150,161 @@ export function ConfigForm({ companyId, config }: { companyId: string; config: C
   );
 }
 
-// ------------------------------------------------------------------ pessoa
+// ------------------------------------------------------------- colaborador
 
-export type PessoaDaTela = {
-  id: string;
-  nome: string;
-  cargo: string | null;
-  documento: string | null;
-  status: string;
-  temPin: boolean;
-  jornada: number[] | null;
-};
-
-export function PessoaPonto({ pessoa, jornadaDaEmpresa }: { pessoa: PessoaDaTela; jornadaDaEmpresa: number[] }) {
+export function HorarioDoColaborador({
+  companyId,
+  colaborador,
+  horarioDaEmpresa,
+}: {
+  companyId: string;
+  colaborador: { id: string; horario: Horario | null; admissao: string | null };
+  horarioDaEmpresa: Horario;
+}) {
   const [aberto, setAberto] = useState(false);
-  const [state, action] = useActionState<PontoState, FormData>(salvarPessoa, {});
-  const [propria, setPropria] = useState(Boolean(pessoa.jornada));
-
+  const [state, action] = useActionState<PontoState, FormData>(salvarColaborador, {});
+  const [proprio, setProprio] = useState(Boolean(colaborador.horario));
   useEffect(() => {
     if (state.ok) setAberto(false);
   }, [state]);
 
+  if (!aberto) {
+    return (
+      <button type="button" onClick={() => setAberto(true)} className={`${botaoLeve} no-print`}>
+        Horário e admissão
+      </button>
+    );
+  }
   return (
-    <div className="border-b border-slate-100 px-3 py-2 last:border-b-0 even:bg-slate-50/60">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className="min-w-0 flex-1">
-          <p className="text-corpo font-medium text-slate-800">
-            {pessoa.nome}
-            {pessoa.status !== "ATIVO" ? (
-              <span className="ml-1.5">
-                <Etiqueta tom={pessoa.status === "DESLIGADO" ? "neutro" : "atencao"}>{pessoa.status.toLowerCase()}</Etiqueta>
-              </span>
-            ) : null}
-          </p>
-          <p className="text-micro text-slate-500">
-            {[pessoa.cargo, pessoa.documento ? `CPF ${pessoa.documento}` : "sem CPF"].filter(Boolean).join(" · ")}
-            {pessoa.jornada ? ` · jornada própria de ${horas(pessoa.jornada.reduce((s, m) => s + m, 0))}/semana` : ""}
-          </p>
-        </div>
-        <Etiqueta tom={pessoa.temPin ? "bom" : "atencao"}>{pessoa.temPin ? "PIN ativo" : "sem PIN"}</Etiqueta>
-        <button type="button" onClick={() => setAberto((v) => !v)} className={botaoLeve}>
-          {aberto ? "Fechar" : pessoa.temPin ? "Ajustar" : "Liberar ponto"}
-        </button>
-      </div>
-      {!aberto && state.mensagem ? <p className="mt-1 text-micro text-emerald-700">{state.mensagem}</p> : null}
-
-      {aberto ? (
-        <form action={action} className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
-          <input type="hidden" name="employeeId" value={pessoa.id} />
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="CPF" hint={pessoa.documento ? "Deixe em branco para manter." : "É com ele que a pessoa se identifica."}>
-              <Input name="cpf" inputMode="numeric" placeholder={pessoa.documento ?? "000.000.000-00"} />
-            </Field>
-            <Field label={pessoa.temPin ? "Novo PIN" : "PIN"} hint="4 a 6 números. Combine com a pessoa.">
-              <Input name="pin" inputMode="numeric" maxLength={6} autoComplete="off" placeholder={pessoa.temPin ? "manter o atual" : "ex.: 4821"} />
-            </Field>
-            {pessoa.temPin ? (
-              <label className="flex items-end gap-2 pb-2 text-xs text-slate-600">
-                <input type="checkbox" name="removerPin" /> Tirar o PIN (bloqueia o ponto)
-              </label>
-            ) : null}
-          </div>
-
-          <label className="flex items-center gap-2 text-xs text-slate-600">
-            <input type="checkbox" name="jornadaPropria" checked={propria} onChange={(e) => setPropria(e.target.checked)} />
-            Jornada diferente da empresa (escala, meio período)
-          </label>
-          {propria ? <CamposDaJornada jornada={pessoa.jornada ?? jornadaDaEmpresa} /> : null}
-
-          <FormError message={state.error} />
-          <SmallSubmitButton>Salvar</SmallSubmitButton>
-        </form>
-      ) : null}
-    </div>
+    <Modal titulo="Horário e admissão do colaborador" aoFechar={() => setAberto(false)} largura="xl">
+      <form action={action} className="space-y-3">
+        <input type="hidden" name="companyId" value={companyId} />
+        <input type="hidden" name="colaboradorId" value={colaborador.id} />
+        <Field label="Admissão" hint="Dias antes dela ficam de fora do espelho.">
+          <Input type="date" name="admissao" defaultValue={colaborador.admissao ?? ""} />
+        </Field>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" name="horarioProprio" checked={proprio} onChange={(e) => setProprio(e.target.checked)} />
+          Horário diferente do da empresa (escala, meio período)
+        </label>
+        {proprio ? <CamposDoHorario horario={colaborador.horario ?? horarioDaEmpresa} /> : null}
+        <FormError message={state.error} />
+        <SmallSubmitButton>Salvar</SmallSubmitButton>
+      </form>
+    </Modal>
   );
 }
 
 // ------------------------------------------------------------------ espelho
 
-export type MarcacaoDaTela = {
-  id: string;
-  minuto: number;
-  origem: "RELOGIO" | "MANUAL" | "IMPORTADA";
-  motivo: string | null;
-  anulada: boolean;
-  anuladaMotivo: string | null;
-  nsr: number;
-};
-
-export type DiaDaTela = {
-  dia: string;
-  semana: number;
-  marcacoes: MarcacaoDaTela[];
-  ocorrencia: TipoOcorrencia | null;
-  ocorrenciaId: string | null;
-  ocorrenciaDescricao: string | null;
-  previsto: number;
-  trabalhado: number;
-  abonado: number;
-  saldo: number;
-  extras50: number;
-  extras100: number;
-  alertas: string[];
-  emAndamento: boolean;
-  foraDoPeriodo: boolean;
-};
-
-function Batida({ m, podeMexer }: { m: MarcacaoDaTela; podeMexer: boolean }) {
+function DetalheDaBatida({ companyId, m, fechar }: { companyId: string; m: MarcacaoNoPonto; fechar: () => void }) {
   const [pendente, iniciar] = useTransition();
-  const [erro, setErro] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState("");
+  const mapa =
+    m.latitude !== null && m.longitude !== null
+      ? `https://www.google.com/maps?q=${m.latitude.toFixed(6)},${m.longitude.toFixed(6)}`
+      : null;
 
+  return (
+    <Modal titulo={`Batida das ${relogio(m.minuto)}`} aoFechar={fechar} largura="lg">
+      <div className="space-y-3 text-sm text-slate-700">
+        <p>
+          {m.origem === "MANUAL" ? `Incluída pelo RH: ${m.motivo ?? ""}` : "Registrada pelo colaborador no aplicativo do ponto."} · NSR {m.nsr}
+        </p>
+        {m.temFoto ? (
+          // eslint-disable-next-line @next/next/no-img-element -- a foto vem do ponto pelo próprio RH, sem otimização
+          <img
+            src={`/api/ponto/foto?empresa=${encodeURIComponent(companyId)}&id=${encodeURIComponent(m.id)}`}
+            alt="Foto tirada na batida"
+            className="max-h-80 rounded-lg border border-slate-200"
+          />
+        ) : null}
+        {mapa ? (
+          <a href={mapa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-700 underline">
+            <MapPin size={14} /> Ver o local no mapa{m.precisao ? ` (precisão de ${Math.round(m.precisao)} m)` : ""}
+          </a>
+        ) : null}
+        {m.anulada ? (
+          <div className="rounded-md bg-slate-50 p-2">
+            <p>Anulada: {m.anuladaMotivo}</p>
+            <button
+              type="button"
+              disabled={pendente}
+              className={`${botaoLeve} mt-2`}
+              onClick={() =>
+                iniciar(async () => {
+                  const r = await restaurarMarcacao(companyId, m.id);
+                  avisarSeErro(r);
+                  if (r.ok) fechar();
+                })
+              }
+            >
+              <RotateCcw size={12} /> Restaurar a batida
+            </button>
+          </div>
+        ) : (
+          <form
+            className="space-y-2 border-t border-slate-100 pt-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              iniciar(async () => {
+                const r = await anularMarcacao(companyId, m.id, motivo);
+                avisarSeErro(r);
+                if (r.ok) fechar();
+              });
+            }}
+          >
+            <Field label="Anular esta batida" hint="Ela continua no histórico, riscada, com o motivo.">
+              <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo (ex.: batida em duplicidade)" required minLength={3} />
+            </Field>
+            <button type="submit" disabled={pendente} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">
+              {pendente ? "Anulando…" : "Anular"}
+            </button>
+          </form>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function Batida({ companyId, m, podeMexer }: { companyId: string; m: MarcacaoNoPonto; podeMexer: boolean }) {
+  const [aberto, setAberto] = useState(false);
   const titulo = [
     `NSR ${m.nsr}`,
-    m.origem === "MANUAL" ? `incluída pelo RH: ${m.motivo ?? ""}` : m.origem === "IMPORTADA" ? "importada do AFD" : "registrada no ponto",
+    m.origem === "MANUAL" ? `incluída pelo RH: ${m.motivo ?? ""}` : "registrada no aplicativo",
     m.anulada ? `anulada: ${m.anuladaMotivo ?? ""}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <span
-      title={titulo}
-      className={`group inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-mini tabular-nums ${
-        m.anulada
-          ? "bg-slate-100 text-slate-500 line-through"
-          : m.origem === "MANUAL"
-            ? "bg-amber-50 text-amber-800"
-            : "bg-brand-50 text-brand-800"
-      }`}
-    >
-      {relogio(m.minuto)}
-      {m.minuto >= 1440 ? <sup className="text-micro">+1</sup> : null}
-      {m.origem === "MANUAL" ? <span className="text-micro">*</span> : null}
-      {podeMexer ? (
-        <button
-          type="button"
-          disabled={pendente}
-          aria-label={m.anulada ? "Restaurar batida" : "Anular batida"}
-          className="no-print ml-0.5 hidden text-slate-500 hover:text-red-600 group-hover:inline"
-          onClick={() => {
-            if (m.anulada) {
-              iniciar(async () => void (await restaurarMarcacao(m.id)));
-              return;
-            }
-            const motivo = prompt(`Anular a batida das ${relogio(m.minuto)}? Diga o motivo:`);
-            if (motivo === null) return;
-            iniciar(async () => {
-              const r = await anularMarcacao(m.id, motivo);
-              setErro(r.error ?? null);
-            });
-          }}
-        >
-          {m.anulada ? <RotateCcw size={10} /> : <X size={10} />}
-        </button>
-      ) : null}
-      {erro ? <span className="ml-1 text-micro text-red-600 no-underline">{erro}</span> : null}
-    </span>
+    <>
+      <button
+        type="button"
+        title={titulo}
+        disabled={!podeMexer}
+        onClick={() => setAberto(true)}
+        className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-mini tabular-nums ${
+          m.anulada ? "bg-slate-100 text-slate-500 line-through" : m.origem === "MANUAL" ? "bg-amber-50 text-amber-800" : "bg-brand-50 text-brand-800"
+        }`}
+      >
+        {relogio(m.minuto)}
+        {m.minuto >= 1440 ? <sup className="text-micro">+1</sup> : null}
+        {m.origem === "MANUAL" ? <span className="text-micro">*</span> : null}
+        {m.temFoto ? <Camera size={10} className="no-print ml-0.5 opacity-60" aria-label="com foto" /> : null}
+      </button>
+      {aberto ? <DetalheDaBatida companyId={companyId} m={m} fechar={() => setAberto(false)} /> : null}
+    </>
   );
 }
 
-function IncluirBatida({ employeeId, dia, fechar }: { employeeId: string; dia: string; fechar: () => void }) {
+function IncluirBatida({ companyId, colaboradorId, dia, fechar }: { companyId: string; colaboradorId: string; dia: string; fechar: () => void }) {
   const [state, action] = useActionState<PontoState, FormData>(incluirMarcacao, {});
   useFechaQuandoOk(state, fechar);
   return (
     <form action={action} className="no-print mt-1.5 flex flex-wrap items-end gap-1.5 rounded-md border border-slate-200 bg-white p-2">
-      <input type="hidden" name="employeeId" value={employeeId} />
+      <input type="hidden" name="companyId" value={companyId} />
+      <input type="hidden" name="colaboradorId" value={colaboradorId} />
       <input type="hidden" name="dia" value={dia} />
       <input type="time" name="hora" required autoFocus className="rounded border border-slate-300 px-1.5 py-1 text-xs" />
       <label className="flex items-center gap-1 text-micro text-slate-500">
@@ -394,13 +325,13 @@ function IncluirBatida({ employeeId, dia, fechar }: { employeeId: string; dia: s
   );
 }
 
-function OcorrenciaDoDia({ companyId, employeeId, dia, fechar }: { companyId: string; employeeId: string; dia: string; fechar: () => void }) {
+function OcorrenciaDoDia({ companyId, colaboradorId, dia, fechar }: { companyId: string; colaboradorId: string; dia: string; fechar: () => void }) {
   const [state, action] = useActionState<PontoState, FormData>(salvarOcorrencia, {});
   useFechaQuandoOk(state, fechar);
   return (
     <form action={action} className="no-print mt-1.5 flex flex-wrap items-end gap-1.5 rounded-md border border-slate-200 bg-white p-2">
       <input type="hidden" name="companyId" value={companyId} />
-      <input type="hidden" name="employeeId" value={employeeId} />
+      <input type="hidden" name="colaboradorId" value={colaboradorId} />
       <input type="hidden" name="de" value={dia} />
       <select name="tipo" className="rounded border border-slate-300 px-1.5 py-1 text-xs" defaultValue="ABONO">
         <option value="ABONO">Abono</option>
@@ -418,7 +349,7 @@ function OcorrenciaDoDia({ companyId, employeeId, dia, fechar }: { companyId: st
   );
 }
 
-function TirarOcorrencia({ id }: { id: string }) {
+function TirarOcorrencia({ companyId, id }: { companyId: string; id: string }) {
   const [pendente, iniciar] = useTransition();
   return (
     <button
@@ -426,8 +357,8 @@ function TirarOcorrencia({ id }: { id: string }) {
       disabled={pendente}
       aria-label="Tirar ocorrência"
       className="no-print ml-0.5 text-slate-500 hover:text-red-600"
-      onClick={() => {
-        if (confirm("Tirar esta ocorrência do dia?")) iniciar(async () => void (await excluirOcorrencia(id)));
+      onClick={async () => {
+        if (await confirmar("Tirar esta ocorrência do dia?")) iniciar(async () => avisarSeErro(await excluirOcorrencia(companyId, id)));
       }}
     >
       <X size={10} />
@@ -439,13 +370,13 @@ const NOME_CURTO_DO_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago
 
 export function Espelho({
   companyId,
-  employeeId,
+  colaboradorId,
   dias,
   regime,
 }: {
   companyId: string;
-  employeeId: string;
-  dias: DiaDaTela[];
+  colaboradorId: string;
+  dias: DiaNoPonto[];
   regime: "BANCO_DE_HORAS" | "HORAS_EXTRAS";
 }) {
   const [aberto, setAberto] = useState<{ dia: string; o: "batida" | "ocorrencia" } | null>(null);
@@ -453,14 +384,16 @@ export function Espelho({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-mini">
+      <table className="w-full min-w-[820px] text-mini">
         <thead>
           <tr className="border-b border-slate-200 text-left text-micro uppercase tracking-wider text-slate-500">
             <th className="px-2 py-1.5 font-medium">Dia</th>
+            <th className="px-2 py-1.5 font-medium">Horário</th>
             <th className="px-2 py-1.5 font-medium">Marcações</th>
-            <th className="px-2 py-1.5 text-right font-medium">Previsto</th>
             <th className="px-2 py-1.5 text-right font-medium">Trabalhado</th>
-            <th className="px-2 py-1.5 text-right font-medium">{regime === "BANCO_DE_HORAS" ? "Banco" : "Extra / falta"}</th>
+            <th className="px-2 py-1.5 text-right font-medium">Extra</th>
+            <th className="px-2 py-1.5 text-right font-medium">Atraso/falta</th>
+            {regime === "BANCO_DE_HORAS" ? <th className="px-2 py-1.5 text-right font-medium">Banco</th> : null}
             <th className="px-2 py-1.5 font-medium">Observações</th>
             <th className="no-print px-2 py-1.5" />
           </tr>
@@ -470,6 +403,8 @@ export function Espelho({
             const [, mes, dia] = d.dia.split("-").map(Number);
             const fimDeSemana = d.semana === 0 || d.semana === 6;
             const temAlerta = d.alertas.length > 0;
+            const extra = d.extras50 + d.extras100;
+            const semConta = d.foraDoPeriodo || d.emAndamento;
             return (
               <tr
                 key={d.dia}
@@ -483,34 +418,34 @@ export function Espelho({
                   </span>{" "}
                   <span className="text-slate-500">{DIAS_DA_SEMANA[d.semana]}</span>
                 </td>
-                <td className="px-2 py-1.5">
+                <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-500">{d.foraDoPeriodo ? "" : horarioEscrito(d.horario) || "—"}</td>
+                <td className="min-w-[13rem] px-2 py-1.5">
                   <div className="flex flex-wrap gap-1">
                     {d.marcacoes.map((m) => (
-                      <Batida key={m.id} m={m} podeMexer={!d.foraDoPeriodo} />
+                      <Batida key={m.id} companyId={companyId} m={m} podeMexer={!d.foraDoPeriodo} />
                     ))}
                     {d.marcacoes.length === 0 && !d.foraDoPeriodo ? <span className="text-slate-300">—</span> : null}
                   </div>
                   {aberto?.dia === d.dia && aberto.o === "batida" ? (
-                    <IncluirBatida employeeId={employeeId} dia={d.dia} fechar={fechar} />
+                    <IncluirBatida companyId={companyId} colaboradorId={colaboradorId} dia={d.dia} fechar={fechar} />
                   ) : null}
                   {aberto?.dia === d.dia && aberto.o === "ocorrencia" ? (
-                    <OcorrenciaDoDia companyId={companyId} employeeId={employeeId} dia={d.dia} fechar={fechar} />
+                    <OcorrenciaDoDia companyId={companyId} colaboradorId={colaboradorId} dia={d.dia} fechar={fechar} />
                   ) : null}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums text-slate-500">
-                  {d.foraDoPeriodo ? "" : d.previsto ? horas(d.previsto) : "—"}
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-slate-700">
                   {d.foraDoPeriodo || (!d.trabalhado && !d.marcacoes.length) ? "" : horas(d.trabalhado)}
                 </td>
-                <td
-                  className={`px-2 py-1.5 text-right font-medium tabular-nums ${
-                    d.saldo > 0 ? "text-emerald-700" : d.saldo < 0 ? "text-red-700" : "text-slate-300"
-                  }`}
-                >
-                  {d.foraDoPeriodo || d.emAndamento ? "" : d.saldo ? saldoEscrito(d.saldo) : "0:00"}
-                  {regime === "HORAS_EXTRAS" && d.extras100 > 0 ? <span className="block text-micro font-normal">100%</span> : null}
+                <td className="px-2 py-1.5 text-right tabular-nums text-emerald-700">
+                  {!semConta && extra ? horas(extra) : ""}
+                  {!semConta && d.extras100 > 0 ? <span className="block text-micro">100%</span> : null}
                 </td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-red-700">{!semConta && d.debito ? horas(d.debito) : ""}</td>
+                {regime === "BANCO_DE_HORAS" ? (
+                  <td className={`px-2 py-1.5 text-right font-medium tabular-nums ${d.saldo > 0 ? "text-emerald-700" : d.saldo < 0 ? "text-red-700" : "text-slate-300"}`}>
+                    {semConta ? "" : saldoEscrito(d.saldo)}
+                  </td>
+                ) : null}
                 <td className="px-2 py-1.5">
                   <div className="flex flex-wrap items-center gap-1">
                     {d.foraDoPeriodo ? <span className="text-micro">fora do período</span> : null}
@@ -521,7 +456,7 @@ export function Espelho({
                           {NOME_DA_OCORRENCIA[d.ocorrencia]}
                           {d.ocorrenciaDescricao ? `: ${d.ocorrenciaDescricao}` : ""}
                         </Etiqueta>
-                        {d.ocorrenciaId && d.ocorrencia !== "FERIADO" ? <TirarOcorrencia id={d.ocorrenciaId} /> : null}
+                        {d.ocorrenciaId && d.ocorrencia !== "FERIADO" ? <TirarOcorrencia companyId={companyId} id={d.ocorrenciaId} /> : null}
                       </span>
                     ) : null}
                     {d.abonado > 0 ? <span className="text-micro text-slate-500">abonado {horas(d.abonado)}</span> : null}
@@ -535,7 +470,7 @@ export function Espelho({
                 <td className="no-print whitespace-nowrap px-2 py-1.5 text-right">
                   {d.foraDoPeriodo ? null : (
                     <div className="flex justify-end gap-1">
-                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "batida" })} title="Incluir batida">
+                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "batida" })} title="Completar horário faltante">
                         <Plus size={11} /> batida
                       </button>
                       <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "ocorrencia" })} title="Abono, atestado, folga, férias">
@@ -555,15 +490,7 @@ export function Espelho({
 
 // ------------------------------------------------------------- ocorrências
 
-export function OcorrenciaForm({
-  companyId,
-  pessoas,
-  hoje,
-}: {
-  companyId: string;
-  pessoas: { id: string; nome: string }[];
-  hoje: string;
-}) {
+export function OcorrenciaForm({ companyId, pessoas, hoje }: { companyId: string; pessoas: { id: string; nome: string }[]; hoje: string }) {
   const [state, action] = useActionState<PontoState, FormData>(salvarOcorrencia, {});
   const [tipo, setTipo] = useState<TipoOcorrencia>("FERIADO");
   const formRef = useRef<HTMLFormElement>(null);
@@ -586,11 +513,11 @@ export function OcorrenciaForm({
               ))}
             </Select>
           </Field>
-          <Field label="Pessoa">
+          <Field label="Colaborador">
             {tipo === "FERIADO" ? (
               <Input value="Empresa toda" disabled readOnly />
             ) : (
-              <Select name="employeeId" required defaultValue="">
+              <Select name="colaboradorId" required defaultValue="">
                 <option value="" disabled>
                   Escolha…
                 </option>
@@ -613,7 +540,7 @@ export function OcorrenciaForm({
           </Field>
         </div>
         <p className="mt-1 text-micro text-slate-500">
-          Feriado, folga e férias tiram a jornada do dia. Abono e atestado mantêm a jornada e dão por cumprido o que faltou.
+          Feriado, folga e férias tiram o horário do dia. Abono e atestado mantêm o horário e dão por cumprido o que faltou.
         </p>
         <div className="mt-2 space-y-2">
           <FormError message={state.error} />
@@ -625,7 +552,7 @@ export function OcorrenciaForm({
   );
 }
 
-export function ExcluirOcorrencia({ id }: { id: string }) {
+export function ExcluirOcorrencia({ companyId, id }: { companyId: string; id: string }) {
   const [pendente, iniciar] = useTransition();
   return (
     <button
@@ -633,8 +560,8 @@ export function ExcluirOcorrencia({ id }: { id: string }) {
       disabled={pendente}
       aria-label="Excluir"
       className="text-slate-500 transition hover:text-red-600"
-      onClick={() => {
-        if (confirm("Excluir esta ocorrência?")) iniciar(async () => void (await excluirOcorrencia(id)));
+      onClick={async () => {
+        if (await confirmar("Excluir esta ocorrência?")) iniciar(async () => avisarSeErro(await excluirOcorrencia(companyId, id)));
       }}
     >
       <Trash2 size={13} />
@@ -644,7 +571,7 @@ export function ExcluirOcorrencia({ id }: { id: string }) {
 
 // ------------------------------------------------------------------- banco
 
-export function LancamentoForm({ employeeId, hoje }: { employeeId: string; hoje: string }) {
+export function LancamentoForm({ companyId, colaboradorId, hoje }: { companyId: string; colaboradorId: string; hoje: string }) {
   const [state, action] = useActionState<PontoState, FormData>(lancarNoBanco, {});
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -653,7 +580,8 @@ export function LancamentoForm({ employeeId, hoje }: { employeeId: string; hoje:
 
   return (
     <form ref={formRef} action={action} className="no-print space-y-2">
-      <input type="hidden" name="employeeId" value={employeeId} />
+      <input type="hidden" name="companyId" value={companyId} />
+      <input type="hidden" name="colaboradorId" value={colaboradorId} />
       <div className="grid gap-2 sm:grid-cols-4">
         <Field label="Movimento">
           <Select name="sentido" defaultValue="DEBITO">
@@ -677,7 +605,7 @@ export function LancamentoForm({ employeeId, hoje }: { employeeId: string; hoje:
   );
 }
 
-export function ExcluirLancamento({ id }: { id: string }) {
+export function ExcluirLancamento({ companyId, id }: { companyId: string; id: string }) {
   const [pendente, iniciar] = useTransition();
   return (
     <button
@@ -685,8 +613,8 @@ export function ExcluirLancamento({ id }: { id: string }) {
       disabled={pendente}
       aria-label="Excluir lançamento"
       className="no-print text-slate-500 transition hover:text-red-600"
-      onClick={() => {
-        if (confirm("Excluir este lançamento do banco?")) iniciar(async () => void (await excluirLancamento(id)));
+      onClick={async () => {
+        if (await confirmar("Excluir este lançamento do banco?")) iniciar(async () => avisarSeErro(await excluirLancamento(companyId, id)));
       }}
     >
       <Trash2 size={13} />
@@ -694,41 +622,25 @@ export function ExcluirLancamento({ id }: { id: string }) {
   );
 }
 
-// ------------------------------------------------------------------ importar
+// ---------------------------------------------------------------- relatório
 
-export function ImportarAfd({ companyId }: { companyId: string }) {
-  const [state, action] = useActionState<PontoState, FormData>(importarAfd, {});
+export function EnviarRelatorio({ companyId, colaboradorId, mes, jaEnviado }: { companyId: string; colaboradorId: string; mes: string; jaEnviado: boolean }) {
+  const [pendente, iniciar] = useTransition();
   return (
-    <form action={action}>
-      <Painel
-        titulo="Trazer batidas do relógio próprio da empresa"
-        descricao="Para a empresa que já tem ponto eletrônico de outro fornecedor: o sistema dela exporta o AFD e ele é lido aqui. Ninguém precisa entregar senha."
-      >
-        <input type="hidden" name="companyId" value={companyId} />
-        <ol className="mb-3 list-decimal space-y-1 pl-5 text-xs leading-relaxed text-slate-600">
-          <li>No sistema de ponto da empresa, procure “AFD” ou “Arquivo Fonte de Dados” (fica em relatórios fiscais ou exportações).</li>
-          <li>Exporte o período desejado. O arquivo é um .txt.</li>
-          <li>Confira se o CPF de cada pessoa está cadastrado na Equipe — é por ele que a batida acha a pessoa.</li>
-          <li>Envie aqui. Pode mandar o mesmo arquivo de novo depois: batida repetida é pulada.</li>
-        </ol>
-        <input
-          type="file"
-          name="arquivo"
-          accept=".txt,.afd,text/plain"
-          required
-          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-700"
-        />
-        <div className="mt-3 space-y-2">
-          <FormError message={state.error} />
-          <FormOk message={state.mensagem} />
-          <SubmitButton pendingLabel="Importando…">
-            <span className="inline-flex items-center gap-1.5">
-              <Upload size={14} /> Importar AFD
-            </span>
-          </SubmitButton>
-        </div>
-      </Painel>
-    </form>
+    <button
+      type="button"
+      disabled={pendente}
+      className="no-print inline-flex items-center gap-1.5 rounded-md bg-brand-700 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-60"
+      onClick={async () => {
+        if (jaEnviado && !(await confirmar("Este mês já foi enviado. Enviar de novo com os ajustes de agora? O colaborador terá de conferir outra vez."))) return;
+        iniciar(async () => {
+          const r = await enviarRelatorio(companyId, colaboradorId, mes);
+          if (r.error) avisar(r.error);
+          else if (r.mensagem) avisar(r.mensagem);
+        });
+      }}
+    >
+      <Send size={12} /> {pendente ? "Enviando…" : jaEnviado ? "Reenviar ao colaborador" : "Enviar ao colaborador"}
+    </button>
   );
 }
-

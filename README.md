@@ -833,3 +833,10 @@ agrupadas por serviço, para marcar o que já foi cumprido.
 A etapa de serviço **é** uma tarefa — não existe uma segunda lista de
 pendências. Por isso `Task.scheduledDate` é opcional: a etapa nasce sem data e
 aparece na aba Tarefas sob "Sem data agendada" até ser agendada no quadro.
+
+## Ponto eletrônico (sistema à parte)
+
+O ponto saiu de dentro do RH e virou um sistema próprio, na pasta [`ponto/`](ponto/README.md),
+com endereço, banco e login separados. O RH continua mostrando e ajustando o ponto de
+cada empresa na aba **Ponto**, lendo e escrevendo no sistema de ponto pela API dele.
+Para isso o RH precisa de `PONTO_URL` e `INTEGRACAO_SECRET` (a mesma chave do ponto).

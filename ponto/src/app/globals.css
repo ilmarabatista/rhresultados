@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/**
+ * O ponto tem cara própria, separada do RH: verde-petróleo e branco, feito
+ * primeiro para o celular de quem bate o ponto.
+ */
+@theme {
+  --color-marca-50: #effaf8;
+  --color-marca-100: #d6f1ec;
+  --color-marca-200: #aee3da;
+  --color-marca-300: #7acdc1;
+  --color-marca-400: #48b1a4;
+  --color-marca-500: #2b958a;
+  --color-marca-600: #1f7870;
+  --color-marca-700: #1c605a;
+  --color-marca-800: #1a4e4a;
+  --color-marca-900: #17413e;
+  --color-fundo: #f3f6f6;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-fundo);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-marca-500);
+  outline-offset: 2px;
+}

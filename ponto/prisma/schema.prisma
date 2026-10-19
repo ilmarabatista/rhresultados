@@ -1,0 +1,212 @@
+// O banco do sistema de ponto. Fica à parte do RH Resultados: em produção,
+// numa área própria (schema "ponto") do mesmo Postgres, com um usuário que
+// só enxerga estas tabelas. O schema vem do endereço do banco (?schema=ponto).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Quem cadastra empresas e colaboradores.
+model Admin {
+  id             String   @id @default(cuid())
+  nome           String
+  email          String   @unique
+  senhaHash      String
+  ativo          Boolean  @default(true)
+  /// Sobe a cada troca de senha: derruba as sessões antigas.
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+}
+
+enum RegimePonto {
+  BANCO_DE_HORAS
+  HORAS_EXTRAS
+}
+
+/// O ponto de uma empresa cliente do RH Resultados.
+model Empresa {
+  id          String  @id @default(cuid())
+  /// O id da empresa no RH Resultados: é por ele que os dois sistemas se acham.
+  rhCompanyId String  @unique
+  nome        String
+  ativo       Boolean @default(true)
+
+  regime             RegimePonto @default(BANCO_DE_HORAS)
+  /// O horário padrão, de domingo (0) a sábado (6): cada dia é uma lista de
+  /// trechos [início, fim] em minutos desde a meia-noite. O que cai fora dele
+  /// é hora extra. O padrão é 08:00–12:00 e 13:00–17:00 de segunda a sexta.
+  horario            Json        @default("[[],[[480,720],[780,1020]],[[480,720],[780,1020]],[[480,720],[780,1020]],[[480,720],[780,1020]],[[480,720],[780,1020]],[]]")
+  /// Variação diária que não conta nem como extra nem como atraso (CLT art. 58, §1º).
+  tolerancia         Int         @default(10)
+  /// Intervalo mínimo para quem trabalha mais de 6h (CLT art. 71).
+  intervaloMinimo    Int         @default(60)
+  validadeBancoMeses Int         @default(6)
+  /// O saldo do banco começa a contar deste dia.
+  inicio             DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  colaboradores Colaborador[]
+  marcacoes     Marcacao[]
+  ocorrencias   Ocorrencia[]
+  lancamentos   Lancamento[]
+}
+
+model Colaborador {
+  id        String  @id @default(cuid())
+  empresaId String
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  nome      String?
+  email     String  @unique
+  senhaHash String
+  /// Entra com a senha padrão e troca no primeiro acesso.
+  trocarSenha    Boolean @default(true)
+  ativo          Boolean @default(true)
+  sessionVersion Int     @default(0)
+
+  /// Horário próprio (escala, meio período), no mesmo formato do da empresa.
+  /// Vazio segue o da empresa.
+  horario  Json?
+  admissao DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  marcacoes   Marcacao[]
+  ocorrencias Ocorrencia[]
+  lancamentos Lancamento[]
+  relatorios  Relatorio[]
+
+  @@index([empresaId])
+}
+
+enum OrigemMarcacao {
+  /// Batida feita pelo colaborador no aplicativo, com foto e local.
+  APLICATIVO
+  /// Incluída pelo RH, com motivo.
+  MANUAL
+}
+
+/// Uma batida. Nunca é apagada: quando está errada, é anulada com motivo.
+model Marcacao {
+  id  String @id @default(cuid())
+  /// Número sequencial do registro, impresso no comprovante.
+  nsr Int    @unique @default(autoincrement())
+
+  empresaId     String
+  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  colaboradorId String
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+
+  /// A jornada a que a batida pertence (UTC 00:00).
+  dia     DateTime
+  momento DateTime
+  origem  OrigemMarcacao @default(APLICATIVO)
+  motivo  String?
+
+  latitude  Float?
+  longitude Float?
+  /// Precisão do local, em metros, como o celular informou.
+  precisao  Float?
+  ip        String?
+
+  anuladaEm     DateTime?
+  anuladaMotivo String?
+  criadoPor     String?
+
+  createdAt DateTime @default(now())
+
+  foto FotoMarcacao?
+
+  @@index([colaboradorId, dia])
+  @@index([empresaId, dia])
+}
+
+/// A foto tirada na batida, guardada à parte para a lista de batidas ficar leve.
+model FotoMarcacao {
+  marcacaoId String   @id
+  marcacao   Marcacao @relation(fields: [marcacaoId], references: [id], onDelete: Cascade)
+  tipo       String   @default("image/jpeg")
+  dados      Bytes
+}
+
+enum TipoOcorrencia {
+  FERIADO
+  FOLGA
+  FERIAS
+  ABONO
+  ATESTADO
+}
+
+/// O que muda a jornada prevista de um dia. Sem colaborador vale para a empresa toda.
+model Ocorrencia {
+  id            String       @id @default(cuid())
+  empresaId     String
+  empresa       Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  colaboradorId String?
+  colaborador   Colaborador? @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+
+  dia       DateTime
+  tipo      TipoOcorrencia
+  descricao String?
+  criadoPor String?
+  createdAt DateTime       @default(now())
+
+  @@index([empresaId, dia])
+}
+
+/// Movimento no banco de horas fora do dia a dia: saldo trazido, horas pagas, ajuste.
+model Lancamento {
+  id            String      @id @default(cuid())
+  empresaId     String
+  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  colaboradorId String
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+
+  dia       DateTime
+  /// Positivo soma ao banco, negativo desconta.
+  minutos   Int
+  descricao String
+  criadoPor String?
+  createdAt DateTime @default(now())
+
+  @@index([colaboradorId, dia])
+}
+
+/// O espelho do mês que o RH enviou ao colaborador. Guarda o retrato do
+/// momento do envio: ajuste feito depois pede um novo envio.
+model Relatorio {
+  id            String      @id @default(cuid())
+  colaboradorId String
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+
+  /// "AAAA-MM".
+  mes         String
+  dados       Json
+  enviadoPor  String?
+  enviadoEm   DateTime  @default(now())
+  /// Quando o colaborador confirmou que viu.
+  cienteEm    DateTime?
+
+  @@unique([colaboradorId, mes])
+}
+
+/// Tentativas de login, para travar força bruta (a Vercel roda em várias instâncias).
+model TentativaLogin {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String?
+  sucesso   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+}
