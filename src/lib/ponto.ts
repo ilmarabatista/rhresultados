@@ -1,6 +1,10 @@
 /**
  * O cálculo do ponto eletrônico, todo puro.
  *
+ * Cópia de ponto/src/lib/calculo.ts, o sistema de ponto à parte: lá ele
+ * calcula, aqui serve para escrever horas e ler os tipos do que a API do
+ * ponto devolve. Mudou lá, copie para cá (os testes dos dois lados são iguais).
+ *
  * Cada dia de trabalho é lido a partir das batidas em "minutos desde a
  * meia-noite do dia" — quem entra às 22h e sai às 6h tem a saída em 1800
  * (30h), e o par fecha sem virar dois dias pela metade.
@@ -17,15 +21,29 @@ import { FUSO } from "./dates";
 export type Regime = "BANCO_DE_HORAS" | "HORAS_EXTRAS";
 export type TipoOcorrencia = "FERIADO" | "FOLGA" | "FERIAS" | "ABONO" | "ATESTADO";
 
+/** Um trecho do horário, em minutos desde a meia-noite: [08:00, 12:00] = [480, 720]. */
+export type Periodo = [number, number];
+/** Os trechos de cada dia da semana, de domingo (0) a sábado (6). */
+export type Horario = Periodo[][];
+
 export type RegrasPonto = {
   regime: Regime;
-  /** Minutos previstos de domingo (0) a sábado (6). */
-  jornada: number[];
+  /** O horário padrão: o que cai fora dele é hora extra. */
+  horario: Horario;
   tolerancia: number;
   intervaloMinimo: number;
 };
 
-export const JORNADA_PADRAO = [0, 480, 480, 480, 480, 480, 240];
+/** 08:00 às 12:00 e 13:00 às 17:00, de segunda a sexta: 40h semanais. */
+export const HORARIO_PADRAO: Horario = [
+  [],
+  [[480, 720], [780, 1020]],
+  [[480, 720], [780, 1020]],
+  [[480, 720], [780, 1020]],
+  [[480, 720], [780, 1020]],
+  [[480, 720], [780, 1020]],
+  [],
+];
 
 export const DIAS_DA_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -37,9 +55,9 @@ export const NOME_DA_OCORRENCIA: Record<TipoOcorrencia, string> = {
   ATESTADO: "Atestado",
 };
 
-/** O dia deixa de ter jornada prevista. */
+/** O dia deixa de ter horário previsto. */
 const ZERA_A_JORNADA: TipoOcorrencia[] = ["FERIADO", "FOLGA", "FERIAS"];
-/** O dia tem jornada, mas o que faltar é dado como cumprido. */
+/** O dia tem horário, mas o que faltar é dado como cumprido. */
 const ABONA_O_DIA: TipoOcorrencia[] = ["ABONO", "ATESTADO"];
 
 export const LIMITE_EXTRA_DIARIO = 120;
@@ -173,21 +191,44 @@ export type DiaCalculado = {
   semana: number;
   batidas: number[];
   pares: [number, number | null][];
+  /** O horário previsto do dia (vazio em folga, feriado, férias). */
+  horario: Periodo[];
   ocorrencia: TipoOcorrencia | null;
   previsto: number;
   trabalhado: number;
   abonado: number;
-  /** Trabalhado + abonado − previsto, já com a tolerância aplicada. */
+  /** Extras − débito, já com a tolerância aplicada: é o que vai para o banco de horas. */
   saldo: number;
+  /** Tempo trabalhado fora do horário padrão. */
+  extras: number;
   extras50: number;
   extras100: number;
-  /** Minutos que faltaram (atraso, saída cedo ou falta), positivos. */
+  /** Tempo do horário que não foi trabalhado (atraso, saída cedo ou falta), positivo. */
   debito: number;
   falta: boolean;
   emAndamento: boolean;
   alertas: string[];
 };
 
+/** Quanto dos pares cai dentro dos trechos do horário. */
+export function sobreposicao(pares: [number, number][], periodos: Periodo[]): number {
+  let total = 0;
+  for (const [ini, fim] of pares) {
+    for (const [pi, pf] of periodos) {
+      total += Math.max(0, Math.min(fim, pf) - Math.max(ini, pi));
+    }
+  }
+  return total;
+}
+
+/**
+ * Um dia de trabalho.
+ *
+ * O horário padrão manda: o que foi trabalhado fora dele é extra, o que dele
+ * ficou sem trabalhar é débito. Quem chega 30 min atrasado e sai 30 min depois
+ * tem 0:30 de atraso e 0:30 de extra, como nos sistemas de ponto comuns. No
+ * banco de horas os dois se compensam no saldo.
+ */
 export function calcularDia(entrada: DiaParaCalcular, regras: RegrasPonto): DiaCalculado {
   const semana = diaDaSemana(entrada.dia);
   const batidas = [...entrada.batidas].sort((a, b) => a - b);
@@ -199,14 +240,20 @@ export function calcularDia(entrada: DiaParaCalcular, regras: RegrasPonto): DiaC
   for (let i = 0; i < batidas.length; i += 2) {
     pares.push([batidas[i], batidas[i + 1] ?? null]);
   }
+  const fechados = pares.filter((p): p is [number, number] => p[1] !== null);
 
   let trabalhado = 0;
-  for (const [ini, fim] of pares) if (fim !== null) trabalhado += fim - ini;
+  for (const [ini, fim] of fechados) trabalhado += fim - ini;
 
-  const jornadaDoDia = regras.jornada[semana] ?? 0;
-  const previsto = ocorrencia && ZERA_A_JORNADA.includes(ocorrencia) ? 0 : jornadaDoDia;
-  const abonado =
-    ocorrencia && ABONA_O_DIA.includes(ocorrencia) ? Math.max(0, previsto - trabalhado) : 0;
+  const horarioDoDia = regras.horario[semana] ?? [];
+  const horario = ocorrencia && ZERA_A_JORNADA.includes(ocorrencia) ? [] : horarioDoDia;
+  const previsto = horario.reduce((s, [i, f]) => s + (f - i), 0);
+  const dentro = sobreposicao(fechados, horario);
+
+  let extraBruto = trabalhado - dentro;
+  let faltaBruta = previsto - dentro;
+  const abonado = ocorrencia && ABONA_O_DIA.includes(ocorrencia) ? faltaBruta : 0;
+  if (abonado) faltaBruta = 0;
 
   if (batidas.length % 2 === 1 && !emAndamento) {
     alertas.push("Marcação ímpar: falta uma batida");
@@ -229,20 +276,20 @@ export function calcularDia(entrada: DiaParaCalcular, regras: RegrasPonto): DiaC
   const falta = !emAndamento && previsto > 0 && trabalhado === 0 && abonado === 0;
   if (falta) alertas.push("Falta");
 
-  // Com marcação ímpar o dia fica sem saldo até o RH completar a batida.
-  let saldo = 0;
-  if (!emAndamento && batidas.length % 2 === 0) {
-    const diferenca = trabalhado + abonado - previsto;
-    // Dentro da tolerância não conta nada; passou dela, conta tudo (Súmula 366 do TST).
-    saldo = Math.abs(diferenca) <= regras.tolerancia ? 0 : diferenca;
+  // Com marcação ímpar o dia fica sem conta até o RH completar a batida.
+  // Dentro da tolerância não conta nada; passou dela, conta tudo (Súmula 366 do TST).
+  if (emAndamento || batidas.length % 2 === 1 || extraBruto + faltaBruta <= regras.tolerancia) {
+    extraBruto = 0;
+    faltaBruta = 0;
   }
 
-  // Domingo sem jornada e feriado trabalhados pagam em dobro.
-  const emDobro = ocorrencia === "FERIADO" || (semana === 0 && jornadaDoDia === 0);
-  const extras = Math.max(0, saldo);
+  // Domingo sem horário e feriado trabalhados pagam em dobro.
+  const emDobro = ocorrencia === "FERIADO" || (semana === 0 && horarioDoDia.length === 0);
+  const extras = extraBruto;
   const extras100 = emDobro ? extras : 0;
   const extras50 = emDobro ? 0 : extras;
-  const debito = Math.max(0, -saldo);
+  const debito = faltaBruta;
+  const saldo = extras - debito;
 
   if (extras > LIMITE_EXTRA_DIARIO && !emDobro) alertas.push("Mais de 2h extras no dia");
 
@@ -251,11 +298,13 @@ export function calcularDia(entrada: DiaParaCalcular, regras: RegrasPonto): DiaC
     semana,
     batidas,
     pares,
+    horario,
     ocorrencia,
     previsto,
     trabalhado,
     abonado,
     saldo,
+    extras,
     extras50,
     extras100,
     debito,
@@ -370,14 +419,70 @@ export function diaDaBatida({
   return hoje;
 }
 
-/** A jornada da pessoa, quando tem uma própria; senão a da empresa. */
-export function jornadaDaPessoa(daEmpresa: number[], daPessoa: number[] | null | undefined): number[] {
+/** O horário da pessoa, quando tem um próprio; senão o da empresa. */
+export function horarioDaPessoa(daEmpresa: Horario, daPessoa: Horario | null | undefined): Horario {
   return daPessoa && daPessoa.length === 7 ? daPessoa : daEmpresa;
 }
 
-/** Soma da jornada semanal, em minutos. */
-export function cargaSemanal(jornada: number[]): number {
-  return jornada.reduce((s, m) => s + m, 0);
+/** Horas previstas na semana, em minutos. */
+export function cargaSemanal(horario: Horario): number {
+  return horario.reduce((s, dia) => s + dia.reduce((t, [i, f]) => t + (f - i), 0), 0);
+}
+
+/** [[480, 720], [780, 1020]] → "08:00–12:00 13:00–17:00". Vazio é "". */
+export function horarioEscrito(periodos: Periodo[]): string {
+  return periodos.map(([i, f]) => `${relogio(i)}–${relogio(f)}`).join(" ");
+}
+
+/**
+ * "08:00-12:00 13:00-17:00" → [[480, 720], [780, 1020]]. Aceita "8-12",
+ * "08:00 às 12:00", vírgula ou "e" entre os trechos. Trecho que vira a noite
+ * (22:00-06:00) passa de 1440. Devolve a mensagem de erro quando não dá.
+ */
+export function lerHorario(texto: string): Periodo[] | string {
+  const limpo = texto
+    .toLowerCase()
+    .replace(/\s+(?:às|as|a|até)\s+/g, "-")
+    .replace(/[–—]/g, "-")
+    .replace(/\s*-\s*/g, "-")
+    .replace(/\s+e\s+|[,;]/g, " ")
+    .trim();
+  if (!limpo) return [];
+
+  const periodos: Periodo[] = [];
+  for (const trecho of limpo.split(/\s+/)) {
+    const m = /^(\d{1,2}(?::?\d{2})?)h?-(\d{1,2}(?::?\d{2})?)h?$/.exec(trecho);
+    if (!m) return `Não entendi "${trecho}". Use 08:00-12:00.`;
+    const ini = lerHora(m[1].includes(":") || m[1].length > 2 ? m[1] : `${m[1]}:00`);
+    let fim = lerHora(m[2].includes(":") || m[2].length > 2 ? m[2] : `${m[2]}:00`);
+    if (ini === null || fim === null) return `Confira as horas de "${trecho}".`;
+    if (fim <= ini) fim += 1440;
+    const anterior = periodos.at(-1);
+    let inicio = ini;
+    if (anterior && inicio < anterior[1]) inicio += 1440;
+    if (anterior && inicio < anterior[1]) return "Os trechos se sobrepõem.";
+    if (inicio !== ini) fim += 1440;
+    periodos.push([inicio, fim]);
+  }
+  const total = periodos.reduce((s, [i, f]) => s + (f - i), 0);
+  if (total > 16 * 60) return "Mais de 16 horas num dia: confira o horário.";
+  return periodos;
+}
+
+/** Confere um horário vindo de fora (JSON): 7 dias, trechos em ordem, sem sobreposição. */
+export function horarioValido(valor: unknown): valor is Horario {
+  if (!Array.isArray(valor) || valor.length !== 7) return false;
+  return valor.every((dia) => {
+    if (!Array.isArray(dia)) return false;
+    let fimAnterior = -1;
+    for (const p of dia) {
+      if (!Array.isArray(p) || p.length !== 2) return false;
+      const [i, f] = p;
+      if (!Number.isInteger(i) || !Number.isInteger(f) || i < 0 || f <= i || f > 2880 || i < fimAnterior) return false;
+      fimAnterior = f;
+    }
+    return true;
+  });
 }
 
 /** Só os números do CPF (ou PIS). */

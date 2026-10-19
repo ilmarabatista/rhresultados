@@ -3,7 +3,10 @@ import { prisma } from "./prisma";
 import { addDaysUTC, dateToDayKey, dayKeyToDate, todayKey } from "./dates";
 import {
   calcularDias,
-  jornadaDaPessoa,
+  horarioDaPessoa,
+  horarioValido,
+  HORARIO_PADRAO,
+  type Horario,
   minutoNoDia,
   totalizar,
   type DiaCalculado,
@@ -11,57 +14,48 @@ import {
   type RegrasPonto,
   type TipoOcorrencia,
   type Totais,
-} from "./ponto";
+} from "./calculo";
 
 /**
  * O ponto lido do banco: batidas, ocorrências e lançamentos de uma empresa,
- * passados pelo cálculo de `ponto.ts`.
+ * passados pelo cálculo de `calculo.ts`. É o que a API entrega ao RH e o que
+ * vai no relatório do colaborador.
  */
 
-export type ConfigPonto = NonNullable<Awaited<ReturnType<typeof configDoPonto>>>;
+export type EmpresaDoPonto = NonNullable<Awaited<ReturnType<typeof empresaPorRh>>>;
 
-export async function configDoPonto(companyId: string) {
-  return prisma.pontoConfig.findUnique({ where: { companyId } });
+export async function empresaPorRh(rhCompanyId: string) {
+  return prisma.empresa.findUnique({ where: { rhCompanyId } });
+}
+
+/** O horário gravado da empresa, ou o padrão se algo estiver fora do formato. */
+export function horarioDaEmpresa(empresa: { horario: unknown }): Horario {
+  return horarioValido(empresa.horario) ? empresa.horario : HORARIO_PADRAO;
 }
 
 export type PessoaDoPonto = {
   id: string;
   nome: string;
-  documento: string | null;
-  cargo: string | null;
-  status: string;
-  temPin: boolean;
-  jornada: number[] | null;
+  email: string;
+  ativo: boolean;
+  trocarSenha: boolean;
+  horario: Horario | null;
   admissao: string | null;
-  desligamento: string | null;
 };
 
-export async function pessoasDoPonto(companyId: string): Promise<PessoaDoPonto[]> {
-  const pessoas = await prisma.employee.findMany({
-    where: { companyId },
-    orderBy: [{ status: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      document: true,
-      role: true,
-      status: true,
-      pontoPin: true,
-      pontoJornada: true,
-      hiredAt: true,
-      terminatedAt: true,
-    },
+export async function pessoasDoPonto(empresaId: string, ids?: string[]): Promise<PessoaDoPonto[]> {
+  const lista = await prisma.colaborador.findMany({
+    where: { empresaId, ...(ids ? { id: { in: ids } } : {}) },
+    orderBy: [{ ativo: "desc" }, { nome: "asc" }, { email: "asc" }],
   });
-  return pessoas.map((p) => ({
+  return lista.map((p) => ({
     id: p.id,
-    nome: p.name,
-    documento: p.document,
-    cargo: p.role,
-    status: p.status,
-    temPin: Boolean(p.pontoPin),
-    jornada: p.pontoJornada.length === 7 ? p.pontoJornada : null,
-    admissao: p.hiredAt ? dateToDayKey(p.hiredAt) : null,
-    desligamento: p.terminatedAt ? dateToDayKey(p.terminatedAt) : null,
+    nome: p.nome ?? p.email,
+    email: p.email,
+    ativo: p.ativo,
+    trocarSenha: p.trocarSenha,
+    horario: horarioValido(p.horario) ? p.horario : null,
+    admissao: p.admissao ? dateToDayKey(p.admissao) : null,
   }));
 }
 
@@ -69,17 +63,21 @@ export type MarcacaoDoDia = {
   id: string;
   nsr: number;
   minuto: number;
-  origem: "RELOGIO" | "MANUAL" | "IMPORTADA";
+  origem: "APLICATIVO" | "MANUAL";
   motivo: string | null;
   anulada: boolean;
   anuladaMotivo: string | null;
+  temFoto: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  precisao: number | null;
 };
 
 export type DiaDoEspelho = DiaCalculado & {
   marcacoes: MarcacaoDoDia[];
   ocorrenciaId: string | null;
   ocorrenciaDescricao: string | null;
-  /** Fora do contrato (antes da admissão, depois do desligamento ou antes do início do ponto). */
+  /** Antes da admissão ou antes do início do ponto. */
   foraDoPeriodo: boolean;
 };
 
@@ -89,23 +87,21 @@ export type CalculoDaPessoa = {
   totais: Totais;
 };
 
-function regrasDe(config: ConfigPonto, pessoa: PessoaDoPonto): RegrasPonto {
+function regrasDe(empresa: EmpresaDoPonto, pessoa: PessoaDoPonto): RegrasPonto {
   return {
-    regime: config.regime,
-    jornada: jornadaDaPessoa(config.jornada, pessoa.jornada),
-    tolerancia: config.tolerancia,
-    intervaloMinimo: config.intervaloMinimo,
+    regime: empresa.regime,
+    horario: horarioDaPessoa(horarioDaEmpresa(empresa), pessoa.horario),
+    tolerancia: empresa.tolerancia,
+    intervaloMinimo: empresa.intervaloMinimo,
   };
 }
 
 /**
  * Calcula cada pessoa de `desde` a `ate` (dias "AAAA-MM-DD", inclusive).
- *
- * O dia de hoje entra como em andamento. Os dias depois de hoje não entram.
+ * O dia de hoje entra como em andamento; os dias depois de hoje não entram.
  */
 export async function calcularPessoas(
-  companyId: string,
-  config: ConfigPonto,
+  empresa: EmpresaDoPonto,
   pessoas: PessoaDoPonto[],
   desde: string,
   ate: string,
@@ -121,39 +117,39 @@ export async function calcularPessoas(
   const ids = pessoas.map((p) => p.id);
 
   const [marcacoes, ocorrencias] = await Promise.all([
-    prisma.pontoMarcacao.findMany({
-      where: {
-        companyId,
-        employeeId: { in: ids },
-        dia: { gte: inicioDaBusca, lte: dayKeyToDate(fim) },
-      },
+    prisma.marcacao.findMany({
+      where: { empresaId: empresa.id, colaboradorId: { in: ids }, dia: { gte: inicioDaBusca, lte: dayKeyToDate(fim) } },
       orderBy: { momento: "asc" },
       select: {
         id: true,
         nsr: true,
-        employeeId: true,
+        colaboradorId: true,
         dia: true,
         momento: true,
         origem: true,
         motivo: true,
         anuladaEm: true,
         anuladaMotivo: true,
+        latitude: true,
+        longitude: true,
+        precisao: true,
+        foto: { select: { marcacaoId: true } },
       },
     }),
-    prisma.pontoOcorrencia.findMany({
+    prisma.ocorrencia.findMany({
       where: {
-        companyId,
-        OR: [{ employeeId: null }, { employeeId: { in: ids } }],
+        empresaId: empresa.id,
+        OR: [{ colaboradorId: null }, { colaboradorId: { in: ids } }],
         dia: { gte: inicioDaBusca, lte: dayKeyToDate(fim) },
       },
-      select: { id: true, employeeId: true, dia: true, tipo: true, descricao: true },
+      select: { id: true, colaboradorId: true, dia: true, tipo: true, descricao: true },
     }),
   ]);
 
   const marcacoesPor = new Map<string, MarcacaoDoDia[]>();
   for (const m of marcacoes) {
     const dia = dateToDayKey(m.dia);
-    const chave = `${m.employeeId}|${dia}`;
+    const chave = `${m.colaboradorId}|${dia}`;
     const lista = marcacoesPor.get(chave) ?? [];
     lista.push({
       id: m.id,
@@ -163,24 +159,27 @@ export async function calcularPessoas(
       motivo: m.motivo,
       anulada: Boolean(m.anuladaEm),
       anuladaMotivo: m.anuladaMotivo,
+      temFoto: Boolean(m.foto),
+      latitude: m.latitude,
+      longitude: m.longitude,
+      precisao: m.precisao,
     });
     marcacoesPor.set(chave, lista);
   }
 
   // A ocorrência da pessoa vale mais que a da empresa (férias num feriado continuam férias).
-  const ocorrenciaDaEmpresa = new Map<string, (typeof ocorrencias)[number]>();
-  const ocorrenciaDaPessoa = new Map<string, (typeof ocorrencias)[number]>();
+  const daEmpresa = new Map<string, (typeof ocorrencias)[number]>();
+  const daPessoa = new Map<string, (typeof ocorrencias)[number]>();
   for (const o of ocorrencias) {
     const dia = dateToDayKey(o.dia);
-    if (o.employeeId) ocorrenciaDaPessoa.set(`${o.employeeId}|${dia}`, o);
-    else ocorrenciaDaEmpresa.set(dia, o);
+    if (o.colaboradorId) daPessoa.set(`${o.colaboradorId}|${dia}`, o);
+    else daEmpresa.set(dia, o);
   }
 
-  const inicioDoPonto = dateToDayKey(config.inicio);
+  const inicioDoPonto = dateToDayKey(empresa.inicio);
 
   return pessoas.map((pessoa) => {
     const primeiro = [desde, inicioDoPonto, pessoa.admissao ?? ""].sort().at(-1)!;
-    const ultimo = pessoa.desligamento && pessoa.desligamento < fim ? pessoa.desligamento : fim;
 
     const entradas: DiaParaCalcular[] = [];
     const extras = new Map<string, { marcacoes: MarcacaoDoDia[]; ocorrenciaId: string | null; descricao: string | null; fora: boolean }>();
@@ -188,8 +187,8 @@ export async function calcularPessoas(
     for (let d = inicioDaBusca; dateToDayKey(d) <= fim; d = addDaysUTC(d, 1)) {
       const dia = dateToDayKey(d);
       const doDia = (marcacoesPor.get(`${pessoa.id}|${dia}`) ?? []).sort((a, b) => a.minuto - b.minuto);
-      const oc = ocorrenciaDaPessoa.get(`${pessoa.id}|${dia}`) ?? ocorrenciaDaEmpresa.get(dia) ?? null;
-      const fora = dia < primeiro || dia > ultimo;
+      const oc = daPessoa.get(`${pessoa.id}|${dia}`) ?? daEmpresa.get(dia) ?? null;
+      const fora = dia < primeiro;
 
       entradas.push({
         dia,
@@ -200,7 +199,7 @@ export async function calcularPessoas(
       extras.set(dia, { marcacoes: doDia, ocorrenciaId: oc?.id ?? null, descricao: oc?.descricao ?? null, fora });
     }
 
-    const calculados = calcularDias(entradas, regrasDe(config, pessoa))
+    const calculados = calcularDias(entradas, regrasDe(empresa, pessoa))
       .filter((d) => d.dia >= desde)
       .map((d): DiaDoEspelho => {
         const e = extras.get(d.dia)!;
@@ -214,35 +213,24 @@ export async function calcularPessoas(
         };
       });
 
-    return {
-      pessoa,
-      dias: calculados,
-      totais: totalizar(calculados.filter((d) => !d.foraDoPeriodo)),
-    };
+    return { pessoa, dias: calculados, totais: totalizar(calculados.filter((d) => !d.foraDoPeriodo)) };
   });
 }
 
-/**
- * O saldo do banco de horas de cada pessoa até ontem: todos os dias desde o
- * início do ponto, mais os lançamentos (saldo trazido, horas pagas).
- */
-export async function saldosDoBanco(
-  companyId: string,
-  config: ConfigPonto,
-  pessoas: PessoaDoPonto[],
-): Promise<Map<string, { dias: number; lancamentos: number; total: number }>> {
-  const inicio = dateToDayKey(config.inicio);
+export type SaldoDoBanco = { dias: number; lancamentos: number; total: number };
+
+/** O saldo do banco de horas de cada pessoa: os dias desde o início do ponto mais os lançamentos. */
+export async function saldosDoBanco(empresa: EmpresaDoPonto, pessoas: PessoaDoPonto[]): Promise<Record<string, SaldoDoBanco>> {
   const [calculos, lancamentos] = await Promise.all([
-    calcularPessoas(companyId, config, pessoas, inicio, todayKey()),
-    prisma.pontoLancamento.groupBy({
-      by: ["employeeId"],
-      where: { companyId, employeeId: { in: pessoas.map((p) => p.id) } },
+    calcularPessoas(empresa, pessoas, dateToDayKey(empresa.inicio), todayKey()),
+    prisma.lancamento.groupBy({
+      by: ["colaboradorId"],
+      where: { empresaId: empresa.id, colaboradorId: { in: pessoas.map((p) => p.id) } },
       _sum: { minutos: true },
     }),
   ]);
-
-  const porPessoa = new Map(lancamentos.map((l) => [l.employeeId, l._sum.minutos ?? 0]));
-  return new Map(
+  const porPessoa = new Map(lancamentos.map((l) => [l.colaboradorId, l._sum.minutos ?? 0]));
+  return Object.fromEntries(
     calculos.map((c) => {
       const lanc = porPessoa.get(c.pessoa.id) ?? 0;
       return [c.pessoa.id, { dias: c.totais.saldo, lancamentos: lanc, total: c.totais.saldo + lanc }];
@@ -250,37 +238,33 @@ export async function saldosDoBanco(
   );
 }
 
-/** Quem está dentro agora: bateu entrada hoje e ainda não saiu. */
-export async function presentesAgora(companyId: string) {
+/** Quem está dentro agora: bateu entrada e ainda não saiu. */
+export async function presentesAgora(empresaId: string) {
   const hoje = todayKey();
   const ontem = dateToDayKey(addDaysUTC(dayKeyToDate(hoje), -1));
-  const marcacoes = await prisma.pontoMarcacao.findMany({
-    where: {
-      companyId,
-      anuladaEm: null,
-      dia: { gte: dayKeyToDate(ontem), lte: dayKeyToDate(hoje) },
-    },
+  const marcacoes = await prisma.marcacao.findMany({
+    where: { empresaId, anuladaEm: null, dia: { gte: dayKeyToDate(ontem), lte: dayKeyToDate(hoje) } },
     orderBy: { momento: "asc" },
-    select: { employeeId: true, dia: true, momento: true, employee: { select: { name: true } } },
+    select: { colaboradorId: true, dia: true, momento: true, colaborador: { select: { nome: true, email: true } } },
   });
 
   const porJornada = new Map<string, { nome: string; dia: string; batidas: Date[] }>();
   for (const m of marcacoes) {
     const dia = dateToDayKey(m.dia);
-    const chave = `${m.employeeId}|${dia}`;
-    const j = porJornada.get(chave) ?? { nome: m.employee.name, dia, batidas: [] };
+    const chave = `${m.colaboradorId}|${dia}`;
+    const j = porJornada.get(chave) ?? { nome: m.colaborador.nome ?? m.colaborador.email, dia, batidas: [] };
     j.batidas.push(m.momento);
     porJornada.set(chave, j);
   }
 
-  const presentes: { nome: string; desde: Date }[] = [];
+  const presentes: { nome: string; desde: string }[] = [];
   let bateramHoje = 0;
   for (const j of porJornada.values()) {
     if (j.dia === hoje) bateramHoje += 1;
     if (j.batidas.length % 2 === 1) {
       const desde = j.batidas[j.batidas.length - 1];
       // Jornada de ontem aberta há mais de 16h é esquecimento, não presença.
-      if (Date.now() - desde.getTime() < 16 * 3_600_000) presentes.push({ nome: j.nome, desde });
+      if (Date.now() - desde.getTime() < 16 * 3_600_000) presentes.push({ nome: j.nome, desde: desde.toISOString() });
     }
   }
   presentes.sort((a, b) => a.nome.localeCompare(b.nome));
