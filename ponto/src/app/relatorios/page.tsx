@@ -16,7 +16,7 @@ export default async function RelatoriosPage() {
   });
   return (
     <>
-      <Topo titulo="Ponto" nome={s.nome} links={[{ href: "/", rotulo: "Registrar" }]} />
+      <Topo titulo="Ponto" nome={s.nome} links={[{ href: "/", rotulo: "Registrar" }, { href: "/folgas", rotulo: "Folgas" }]} />
       <main className="mx-auto max-w-md space-y-4 px-4 py-6">
         <h1 className="text-xl font-semibold text-slate-900">Meus relatórios de ponto</h1>
         <Cartao>
