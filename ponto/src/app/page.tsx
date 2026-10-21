@@ -30,6 +30,7 @@ export default async function InicioPage() {
         titulo="Ponto"
         nome={s.nome}
         links={[
+          { href: "/folgas", rotulo: "Folgas" },
           { href: "/relatorios", rotulo: pendentes ? `Relatórios (${pendentes})` : "Relatórios" },
           { href: "/trocar-senha", rotulo: "Senha" },
         ]}
