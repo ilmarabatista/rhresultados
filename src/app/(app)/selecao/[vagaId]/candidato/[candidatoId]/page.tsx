@@ -13,6 +13,7 @@ import EnviarFicha from "@/components/enviar-ficha";
 import { ResultadoDoDisc, ResultadoDoTesteCadastrado } from "@/components/resultado-teste";
 import CurriculoDoCandidato from "@/components/curriculo-do-candidato";
 import ParecerFinal from "@/components/resultado-do-candidato";
+import { BaixarPastaPdf, ImprimirAoAbrir } from "@/components/baixar-pasta-pdf";
 
 export const dynamic = "force-dynamic";
 // Organizar a entrevista chama a IA, que pode levar mais de um minuto.
@@ -46,6 +47,11 @@ const MOVIMENTO: Record<string, string> = {
 const botao =
   "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
 
+/** O nome que o navegador sugere ao salvar o PDF: "Pasta - Maria da Silva - Recepcionista". */
+function nomeDoPdf(candidato: string, vaga: string): string {
+  return `Pasta - ${candidato} - ${vaga}`.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
 /**
  * A pasta do candidato dentro da vaga: a ficha que ele preencheu, os testes
  * que fez, a entrevista organizada pelas perguntas da vaga e o resultado final.
@@ -56,11 +62,11 @@ export default async function PastaDoCandidatoPage({
   searchParams,
 }: {
   params: Promise<{ vagaId: string; candidatoId: string }>;
-  searchParams: Promise<{ aba?: string }>;
+  searchParams: Promise<{ aba?: string; pdf?: string }>;
 }) {
   await requireSession();
   const { vagaId, candidatoId } = await params;
-  const { aba: abaPedida } = await searchParams;
+  const { aba: abaPedida, pdf } = await searchParams;
   const c = await carregarPastaDoCandidato(vagaId, candidatoId);
   if (!c || !c.jobOpening) notFound();
 
@@ -82,6 +88,7 @@ export default async function PastaDoCandidatoPage({
       {aba === "tudo" ? <h2 className="text-sm font-semibold text-brand-800">Currículo</h2> : null}
       <Painel>
         <CurriculoDoCandidato candidatoId={c.id} arquivos={c.curriculos} />
+        {c.curriculos.length ? <p className="mt-1 hidden text-micro text-slate-500 print:block">O currículo é um PDF à parte, anexado no sistema.</p> : null}
       </Painel>
     </section>
   );
@@ -220,6 +227,7 @@ export default async function PastaDoCandidatoPage({
               ← quadro da vaga
             </Link>
             <PrintButton />
+            <BaixarPastaPdf candidato={c.name} vaga={vaga.title} />
           </span>
         }
       />
@@ -262,6 +270,7 @@ export default async function PastaDoCandidatoPage({
       {aba === "resultado" ? resultado : null}
       {aba === "tudo" ? (
         <div className="space-y-5">
+          {pdf === "1" ? <ImprimirAoAbrir nomeDoArquivo={nomeDoPdf(c.name, vaga.title)} /> : null}
           {curriculo}
           {ficha}
           {testes}
