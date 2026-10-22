@@ -17,11 +17,6 @@ const OPENROUTER_URL =
   process.env.OPENROUTER_BASE_URL ||
   "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
-/**
- * O modelo para dado pessoal (a entrevista do candidato). Modelo gratuito pode
- * guardar o que recebe; este é pago e vai só para provedor com retenção zero.
- */
-const MODELO_PRIVADO = "anthropic/claude-haiku-4.5";
 const TIMEOUT_MS = 240_000;
 const DEFAULT_MAX_TOKENS = 8_000;
 
@@ -94,10 +89,10 @@ const TENTATIVAS = 3;
  */
 export type OpcoesDaIA = {
   /**
-   * Texto com dado pessoal: usa OPENROUTER_MODEL_PRIVADO (ou o modelo privado
-   * padrão) e pede ao OpenRouter só provedor que não guarda nem treina com o
-   * que recebe. Sem provedor assim disponível, a chamada falha em vez de cair
-   * num que guarda.
+   * Texto com dado pessoal (entrevista, cargo). Quando OPENROUTER_MODEL_PRIVADO
+   * está preenchido, vai por esse modelo e só para provedor que não guarda nem
+   * treina com o que recebe. Vazio, segue o modelo de sempre: a Ilmara decidiu
+   * (22/10/2026) não pagar IA, e o gratuito não oferece retenção zero.
    */
   privado?: boolean;
 };
@@ -144,6 +139,8 @@ async function chamarUmaVez(
     );
   }
 
+  const modeloPrivado = opcoes.privado ? process.env.OPENROUTER_MODEL_PRIVADO : undefined;
+
   let resposta: Response;
   try {
     resposta = await fetch(OPENROUTER_URL, {
@@ -158,11 +155,11 @@ async function chamarUmaVez(
           : {}),
       },
       body: JSON.stringify({
-        model: opcoes.privado
-          ? process.env.OPENROUTER_MODEL_PRIVADO || MODELO_PRIVADO
+        model: modeloPrivado
+          ? modeloPrivado
           : process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
         max_tokens: Number(process.env.OPENROUTER_MAX_TOKENS) || maxTokens,
-        ...(opcoes.privado
+        ...(modeloPrivado
           ? { provider: { data_collection: "deny", zdr: true } }
           : {}),
         messages: [
