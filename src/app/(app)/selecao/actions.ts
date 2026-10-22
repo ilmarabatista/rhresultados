@@ -10,6 +10,9 @@ import { MODELO_SUGERIDO, tipoValido, type EtapaTipo } from "@/lib/selecao";
 import { lerEntrevista, lerPerguntas, TETO_DA_TRANSCRICAO, type Entrevista } from "@/lib/entrevista";
 import { organizarTranscricao } from "@/lib/ai-entrevista";
 import { nomeDoCurriculo, problemaDoCurriculo } from "@/lib/curriculo";
+import { lerFicha } from "@/lib/ficha";
+import { testeEmTexto } from "@/lib/fluxo-da-vaga";
+import { rascunharParecer } from "@/lib/ai-parecer";
 
 /**
  * O processo seletivo: modelos de processo, vagas, etapas e candidatos.
@@ -624,6 +627,65 @@ export async function salvarEntrevista(candidatoId: string, entrevista: Entrevis
   return { ok: true };
 }
 
+/**
+ * Rascunho do parecer final pela IA, a partir de tudo o que está na pasta.
+ * Não grava: volta para a tela, onde ela lê, ajusta e salva.
+ */
+export async function sugerirParecer(candidatoId: string): Promise<SelecaoState & { parecer?: string }> {
+  await requireSession();
+  const c = await prisma.candidate.findUnique({
+    where: { id: candidatoId },
+    select: {
+      applicationAnswers: true,
+      applicationAnsweredAt: true,
+      entrevista: true,
+      stageNotes: true,
+      jobOpening: {
+        select: {
+          title: true,
+          etapas: { select: { id: true, nome: true } },
+          cargo: { select: { missao: true, responsabilidades: true, requisitos: true, competencias: { orderBy: { ordem: "asc" }, select: { nome: true } } } },
+        },
+      },
+      testes: { where: { status: "RESPONDIDO" }, orderBy: { respondidoEm: "asc" }, select: { nomeDoTeste: true, resultado: true } },
+    },
+  });
+  if (!c || !c.jobOpening) return { error: "Candidato não encontrado." };
+
+  const ficha = c.applicationAnsweredAt ? lerFicha(c.applicationAnswers) : null;
+  const entrevista = lerEntrevista(c.entrevista);
+  if (!ficha && c.testes.length === 0 && !entrevista) {
+    return { error: "A pasta ainda está vazia: sem ficha, testes ou entrevista não há o que resumir." };
+  }
+  const notas = c.stageNotes && typeof c.stageNotes === "object" && !Array.isArray(c.stageNotes) ? (c.stageNotes as Record<string, unknown>) : {};
+  const nomes = new Map(c.jobOpening.etapas.map((e) => [e.id, e.nome]));
+  const cargo = c.jobOpening.cargo;
+
+  try {
+    const parecer = await rascunharParecer({
+      vaga: c.jobOpening.title,
+      cargo: cargo
+        ? {
+            missao: cargo.missao ?? "",
+            responsabilidades: cargo.responsabilidades ?? "",
+            requisitos: cargo.requisitos ?? "",
+            competencias: cargo.competencias.map((k) => k.nome),
+          }
+        : null,
+      ficha,
+      testes: c.testes.map((t) => testeEmTexto(t.nomeDoTeste, t.resultado)),
+      entrevista,
+      anotacoes: Object.entries(notas)
+        .filter((par): par is [string, string] => typeof par[1] === "string" && par[1].trim() !== "")
+        .map(([id, texto]) => ({ etapa: nomes.get(id) ?? "Etapa", texto })),
+    });
+    if (!parecer) return { error: "A IA não devolveu texto. Tente de novo em instantes." };
+    return { ok: true, parecer };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Não foi possível sugerir o parecer." };
+  }
+}
+
 /** O parecer final da consultoria, na aba Resultado da pasta. */
 export async function salvarParecerFinal(candidatoId: string, parecer: string): Promise<SelecaoState> {
   const session = await requireSession();
@@ -634,6 +696,77 @@ export async function salvarParecerFinal(candidatoId: string, parecer: string): 
   await log(c.companyId, session.userId, "EDITOU", candidatoId, `Atualizou o parecer final de ${c.name}.`);
   refresh(c.companyId);
   return { ok: true };
+}
+
+// ------------------------------------------------------------ fluxo da vaga
+
+/** Liga a vaga a um cargo da empresa (ou desliga). O roteiro do cargo vem junto se a vaga ainda não tem. */
+export async function escolherCargoDaVaga(vagaId: string, cargoId: string): Promise<SelecaoState> {
+  const session = await requireSession();
+  const vaga = await prisma.jobOpening.findUnique({ where: { id: vagaId }, select: { companyId: true, title: true, perguntasDaEntrevista: true } });
+  if (!vaga) return { error: "Vaga não encontrada." };
+  if (!cargoId) {
+    await prisma.jobOpening.update({ where: { id: vagaId }, data: { cargoId: null } });
+    refresh(vaga.companyId);
+    return { ok: true };
+  }
+  const cargo = await prisma.cargo.findFirst({ where: { id: cargoId, companyId: vaga.companyId }, select: { id: true, nome: true, perguntasDaEntrevista: true } });
+  if (!cargo) return { error: "Este cargo não é da empresa da vaga." };
+  const roteiroDoCargo = lerPerguntas(cargo.perguntasDaEntrevista);
+  const vagaSemRoteiro = lerPerguntas(vaga.perguntasDaEntrevista).length === 0;
+  await prisma.jobOpening.update({
+    where: { id: vagaId },
+    data: { cargoId: cargo.id, ...(vagaSemRoteiro && roteiroDoCargo.length ? { perguntasDaEntrevista: roteiroDoCargo } : {}) },
+  });
+  await log(vaga.companyId, session.userId, "EDITOU", vagaId, `Ligou a vaga de ${vaga.title} ao cargo ${cargo.nome}.`);
+  refresh(vaga.companyId);
+  return { ok: true };
+}
+
+/**
+ * Liga um teste feito pela aba Testes a um candidato da vaga, ou cadastra a
+ * pessoa como candidato novo (candidatoId "NOVO") já com o teste.
+ */
+export async function ligarTesteAoCandidato(testeId: string, vagaId: string, candidatoId: string): Promise<SelecaoState> {
+  const session = await requireSession();
+  const [teste, vaga] = await Promise.all([
+    prisma.testeEnviado.findUnique({ where: { id: testeId }, select: { id: true, pessoa: true, telefone: true, nomeDoTeste: true, companyId: true, candidateId: true } }),
+    prisma.jobOpening.findUnique({
+      where: { id: vagaId },
+      select: { companyId: true, title: true, etapas: { orderBy: { ordem: "asc" }, take: 1, select: { id: true, nome: true } } },
+    }),
+  ]);
+  if (!teste || !vaga) return { error: "Teste ou vaga não encontrado." };
+  if (teste.candidateId) return { error: "Este teste já está ligado a um candidato." };
+  if (teste.companyId && teste.companyId !== vaga.companyId) return { error: "Este teste foi feito para outra empresa." };
+
+  let alvo: { id: string; name: string } | null;
+  if (candidatoId === "NOVO") {
+    const primeira = vaga.etapas[0] ?? null;
+    alvo = await prisma.candidate.create({
+      data: {
+        companyId: vaga.companyId,
+        jobOpeningId: vagaId,
+        name: textoSeguro(teste.pessoa).trim() || "Sem nome",
+        phone: teste.telefone,
+        source: "MANUAL",
+        etapaId: primeira?.id ?? null,
+        applicationToken: randomBytes(24).toString("hex"),
+        ...(primeira
+          ? { movimentos: { create: { etapaId: primeira.id, etapaNome: primeira.nome, resultado: "ENTROU", criadoPorId: session.userId } } }
+          : {}),
+      },
+      select: { id: true, name: true },
+    });
+  } else {
+    alvo = await prisma.candidate.findFirst({ where: { id: candidatoId, jobOpeningId: vagaId }, select: { id: true, name: true } });
+    if (!alvo) return { error: "Escolha um candidato desta vaga." };
+  }
+
+  await prisma.testeEnviado.update({ where: { id: teste.id }, data: { candidateId: alvo.id, companyId: teste.companyId ?? vaga.companyId } });
+  await log(vaga.companyId, session.userId, "EDITOU", alvo.id, `Ligou o teste "${teste.nomeDoTeste}" a ${alvo.name}, na vaga de ${vaga.title}.`);
+  refresh(vaga.companyId);
+  return { ok: true, id: alvo.id };
 }
 
 // --------------------------------------------------------------- currículo

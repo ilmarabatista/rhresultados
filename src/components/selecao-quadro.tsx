@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { ArrowRight, Bell, Check, ClipboardCheck, Copy, FolderOpen, MessageCircle, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Bell, Check, ClipboardCheck, Copy, ExternalLink, FolderOpen, MessageCircle, Plus, Trash2 } from "lucide-react";
 import { enviarTesteAoCandidato } from "@/app/(app)/testes/actions";
 import {
   adicionarCandidato,
@@ -33,7 +33,7 @@ import {
 import { Etiqueta, Painel, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
 import { avisar } from "@/components/avisos";
-import EnviarFicha from "./enviar-ficha";
+import EnviarFicha, { PreencherFicha } from "./enviar-ficha";
 import CurriculoDoCandidato, { type CurriculoNaTela } from "./curriculo-do-candidato";
 
 /**
@@ -135,6 +135,9 @@ function TestesDoCandidato({
                 <Copy className="h-3 w-3" /> {copiado === t.id ? "copiado" : "link"}
               </button>
               {/* Montado no clique: o endereço do navegador não existe no servidor. */}
+              <a href={`/teste/${t.token}`} target="_blank" rel="noreferrer" className={botao} title="Abrir o teste para responder aqui">
+                <ExternalLink className="h-3 w-3" />
+              </a>
               <button
                 type="button"
                 className={botao}
@@ -289,6 +292,7 @@ function Candidato({
                   className={botao}
                 />
               ) : null}
+              {!encerrado && c.ficha !== "RESPONDIDA" ? <PreencherFicha candidatoId={c.id} className={botao} /> : null}
             </div>
           </div>
           {!encerrado || c.testes.length > 0 ? (

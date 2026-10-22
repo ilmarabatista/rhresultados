@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { FileText } from "lucide-react";
+import { FileText, PenLine } from "lucide-react";
 import { enviarFicha } from "@/app/(app)/selecao/actions";
 import { linkDoWhatsapp, primeiroNome } from "@/lib/selecao";
 import { avisar } from "./avisos";
@@ -60,6 +60,38 @@ export default function EnviarFicha({
       }
     >
       <FileText className="h-3 w-3" /> {pendente ? "Gerando…" : enviada ? "Reenviar ficha" : "Enviar ficha"}
+    </button>
+  );
+}
+
+/**
+ * Preencher a ficha aqui mesmo, com o candidato do lado ou a partir da ficha
+ * de papel: abre o mesmo formulário do link numa aba nova.
+ */
+export function PreencherFicha({ candidatoId, className }: { candidatoId: string; className: string }) {
+  const [pendente, iniciar] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pendente}
+      className={className}
+      title="Abre o formulário da ficha numa aba nova, para preencher aqui"
+      onClick={() => {
+        // A aba nasce no clique, senão o navegador bloqueia como pop-up.
+        const aba = window.open("about:blank", "_blank");
+        iniciar(async () => {
+          const r = await enviarFicha(candidatoId);
+          if (r.error || !r.token) {
+            aba?.close();
+            avisar(r.error ?? "Não foi possível abrir a ficha.");
+            return;
+          }
+          if (aba) aba.location.href = linkDaFicha(r.token);
+          else window.location.href = linkDaFicha(r.token);
+        });
+      }}
+    >
+      <PenLine className="h-3 w-3" /> {pendente ? "Abrindo…" : "Preencher aqui"}
     </button>
   );
 }
