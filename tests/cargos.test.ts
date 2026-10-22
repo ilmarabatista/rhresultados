@@ -7,9 +7,11 @@ import {
   lerNivelDeCargo,
   lerRespostas,
   lerResponsabilidades,
+  NAO_SE_APLICA,
   NIVEIS_DE_CARGO,
   questionarioDoNivel,
   questionarioEmTexto,
+  respostaEmTexto,
   semResposta,
   totalDeExperiencia,
   type Respostas,
@@ -68,8 +70,21 @@ test("escolher só aceita uma das opções", () => {
   assert.equal(lerRespostas("OPERACIONAL", { peso: "Levíssimo" }).peso, undefined);
 });
 
-test("experiência: sem experiência só vale no operacional, e o total soma meses e anos", () => {
-  assert.equal(lerRespostas("GERENCIAL", { experiencia: { nenhuma: true } }).experiencia, undefined);
+test("toda pergunta de opção aceita Não se aplica, mas não outro texto", () => {
+  const r = lerRespostas("OPERACIONAL", { esforcoVisual: NAO_SE_APLICA, ambiente: NAO_SE_APLICA, calculos: "talvez" });
+  assert.equal(r.esforcoVisual, NAO_SE_APLICA);
+  assert.equal(r.ambiente, NAO_SE_APLICA);
+  assert.equal(r.calculos, undefined);
+  const ambiente = questionarioDoNivel("OPERACIONAL").flatMap((s) => s.perguntas).find((p) => p.id === "ambiente")!;
+  assert.equal(respostaEmTexto(ambiente, r.ambiente), NAO_SE_APLICA);
+});
+
+test("experiência: todo nível aceita sem experiência, e o total soma meses e anos", () => {
+  assert.deepEqual(lerRespostas("GERENCIAL", { experiencia: { nenhuma: true } }).experiencia, {
+    nenhuma: true,
+    noCargo: { quantidade: null, unidade: "anos" },
+    anteriores: [],
+  });
   const op = lerRespostas("OPERACIONAL", { experiencia: { nenhuma: true } }).experiencia;
   assert.deepEqual(op, { nenhuma: true, noCargo: { quantidade: null, unidade: "anos" }, anteriores: [] });
 

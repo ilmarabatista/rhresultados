@@ -177,13 +177,13 @@ const P = {
   },
 } satisfies Record<string, Pergunta>;
 
-function experiencia(podeSemExperiencia: boolean): Pergunta {
+function experiencia(): Pergunta {
   return {
     id: "experiencia",
     tipo: "experiencia",
     titulo: "Quanta experiência alguém precisa ter para fazer bem este trabalho?",
     ajuda: "Não é a sua experiência: é o mínimo que o cargo pede, no próprio cargo e em cargos anteriores.",
-    podeSemExperiencia,
+    podeSemExperiencia: true,
   };
 }
 
@@ -234,7 +234,7 @@ export function questionarioDoNivel(nivel: NivelDeCargo): Secao[] {
             titulo: "O cargo lê desenhos, plantas ou diagramas?",
             opcoes: ["Não", "Simples", "Detalhados", "Complexos"],
           },
-          experiencia(true),
+          experiencia(),
         ],
       },
       {
@@ -313,7 +313,7 @@ export function questionarioDoNivel(nivel: NivelDeCargo): Secao[] {
   return [
     IDENTIFICACAO,
     ATIVIDADES,
-    { titulo: "O que o cargo exige", perguntas: [escolaridade(nivel), P.conhecimentos, experiencia(false)] },
+    { titulo: "O que o cargo exige", perguntas: [escolaridade(nivel), P.conhecimentos, experiencia()] },
     {
       titulo: "Responsabilidades",
       perguntas:
@@ -344,6 +344,7 @@ export type Experiencia = {
   noCargo: Duracao;
   anteriores: { cargo: string; duracao: Duracao }[];
 };
+/** Marcadas, ou o texto de Não se aplica quando nenhuma opção tem a ver com o cargo. */
 export type Marcadas = { marcadas: string[]; qual: Record<string, string> };
 
 export type Resposta = string | Tarefa[] | Marcadas | Experiencia;
@@ -369,9 +370,10 @@ function lerUma(pergunta: Pergunta, cru: unknown): Resposta | null {
     }
     case "escolher": {
       const t = limpar(cru, 200);
-      return pergunta.opcoes.includes(t) ? t : null;
+      return t === NAO_SE_APLICA || pergunta.opcoes.includes(t) ? t : null;
     }
     case "marcar": {
+      if (cru === NAO_SE_APLICA) return NAO_SE_APLICA;
       const obj = (cru && typeof cru === "object" ? cru : {}) as Record<string, unknown>;
       const validas = new Set(pergunta.opcoes.map((o) => o.valor));
       const marcadas = Array.isArray(obj.marcadas)

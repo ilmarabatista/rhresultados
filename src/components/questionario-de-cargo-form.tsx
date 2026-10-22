@@ -84,40 +84,48 @@ function Marcar({
   mudar,
 }: {
   p: Extract<Pergunta, { tipo: "marcar" }>;
-  valor: Marcadas | undefined;
-  mudar: (v: Marcadas) => void;
+  valor: Marcadas | string | undefined;
+  mudar: (v: Marcadas | string) => void;
 }) {
-  const atual = valor ?? { marcadas: [], qual: {} };
+  const naoSeAplica = valor === NAO_SE_APLICA;
+  const atual = valor && typeof valor === "object" ? valor : { marcadas: [], qual: {} };
   return (
-    <div className="grid gap-1.5 sm:grid-cols-2">
-      {p.opcoes.map((o) => {
-        const marcada = atual.marcadas.includes(o.valor);
-        return (
-          <div key={o.valor}>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={marcada}
-                onChange={(e) =>
-                  mudar({
-                    ...atual,
-                    marcadas: e.target.checked ? [...atual.marcadas, o.valor] : atual.marcadas.filter((m) => m !== o.valor),
-                  })
-                }
-              />
-              {o.valor}
-            </label>
-            {o.qual && marcada ? (
-              <input
-                value={atual.qual[o.valor] ?? ""}
-                onChange={(e) => mudar({ ...atual, qual: { ...atual.qual, [o.valor]: e.target.value } })}
-                placeholder="Qual?"
-                className={`${campo} mt-1`}
-              />
-            ) : null}
-          </div>
-        );
-      })}
+    <div>
+      <div className={`grid gap-1.5 sm:grid-cols-2 ${naoSeAplica ? "opacity-50" : ""}`}>
+        {p.opcoes.map((o) => {
+          const marcada = atual.marcadas.includes(o.valor);
+          return (
+            <div key={o.valor}>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={marcada}
+                  disabled={naoSeAplica}
+                  onChange={(e) =>
+                    mudar({
+                      ...atual,
+                      marcadas: e.target.checked ? [...atual.marcadas, o.valor] : atual.marcadas.filter((m) => m !== o.valor),
+                    })
+                  }
+                />
+                {o.valor}
+              </label>
+              {o.qual && marcada ? (
+                <input
+                  value={atual.qual[o.valor] ?? ""}
+                  onChange={(e) => mudar({ ...atual, qual: { ...atual.qual, [o.valor]: e.target.value } })}
+                  placeholder="Qual?"
+                  className={`${campo} mt-1`}
+                />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <label className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-slate-500">
+        <input type="checkbox" checked={naoSeAplica} onChange={(e) => mudar(e.target.checked ? NAO_SE_APLICA : atual)} />
+        Não se aplica ao cargo
+      </label>
     </div>
   );
 }
@@ -125,7 +133,7 @@ function Marcar({
 function Escolher({ p, valor, mudar }: { p: Extract<Pergunta, { tipo: "escolher" }>; valor: string; mudar: (v: string) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {p.opcoes.map((o) => (
+      {[...p.opcoes, NAO_SE_APLICA].map((o) => (
         <button
           key={o}
           type="button"
@@ -135,7 +143,7 @@ function Escolher({ p, valor, mudar }: { p: Extract<Pergunta, { tipo: "escolher"
             valor === o ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300 text-slate-700 hover:border-brand-400"
           }`}
         >
-          {o}
+          {o === NAO_SE_APLICA ? "Não se aplica" : o}
         </button>
       ))}
     </div>
@@ -247,7 +255,7 @@ function UmaPergunta({ p, valor, mudar }: { p: Pergunta; valor: Resposta | undef
     case "tarefas":
       return <Tarefas valor={Array.isArray(valor) ? (valor as Tarefa[]) : []} mudar={mudar} />;
     case "marcar":
-      return <Marcar p={p} valor={valor as Marcadas | undefined} mudar={mudar} />;
+      return <Marcar p={p} valor={valor as Marcadas | string | undefined} mudar={mudar} />;
     case "escolher":
       return <Escolher p={p} valor={typeof valor === "string" ? valor : ""} mudar={mudar} />;
     case "experiencia":
