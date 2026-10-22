@@ -34,6 +34,7 @@ import { Etiqueta, Painel, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
 import { avisar } from "@/components/avisos";
 import EnviarFicha from "./enviar-ficha";
+import CurriculoDoCandidato, { type CurriculoNaTela } from "./curriculo-do-candidato";
 
 /**
  * O quadro da vaga: uma coluna por etapa, com quem está em cada uma.
@@ -61,6 +62,7 @@ export type CandidatoNaTela = {
   testes: { id: string; token: string; nome: string; respondido: boolean }[];
   ficha: "NAO_ENVIADA" | "ENVIADA" | "RESPONDIDA";
   entrevistaRegistrada: boolean;
+  curriculos: CurriculoNaTela[];
 };
 
 export type TesteDisponivel = { id: string; nome: string };
@@ -242,6 +244,7 @@ function Candidato({
           <p className="text-corpo font-medium text-slate-800">{c.nome}</p>
           <p className="text-micro text-slate-500">
             {c.telefone ?? c.email ?? "sem contato"}
+            {c.curriculos.length > 0 ? " · com currículo" : ""}
             {!encerrado && c.diasNaEtapa > 0 ? ` · há ${c.diasNaEtapa} dia(s) aqui` : ""}
           </p>
         </button>
@@ -271,6 +274,7 @@ function Candidato({
                 {c.entrevistaRegistrada ? <span className="text-emerald-700">registrada</span> : "pendente"}
               </span>
             </div>
+            <CurriculoDoCandidato candidatoId={c.id} arquivos={c.curriculos} compacto />
             <div className="flex flex-wrap gap-1">
               <Link href={`/selecao/${vagaId}/candidato/${c.id}`} className={botao}>
                 <FolderOpen className="h-3 w-3" /> Abrir pasta

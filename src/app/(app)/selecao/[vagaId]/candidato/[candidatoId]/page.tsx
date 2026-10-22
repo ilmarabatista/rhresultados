@@ -11,6 +11,7 @@ import FichaDoCandidato from "@/components/ficha-do-candidato";
 import EntrevistaDoCandidato from "@/components/entrevista-do-candidato";
 import EnviarFicha from "@/components/enviar-ficha";
 import { ResultadoDoDisc, ResultadoDoTesteCadastrado } from "@/components/resultado-teste";
+import CurriculoDoCandidato from "@/components/curriculo-do-candidato";
 
 export const dynamic = "force-dynamic";
 // Organizar a entrevista chama a IA, que pode levar mais de um minuto.
@@ -18,6 +19,7 @@ export const maxDuration = 300;
 export const metadata = { title: "Candidato — RH Resultados" };
 
 const ABAS = [
+  { valor: "curriculo", rotulo: "Currículo" },
   { valor: "ficha", rotulo: "Ficha" },
   { valor: "testes", rotulo: "Testes" },
   { valor: "entrevista", rotulo: "Entrevista" },
@@ -53,16 +55,26 @@ export default async function PastaDoCandidatoPage({
   const c = await carregarPastaDoCandidato(vagaId, candidatoId);
   if (!c || !c.jobOpening) notFound();
 
-  const aba: Aba = abaPedida === "tudo" || ABAS.some((a) => a.valor === abaPedida) ? (abaPedida as Aba) : "ficha";
+  const aba: Aba = abaPedida === "tudo" || ABAS.some((a) => a.valor === abaPedida) ? (abaPedida as Aba) : c.curriculos.length > 0 && !c.ficha ? "curriculo" : "ficha";
   const vaga = c.jobOpening;
   const situacao = SITUACAO[c.outcome] ?? SITUACAO.EM_ANDAMENTO;
   const respondidos = c.testes.filter((t) => t.status === "RESPONDIDO").length;
 
   const contagem: Record<(typeof ABAS)[number]["valor"], string> = {
+    curriculo: c.curriculos.length ? `${c.curriculos.length} PDF` : "nenhum",
     ficha: c.ficha ? "respondida" : c.applicationSentAt ? "esperando" : "não enviada",
     testes: c.testes.length ? `${respondidos} de ${c.testes.length}` : "nenhum",
     entrevista: c.entrevista ? "registrada" : "pendente",
   };
+
+  const curriculo = (
+    <section className="space-y-2">
+      {aba === "tudo" ? <h2 className="text-sm font-semibold text-brand-800">Currículo</h2> : null}
+      <Painel>
+        <CurriculoDoCandidato candidatoId={c.id} arquivos={c.curriculos} />
+      </Painel>
+    </section>
+  );
 
   const ficha = (
     <section className="space-y-2">
@@ -187,11 +199,13 @@ export default async function PastaDoCandidatoPage({
         </Link>
       </nav>
 
+      {aba === "curriculo" ? curriculo : null}
       {aba === "ficha" ? ficha : null}
       {aba === "testes" ? testes : null}
       {aba === "entrevista" ? entrevista : null}
       {aba === "tudo" ? (
         <div className="space-y-5">
+          {curriculo}
           {ficha}
           {testes}
           {entrevista}

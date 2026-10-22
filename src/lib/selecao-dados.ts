@@ -135,6 +135,7 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
           applicationSentAt: true,
           applicationAnsweredAt: true,
           entrevistaEm: true,
+          arquivos: { orderBy: { criadoEm: "asc" }, select: { id: true, nome: true, tamanho: true } },
           etapa: { select: { tipo: true, prazoDias: true } },
           testes: {
             orderBy: { enviadoEm: "asc" },
@@ -172,6 +173,7 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
       cobradoEm: c.cobradoEm ? dataCurta(c.cobradoEm) : null,
       ficha: c.applicationAnsweredAt ? "RESPONDIDA" : c.applicationSentAt ? "ENVIADA" : "NAO_ENVIADA",
       entrevistaRegistrada: Boolean(c.entrevistaEm),
+      curriculos: c.arquivos,
       ultimoMotivo: c.movimentos.find((m) => m.motivo)?.motivo ?? null,
       testes: c.testes.map((t) => ({
         id: t.id,
@@ -222,6 +224,7 @@ export async function carregarPastaDoCandidato(vagaId: string, candidatoId: stri
       applicationSentAt: true,
       applicationAnsweredAt: true,
       entrevista: true,
+      arquivos: { orderBy: { criadoEm: "asc" }, select: { id: true, nome: true, tamanho: true, criadoEm: true } },
       etapa: { select: { nome: true } },
       jobOpening: { select: { id: true, title: true, perguntasDaEntrevista: true, company: { select: { id: true, name: true } } } },
       testes: {
@@ -236,6 +239,7 @@ export async function carregarPastaDoCandidato(vagaId: string, candidatoId: stri
     ficha: c.applicationAnsweredAt ? lerFicha(c.applicationAnswers) : null,
     entrevista: lerEntrevista(c.entrevista),
     perguntas: lerPerguntas(c.jobOpening.perguntasDaEntrevista),
+    curriculos: c.arquivos.map((a) => ({ id: a.id, nome: a.nome, tamanho: a.tamanho, enviadoEm: dataCurta(a.criadoEm) })),
   };
 }
 

@@ -9,6 +9,7 @@ import { atividade } from "@/lib/atividade";
 import { MODELO_SUGERIDO, tipoValido, type EtapaTipo } from "@/lib/selecao";
 import { lerEntrevista, lerPerguntas, TETO_DA_TRANSCRICAO, type Entrevista } from "@/lib/entrevista";
 import { organizarTranscricao } from "@/lib/ai-entrevista";
+import { nomeDoCurriculo, problemaDoCurriculo } from "@/lib/curriculo";
 
 /**
  * O processo seletivo: modelos de processo, vagas, etapas e candidatos.
@@ -611,5 +612,43 @@ export async function salvarEntrevista(candidatoId: string, entrevista: Entrevis
   await prisma.candidate.update({ where: { id: candidatoId }, data: { entrevista: lida, entrevistaEm: c.entrevistaEm ?? new Date() } });
   if (!c.entrevistaEm) await log(c.companyId, session.userId, "EDITOU", candidatoId, `Registrou a entrevista de ${c.name}.`);
   refresh(c.companyId);
+  return { ok: true };
+}
+
+// --------------------------------------------------------------- currículo
+
+/** Anexa o currículo em PDF ao candidato. */
+export async function anexarCurriculo(formData: FormData): Promise<SelecaoState> {
+  const session = await requireSession();
+  const candidatoId = String(formData.get("candidatoId") ?? "");
+  const arquivo = formData.get("arquivo");
+  if (!(arquivo instanceof File)) return { error: "Escolha o arquivo do currículo." };
+
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const problema = problemaDoCurriculo(bytes.length, bytes.subarray(0, 1100));
+  if (problema) return { error: problema };
+
+  const c = await prisma.candidate.findUnique({ where: { id: candidatoId }, select: { name: true, companyId: true } });
+  if (!c) return { error: "Candidato não encontrado." };
+
+  const nome = textoSeguro(nomeDoCurriculo(arquivo.name));
+  await prisma.arquivoDoCandidato.create({
+    data: { candidateId: candidatoId, nome, tamanho: bytes.length, dados: bytes, enviadoPor: session.name },
+  });
+  await log(c.companyId, session.userId, "EDITOU", candidatoId, `Anexou o currículo de ${c.name} ("${nome}").`);
+  refresh(c.companyId);
+  return { ok: true };
+}
+
+export async function excluirCurriculo(id: string): Promise<SelecaoState> {
+  const session = await requireSession();
+  const a = await prisma.arquivoDoCandidato.findUnique({
+    where: { id },
+    select: { nome: true, candidate: { select: { id: true, name: true, companyId: true } } },
+  });
+  if (!a) return { error: "Arquivo não encontrado." };
+  await prisma.arquivoDoCandidato.delete({ where: { id } });
+  await log(a.candidate.companyId, session.userId, "EXCLUIU", a.candidate.id, `Excluiu o currículo "${a.nome}" de ${a.candidate.name}.`);
+  refresh(a.candidate.companyId);
   return { ok: true };
 }
