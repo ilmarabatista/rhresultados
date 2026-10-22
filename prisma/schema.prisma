@@ -115,6 +115,8 @@ model Company {
   turmas           TurmaDeTreinamento[]
   modeloIntegracao ItemDoModeloDeIntegracao[]
   testesEnviados   TesteEnviado[]
+  pesquisasDeClima PesquisaDeClima[]
+  perguntasDeClima PerguntaDeClima[]
 
   @@index([name])
 }
@@ -1486,4 +1488,179 @@ model EtapaDeIntegracao {
   feitoEm    DateTime?
 
   @@index([employeeId])
+}
+
+// ------------------------------------------------------- pesquisa de clima
+
+/// Um tema que a pesquisa de clima mede (Liderança, Comunicação...). A
+/// biblioteca é uma só para o sistema; cada empresa escolhe o que usa.
+model DimensaoDeClima {
+  id        String  @id @default(cuid())
+  nome      String
+  descricao String? @db.Text
+  ordem     Int     @default(0)
+  ativa     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  perguntas PerguntaDeClima[]
+
+  @@index([ordem])
+}
+
+/// Uma pergunta da biblioteca (companyId vazio) ou própria de uma empresa.
+///
+/// Toda pergunta de nota é escrita para que nota alta seja bom: não existe
+/// pergunta invertida.
+model PerguntaDeClima {
+  id         String          @id @default(cuid())
+  dimensaoId String
+  dimensao   DimensaoDeClima @relation(fields: [dimensaoId], references: [id], onDelete: Cascade)
+  /// Preenchido quando a pergunta foi criada só para uma empresa.
+  companyId  String?
+  company    Company?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  enunciado   String  @db.Text
+  /// NOTA, ESCOLHA (uma opção), MULTIPLA (até maxEscolhas) ou TEXTO.
+  tipo        String  @default("NOTA")
+  /// As opções das perguntas de escolha: ["Sim", "Não"].
+  opcoes      Json?
+  maxEscolhas Int?
+  /// A pergunta "recomendaria a empresa", de 0 a 10, que dá o eNPS.
+  enps        Boolean @default(false)
+  /// Entra sozinha na primeira pesquisa de uma empresa.
+  padrao      Boolean @default(false)
+  ordem       Int     @default(0)
+  ativa       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usos PerguntaDaPesquisa[]
+
+  @@index([dimensaoId])
+  @@index([companyId])
+}
+
+/// Um ciclo da pesquisa de clima de uma empresa ("Clima 2026").
+///
+/// RASCUNHO se monta; ABERTA recebe respostas pelo link; ENCERRADA não recebe
+/// mais. HISTORICO é um ciclo feito fora do sistema, de que só se digitaram as
+/// médias por dimensão, para o comparativo já nascer com o passado.
+model PesquisaDeClima {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  nome   String
+  /// O código do link público. É a única credencial de quem responde.
+  token  String @unique
+  status String @default("RASCUNHO")
+
+  abertaEm    DateTime?
+  /// Último dia para responder (inclusive).
+  prazo       DateTime? @db.Date
+  encerradaEm DateTime?
+
+  /// Quantas pessoas foram convidadas, para a taxa de adesão.
+  convidados Int?
+  /// Nota a partir da qual a resposta está dentro do esperado.
+  regua      Decimal @default(6) @db.Decimal(4, 2)
+  introducao String? @db.Text
+
+  /// As perguntas de perfil: [{ chave, rotulo, opcoes: string[] }].
+  perfil          Json
+  /// O texto da conclusão de cada dimensão no relatório: { [dimensao]: texto }.
+  conclusoes      Json?
+  /// Só nos ciclos de histórico: { [dimensao]: media }.
+  mediasDigitadas Json?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  perguntas PerguntaDaPesquisa[]
+  respostas RespostaDeClima[]
+  acoes     AcaoDeClima[]
+
+  @@index([companyId])
+}
+
+/// A pergunta como ela foi para a pesquisa. Editar a biblioteca depois não
+/// muda o que já foi perguntado, e o comparativo entre ciclos usa a pergunta
+/// de origem para achar a mesma pergunta no ciclo anterior.
+model PerguntaDaPesquisa {
+  id         String           @id @default(cuid())
+  pesquisaId String
+  pesquisa   PesquisaDeClima  @relation(fields: [pesquisaId], references: [id], onDelete: Cascade)
+  perguntaId String?
+  pergunta   PerguntaDeClima? @relation(fields: [perguntaId], references: [id], onDelete: SetNull)
+
+  dimensao      String
+  dimensaoOrdem Int     @default(0)
+  enunciado     String  @db.Text
+  tipo          String
+  opcoes        Json?
+  maxEscolhas   Int?
+  enps          Boolean @default(false)
+  ordem         Int     @default(0)
+
+  itens ItemDaResposta[]
+
+  @@index([pesquisaId])
+  @@index([perguntaId])
+}
+
+/// Uma resposta anônima. Não há nome, email, IP nem hora: só o dia, e o id é
+/// aleatório (um cuid carregaria o momento em que foi criado).
+model RespostaDeClima {
+  id           String          @id @default(uuid())
+  pesquisaId   String
+  pesquisa     PesquisaDeClima @relation(fields: [pesquisaId], references: [id], onDelete: Cascade)
+  /// O perfil escolhido: { [chave]: opcao }.
+  perfil       Json
+  respondidaEm DateTime        @db.Date
+
+  itens ItemDaResposta[]
+
+  @@index([pesquisaId])
+}
+
+model ItemDaResposta {
+  id         String             @id @default(uuid())
+  respostaId String
+  resposta   RespostaDeClima    @relation(fields: [respostaId], references: [id], onDelete: Cascade)
+  perguntaId String
+  pergunta   PerguntaDaPesquisa @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+
+  nota     Int?
+  escolhas String[]
+  texto    String?  @db.Text
+
+  /// O texto como vai para o relatório, sem trechos que identifiquem alguém.
+  textoRevisado String? @db.Text
+  ocultar       Boolean @default(false)
+
+  @@index([respostaId])
+  @@index([perguntaId])
+}
+
+/// Uma ação do plano que sai da pesquisa, presa a uma dimensão. O ciclo
+/// seguinte mostra o que foi feito e se a dimensão melhorou.
+model AcaoDeClima {
+  id          String          @id @default(cuid())
+  pesquisaId  String
+  pesquisa    PesquisaDeClima @relation(fields: [pesquisaId], references: [id], onDelete: Cascade)
+  dimensao    String
+  descricao   String          @db.Text
+  responsavel String?
+  prazo       DateTime?       @db.Date
+  /// PENDENTE, ANDAMENTO ou CONCLUIDA.
+  status      String          @default("PENDENTE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pesquisaId])
 }

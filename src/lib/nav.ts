@@ -32,6 +32,7 @@ export const NAV: NavGroup[] = [
       { label: "Agenda", href: "/agenda", icon: "CalendarDays" },
       { label: "Seleção", href: "/selecao", icon: "UserSearch" },
       { label: "Testes", href: "/testes", icon: "ClipboardCheck" },
+      { label: "Pesquisa de clima", href: "/clima", icon: "Thermometer" },
       { label: "Gestão", href: "/gestao", icon: "Wallet", adminOnly: true },
       { label: "Relatórios", href: "/relatorios", icon: "ChartNoAxesColumn" },
       // O cofre do Obsidian desta máquina: abre o aplicativo, não uma tela daqui.
@@ -103,5 +104,6 @@ export const FICHA_TABS: FichaTab[] = [
   { label: "Equipe", slug: "equipe" },
   { label: "Treinamentos", slug: "treinamentos" },
   { label: "PDI", slug: "pdi" },
+  { label: "Clima", slug: "clima" },
   { label: "Ponto", slug: "ponto" },
 ];
