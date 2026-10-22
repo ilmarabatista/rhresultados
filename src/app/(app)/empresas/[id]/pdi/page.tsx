@@ -1,20 +1,20 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { dateToDayKey, formatFullDate, todayKey } from "@/lib/dates";
 import {
   gapsPrioritarios,
-  lerTipoDeCompetencia,
   progressoDoPlano,
   resumoDaAvaliacao,
   situacaoDaConversa,
 } from "@/lib/pdi";
 import { Aviso, Etiqueta, Numeros, Tabela, Vazio } from "@/components/ui";
-import PdiCargos from "@/components/pdi-cargos";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI — RH Resultados" };
 
+/** As descrições de cargo moram na aba Cargos; aqui fica só o atalho. */
 const ABAS = [
   { slug: "equipe", rotulo: "Equipe" },
   { slug: "cargos", rotulo: "Descrições de cargo" },
@@ -35,7 +35,8 @@ export default async function PdiPage({
   await requireSession();
   const { id } = await params;
   const sp = await searchParams;
-  const aba = sp.aba === "cargos" ? "cargos" : "equipe";
+  if (sp.aba === "cargos") redirect(`/empresas/${id}/cargos${sp.cargo ? `?cargo=${encodeURIComponent(sp.cargo)}` : ""}`);
+  const aba = "equipe";
   const hoje = todayKey();
 
   const [pessoas, cargos] = await Promise.all([
@@ -75,11 +76,7 @@ export default async function PdiPage({
       select: {
         id: true,
         nome: true,
-        missao: true,
-        responsabilidades: true,
-        requisitos: true,
-        competencias: { orderBy: [{ ordem: "asc" }, { nome: "asc" }] },
-        _count: { select: { colaboradores: { where: { status: { not: "DESLIGADO" } } } } },
+        _count: { select: { competencias: true, colaboradores: { where: { status: { not: "DESLIGADO" } } } } },
       },
     }),
   ]);
@@ -114,7 +111,7 @@ export default async function PdiPage({
   const comPlano = linhas.filter((l) => l.plano).length;
   const atrasadas = linhas.filter((l) => l.situacao === "ATRASADA").length;
   const semData = linhas.filter((l) => l.situacao === "SEM_DATA").length;
-  const cargosSemDescricao = cargos.filter((c) => c._count.colaboradores > 0 && c.competencias.length === 0).length;
+  const cargosSemDescricao = cargos.filter((c) => c._count.colaboradores > 0 && c._count.competencias === 0).length;
 
   return (
     <main>
@@ -131,7 +128,7 @@ export default async function PdiPage({
         {ABAS.map((a) => (
           <Link
             key={a.slug}
-            href={`?aba=${a.slug}`}
+            href={a.slug === "cargos" ? `/empresas/${id}/cargos` : `?aba=${a.slug}`}
             className={`-mb-px border-b-2 px-3 py-2 text-sm transition ${
               aba === a.slug
                 ? "border-brand-600 font-semibold text-brand-800"
@@ -148,27 +145,6 @@ export default async function PdiPage({
         ))}
       </nav>
 
-      {aba === "cargos" ? (
-        <PdiCargos
-          companyId={id}
-          selecionado={sp.cargo ?? null}
-          cargos={cargos.map((c) => ({
-            id: c.id,
-            nome: c.nome,
-            pessoas: c._count.colaboradores,
-            missao: c.missao ?? "",
-            responsabilidades: c.responsabilidades ?? "",
-            requisitos: c.requisitos ?? "",
-            competencias: c.competencias.map((k) => ({
-              id: k.id,
-              nome: k.nome,
-              tipo: lerTipoDeCompetencia(k.tipo),
-              descricao: k.descricao ?? "",
-              nivelEsperado: k.nivelEsperado,
-            })),
-          }))}
-        />
-      ) : (
         <div className="space-y-3">
           <Numeros
             colunas={4}
@@ -198,7 +174,7 @@ export default async function PdiPage({
           {cargosSemDescricao > 0 ? (
             <Aviso rotulo="Antes de avaliar">
               Para avaliar alguém, o cargo da pessoa precisa ter as competências descritas.{" "}
-              <Link href="?aba=cargos" className="font-medium underline">
+              <Link href={`/empresas/${id}/cargos`} className="font-medium underline">
                 Descrever os cargos
               </Link>
             </Aviso>
@@ -294,7 +270,6 @@ export default async function PdiPage({
             </Tabela>
           )}
         </div>
-      )}
     </main>
   );
 }

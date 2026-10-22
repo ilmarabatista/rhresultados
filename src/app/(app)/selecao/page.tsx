@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { listarModelos, listarVagas } from "@/lib/selecao-dados";
+import { listarCargosParaVaga, listarModelos, listarVagas } from "@/lib/selecao-dados";
 import { TituloDaSecao } from "@/components/ui";
 import SelecaoVagas from "@/components/selecao-vagas";
 import SelecaoModelos from "@/components/selecao-modelos";
@@ -12,10 +12,11 @@ export const metadata = { title: "Seleção — RH Resultados" };
 export default async function SelecaoPage() {
   await requireSession();
 
-  const [vagas, modelos, empresas] = await Promise.all([
+  const [vagas, modelos, empresas, cargos] = await Promise.all([
     listarVagas(),
     listarModelos(),
     prisma.company.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    listarCargosParaVaga(),
   ]);
 
   return (
@@ -26,6 +27,7 @@ export default async function SelecaoPage() {
         vagas={vagas}
         empresas={empresas.map((e) => ({ id: e.id, nome: e.name }))}
         modelos={modelos.map((m) => ({ id: m.id, nome: m.nome, etapas: m.etapas.length }))}
+        cargos={cargos}
       />
 
       <SelecaoModelos modelos={modelos} />

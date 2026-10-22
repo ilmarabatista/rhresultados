@@ -189,6 +189,7 @@ export default async function InformacoesPage({
           employeeCount: company.employeeCount,
           website: company.website,
           description: company.description,
+          valores: company.valores,
           contactName: company.contactName,
           contactEmail: company.contactEmail,
           contactPhone: company.contactPhone,

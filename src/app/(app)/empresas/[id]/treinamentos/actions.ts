@@ -18,6 +18,7 @@ import {
   nomeDoTreinamento,
 } from "@/lib/treinamentos";
 import { gerarIntegracaoDe, quemPrecisa } from "@/lib/treinamentos-dados";
+import { lerNivelDeCargo } from "@/lib/cargos";
 
 /**
  * Treinamento e desenvolvimento da empresa: cargos, catálogo, matriz, turmas
@@ -42,7 +43,8 @@ function texto(valor: FormDataEntryValue | string | null, max = 200): string {
 
 // ------------------------------------------------------------------ cargos
 
-export async function criarCargo(companyId: string, nome: string): Promise<TreinoState> {
+/** O nível (gerencial, técnico, operacional) vem da aba Cargos; nas outras telas fica para depois. */
+export async function criarCargo(companyId: string, nome: string, nivel?: string): Promise<TreinoState> {
   const session = await requireSession();
   const limpo = limparNomeDoCargo(textoSeguro(nome)).slice(0, 120);
   if (limpo.length < 2) return { error: "Escreva o nome do cargo." };
@@ -52,7 +54,10 @@ export async function criarCargo(companyId: string, nome: string): Promise<Trein
   if (igual) return { error: `Já existe o cargo "${igual.nome}".` };
   if (!(await prisma.company.count({ where: { id: companyId } }))) return { error: "Empresa não encontrada." };
 
-  const cargo = await prisma.cargo.create({ data: { companyId, nome: limpo }, select: { id: true } });
+  const cargo = await prisma.cargo.create({
+    data: { companyId, nome: limpo, nivel: lerNivelDeCargo(nivel) },
+    select: { id: true },
+  });
   await log(companyId, session.userId, "CRIOU", cargo.id, `Criou o cargo ${limpo}.`);
   refresh(companyId);
   return { ok: true, id: cargo.id };

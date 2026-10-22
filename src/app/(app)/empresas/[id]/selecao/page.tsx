@@ -1,5 +1,5 @@
 import { requireSession } from "@/lib/session";
-import { listarModelos, listarVagas } from "@/lib/selecao-dados";
+import { listarCargosParaVaga, listarModelos, listarVagas } from "@/lib/selecao-dados";
 import SelecaoVagas from "@/components/selecao-vagas";
 
 export const dynamic = "force-dynamic";
@@ -10,13 +10,14 @@ export default async function SelecaoDaEmpresaPage({ params }: { params: Promise
   await requireSession();
   const { id } = await params;
 
-  const [vagas, modelos] = await Promise.all([listarVagas(id), listarModelos()]);
+  const [vagas, modelos, cargos] = await Promise.all([listarVagas(id), listarModelos(), listarCargosParaVaga(id)]);
 
   return (
     <SelecaoVagas
       vagas={vagas}
       empresas={[]}
       empresaFixa={id}
+      cargos={cargos}
       modelos={modelos.map((m) => ({ id: m.id, nome: m.nome, etapas: m.etapas.length }))}
     />
   );

@@ -24,6 +24,7 @@ export type CompanyDefaults = {
   employeeCount?: number | null;
   website?: string | null;
   description?: string | null;
+  valores?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
@@ -107,6 +108,18 @@ export default function CompanyForm({
               rows={4}
               defaultValue={d.description ?? ""}
               placeholder="Contexto do negócio, estrutura de RH atual, dores conhecidas…"
+            />
+          </Field>
+          <Field
+            label="Valores da empresa"
+            hint="Um por linha. Viram as competências organizacionais das descrições de cargo."
+            className="sm:col-span-2"
+          >
+            <Textarea
+              name="valores"
+              rows={3}
+              defaultValue={d.valores ?? ""}
+              placeholder={"Foco no cliente\nÉtica\nAtitude de dono"}
             />
           </Field>
         </div>

@@ -10,16 +10,18 @@
 
 // ------------------------------------------------------------ competências
 
-export const TIPOS_DE_COMPETENCIA = ["TECNICA", "COMPORTAMENTAL"] as const;
+/** As organizacionais são os valores da empresa traduzidos em comportamento. */
+export const TIPOS_DE_COMPETENCIA = ["TECNICA", "COMPORTAMENTAL", "ORGANIZACIONAL"] as const;
 export type TipoDeCompetencia = (typeof TIPOS_DE_COMPETENCIA)[number];
 
 export const ROTULO_DO_TIPO: Record<TipoDeCompetencia, string> = {
   TECNICA: "Técnica",
   COMPORTAMENTAL: "Comportamental",
+  ORGANIZACIONAL: "Organizacional",
 };
 
 export function lerTipoDeCompetencia(valor: string): TipoDeCompetencia {
-  return valor === "COMPORTAMENTAL" ? "COMPORTAMENTAL" : "TECNICA";
+  return (TIPOS_DE_COMPETENCIA as readonly string[]).includes(valor) ? (valor as TipoDeCompetencia) : "TECNICA";
 }
 
 /** A escala de 1 a 5, igual para o cargo e para a avaliação. */

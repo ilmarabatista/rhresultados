@@ -284,3 +284,18 @@ export async function vagasComRoteiro(excetoId: string): Promise<{ id: string; n
     }))
     .filter((v) => v.perguntas > 0);
 }
+
+/** Os cargos para a vaga escolher, com quantas perguntas de entrevista cada um leva. */
+export async function listarCargosParaVaga(companyId?: string) {
+  const cargos = await prisma.cargo.findMany({
+    where: companyId ? { companyId } : undefined,
+    orderBy: { nome: "asc" },
+    select: { id: true, nome: true, companyId: true, perguntasDaEntrevista: true },
+  });
+  return cargos.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    empresaId: c.companyId,
+    perguntas: lerPerguntas(c.perguntasDaEntrevista).length,
+  }));
+}
