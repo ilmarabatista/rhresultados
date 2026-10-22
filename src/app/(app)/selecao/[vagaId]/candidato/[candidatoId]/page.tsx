@@ -11,6 +11,9 @@ import FichaDoCandidato from "@/components/ficha-do-candidato";
 import EntrevistaDoCandidato from "@/components/entrevista-do-candidato";
 import EnviarFicha from "@/components/enviar-ficha";
 import { ResultadoDoDisc, ResultadoDoTesteCadastrado } from "@/components/resultado-teste";
+import CurriculoDoCandidato from "@/components/curriculo-do-candidato";
+import ParecerFinal from "@/components/resultado-do-candidato";
+import { BaixarPastaPdf, ImprimirAoAbrir } from "@/components/baixar-pasta-pdf";
 
 export const dynamic = "force-dynamic";
 // Organizar a entrevista chama a IA, que pode levar mais de um minuto.
@@ -18,9 +21,11 @@ export const maxDuration = 300;
 export const metadata = { title: "Candidato — RH Resultados" };
 
 const ABAS = [
+  { valor: "curriculo", rotulo: "Currículo" },
   { valor: "ficha", rotulo: "Ficha" },
   { valor: "testes", rotulo: "Testes" },
   { valor: "entrevista", rotulo: "Entrevista" },
+  { valor: "resultado", rotulo: "Resultado final" },
 ] as const;
 
 type Aba = (typeof ABAS)[number]["valor"] | "tudo";
@@ -32,37 +37,61 @@ const SITUACAO: Record<string, { rotulo: string; tom: "azul" | "bom" | "ruim" | 
   DESISTIU: { rotulo: "Desistiu", tom: "neutro" },
 };
 
+const MOVIMENTO: Record<string, string> = {
+  ENTROU: "Entrou na etapa",
+  APROVADO: "Aprovado na etapa",
+  REPROVADO: "Reprovado",
+  DESISTIU: "Desistiu",
+};
+
 const botao =
   "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
 
+/** O nome que o navegador sugere ao salvar o PDF: "Pasta - Maria da Silva - Recepcionista". */
+function nomeDoPdf(candidato: string, vaga: string): string {
+  return `Pasta - ${candidato} - ${vaga}`.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
 /**
  * A pasta do candidato dentro da vaga: a ficha que ele preencheu, os testes
- * que fez e a entrevista organizada pelas perguntas da vaga. "Tudo" junta as
- * três numa página só, para imprimir e mandar ao cliente.
+ * que fez, a entrevista organizada pelas perguntas da vaga e o resultado final.
+ * "Pasta inteira" junta tudo numa página só, para imprimir e mandar ao cliente.
  */
 export default async function PastaDoCandidatoPage({
   params,
   searchParams,
 }: {
   params: Promise<{ vagaId: string; candidatoId: string }>;
-  searchParams: Promise<{ aba?: string }>;
+  searchParams: Promise<{ aba?: string; pdf?: string }>;
 }) {
   await requireSession();
   const { vagaId, candidatoId } = await params;
-  const { aba: abaPedida } = await searchParams;
+  const { aba: abaPedida, pdf } = await searchParams;
   const c = await carregarPastaDoCandidato(vagaId, candidatoId);
   if (!c || !c.jobOpening) notFound();
 
-  const aba: Aba = abaPedida === "tudo" || ABAS.some((a) => a.valor === abaPedida) ? (abaPedida as Aba) : "ficha";
+  const aba: Aba = abaPedida === "tudo" || ABAS.some((a) => a.valor === abaPedida) ? (abaPedida as Aba) : c.curriculos.length > 0 && !c.ficha ? "curriculo" : "ficha";
   const vaga = c.jobOpening;
   const situacao = SITUACAO[c.outcome] ?? SITUACAO.EM_ANDAMENTO;
   const respondidos = c.testes.filter((t) => t.status === "RESPONDIDO").length;
 
   const contagem: Record<(typeof ABAS)[number]["valor"], string> = {
+    curriculo: c.curriculos.length ? `${c.curriculos.length} PDF` : "nenhum",
     ficha: c.ficha ? "respondida" : c.applicationSentAt ? "esperando" : "não enviada",
     testes: c.testes.length ? `${respondidos} de ${c.testes.length}` : "nenhum",
     entrevista: c.entrevista ? "registrada" : "pendente",
+    resultado: situacao.rotulo.toLowerCase(),
   };
+
+  const curriculo = (
+    <section className="space-y-2">
+      {aba === "tudo" ? <h2 className="text-sm font-semibold text-brand-800">Currículo</h2> : null}
+      <Painel>
+        <CurriculoDoCandidato candidatoId={c.id} arquivos={c.curriculos} />
+        {c.curriculos.length ? <p className="mt-1 hidden text-micro text-slate-500 print:block">O currículo é um PDF à parte, anexado no sistema.</p> : null}
+      </Painel>
+    </section>
+  );
 
   const ficha = (
     <section className="space-y-2">
@@ -141,6 +170,52 @@ export default async function PastaDoCandidatoPage({
     </section>
   );
 
+  const resultado = (
+    <section className="space-y-2">
+      {aba === "tudo" ? <h2 className="text-sm font-semibold text-brand-800">Resultado final</h2> : null}
+      <Painel
+        titulo="Situação"
+        acao={<Etiqueta tom={situacao.tom}>{situacao.rotulo}</Etiqueta>}
+        descricao={
+          c.outcome === "EM_ANDAMENTO"
+            ? `Ainda no processo${c.etapa ? `, na etapa ${c.etapa.nome}` : ""}. Aprovar, reprovar ou mover é pelo cartão no quadro da vaga.`
+            : c.avisadoEm
+              ? `Candidato avisado do resultado ${formatMoment(c.avisadoEm)}.`
+              : "O candidato ainda não foi avisado do resultado."
+        }
+        className="break-inside-avoid"
+      >
+        {c.movimentos.length === 0 ? (
+          <p className="text-mini text-slate-500">Nenhum passo registrado ainda.</p>
+        ) : (
+          <ol className="space-y-1.5">
+            {c.movimentos.map((m) => (
+              <li key={m.id} className="text-mini">
+                <span className="text-slate-500">{formatMoment(m.criadoEm)} · </span>
+                <span className="font-medium text-slate-800">{MOVIMENTO[m.resultado] ?? m.resultado}</span>
+                <span className="text-slate-700"> · {m.etapaNome}</span>
+                {m.motivo ? <p className="whitespace-pre-line text-slate-600">{m.motivo}</p> : null}
+              </li>
+            ))}
+          </ol>
+        )}
+      </Painel>
+      {c.anotacoes.length > 0 ? (
+        <Painel titulo="Anotações das etapas" className="break-inside-avoid">
+          <dl className="space-y-1.5">
+            {c.anotacoes.map((a) => (
+              <div key={a.etapa} className="text-mini">
+                <dt className="font-medium text-slate-800">{a.etapa}</dt>
+                <dd className="whitespace-pre-line text-slate-700">{a.texto}</dd>
+              </div>
+            ))}
+          </dl>
+        </Painel>
+      ) : null}
+      <ParecerFinal key={c.finalNotes ?? ""} candidatoId={c.id} salvo={c.finalNotes ?? ""} />
+    </section>
+  );
+
   return (
     <div className="space-y-3">
       <TituloDaSecao
@@ -152,6 +227,7 @@ export default async function PastaDoCandidatoPage({
               ← quadro da vaga
             </Link>
             <PrintButton />
+            <BaixarPastaPdf candidato={c.name} vaga={vaga.title} />
           </span>
         }
       />
@@ -187,14 +263,19 @@ export default async function PastaDoCandidatoPage({
         </Link>
       </nav>
 
+      {aba === "curriculo" ? curriculo : null}
       {aba === "ficha" ? ficha : null}
       {aba === "testes" ? testes : null}
       {aba === "entrevista" ? entrevista : null}
+      {aba === "resultado" ? resultado : null}
       {aba === "tudo" ? (
         <div className="space-y-5">
+          {pdf === "1" ? <ImprimirAoAbrir nomeDoArquivo={nomeDoPdf(c.name, vaga.title)} /> : null}
+          {curriculo}
           {ficha}
           {testes}
           {entrevista}
+          {resultado}
         </div>
       ) : null}
     </div>

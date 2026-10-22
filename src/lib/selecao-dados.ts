@@ -135,6 +135,7 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
           applicationSentAt: true,
           applicationAnsweredAt: true,
           entrevistaEm: true,
+          arquivos: { orderBy: { criadoEm: "asc" }, select: { id: true, nome: true, tamanho: true } },
           etapa: { select: { tipo: true, prazoDias: true } },
           testes: {
             orderBy: { enviadoEm: "asc" },
@@ -172,6 +173,7 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
       cobradoEm: c.cobradoEm ? dataCurta(c.cobradoEm) : null,
       ficha: c.applicationAnsweredAt ? "RESPONDIDA" : c.applicationSentAt ? "ENVIADA" : "NAO_ENVIADA",
       entrevistaRegistrada: Boolean(c.entrevistaEm),
+      curriculos: c.arquivos,
       ultimoMotivo: c.movimentos.find((m) => m.motivo)?.motivo ?? null,
       testes: c.testes.map((t) => ({
         id: t.id,
@@ -222,8 +224,13 @@ export async function carregarPastaDoCandidato(vagaId: string, candidatoId: stri
       applicationSentAt: true,
       applicationAnsweredAt: true,
       entrevista: true,
+      finalNotes: true,
+      stageNotes: true,
+      avisadoEm: true,
+      movimentos: { orderBy: { criadoEm: "asc" }, select: { id: true, etapaId: true, etapaNome: true, resultado: true, motivo: true, criadoEm: true } },
+      arquivos: { orderBy: { criadoEm: "asc" }, select: { id: true, nome: true, tamanho: true, criadoEm: true } },
       etapa: { select: { nome: true } },
-      jobOpening: { select: { id: true, title: true, perguntasDaEntrevista: true, company: { select: { id: true, name: true } } } },
+      jobOpening: { select: { id: true, title: true, perguntasDaEntrevista: true, etapas: { orderBy: { ordem: "asc" }, select: { id: true, nome: true } }, company: { select: { id: true, name: true } } } },
       testes: {
         orderBy: { enviadoEm: "asc" },
         select: { id: true, tipo: true, nomeDoTeste: true, status: true, resultado: true, enviadoEm: true, respondidoEm: true },
@@ -236,7 +243,29 @@ export async function carregarPastaDoCandidato(vagaId: string, candidatoId: stri
     ficha: c.applicationAnsweredAt ? lerFicha(c.applicationAnswers) : null,
     entrevista: lerEntrevista(c.entrevista),
     perguntas: lerPerguntas(c.jobOpening.perguntasDaEntrevista),
+    curriculos: c.arquivos.map((a) => ({ id: a.id, nome: a.nome, tamanho: a.tamanho, enviadoEm: dataCurta(a.criadoEm) })),
+    anotacoes: anotacoesPorEtapa(c.stageNotes, c.jobOpening.etapas, c.movimentos),
   };
+}
+
+/**
+ * As anotações de cada etapa, na ordem da vaga, com o nome da etapa. Uma etapa
+ * que foi excluída da vaga ainda aparece pelo nome que tinha no histórico.
+ */
+function anotacoesPorEtapa(
+  cru: unknown,
+  etapas: { id: string; nome: string }[],
+  movimentos: { etapaId: string | null; etapaNome: string }[],
+): { etapa: string; texto: string }[] {
+  const notas = cru && typeof cru === "object" && !Array.isArray(cru) ? (cru as Record<string, unknown>) : {};
+  const nomes = new Map<string, string>();
+  for (const m of movimentos) if (m.etapaId) nomes.set(m.etapaId, m.etapaNome);
+  for (const e of etapas) nomes.set(e.id, e.nome);
+  const ordem = etapas.map((e) => e.id);
+  return Object.entries(notas)
+    .filter((par): par is [string, string] => typeof par[1] === "string" && par[1].trim() !== "")
+    .sort(([a], [b]) => (ordem.indexOf(a) === -1 ? 999 : ordem.indexOf(a)) - (ordem.indexOf(b) === -1 ? 999 : ordem.indexOf(b)))
+    .map(([id, texto]) => ({ etapa: nomes.get(id) ?? (id === "SEM_ETAPA" ? "Sem etapa" : "Etapa excluída"), texto }));
 }
 
 /** As outras vagas que já têm roteiro de entrevista, para copiar. */
