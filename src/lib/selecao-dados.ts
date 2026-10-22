@@ -1,5 +1,8 @@
 import "server-only";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
+import { lerFicha } from "./ficha";
+import { lerEntrevista, lerPerguntas } from "./entrevista";
 import { diasDesde, funilDaVaga, pendenciasDoCandidato, type EtapaTipo } from "./selecao";
 import type { CandidatoNaTela, EtapaNaTela, FunilNaTela } from "@/components/selecao-quadro";
 import type { VagaNaLista } from "@/components/selecao-vagas";
@@ -96,6 +99,8 @@ export type DadosDaVaga = {
   funil: FunilNaTela;
   /** Os testes que podem ser mandados ao candidato: o DISC e os cadastrados ativos. */
   testesDisponiveis: { id: string; nome: string }[];
+  /** O roteiro da entrevista da vaga. */
+  perguntas: string[];
 };
 
 export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> {
@@ -111,6 +116,7 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
       title: true,
       status: true,
       notes: true,
+      perguntasDaEntrevista: true,
       company: { select: { id: true, name: true } },
       etapas: { orderBy: { ordem: "asc" }, select: { id: true, nome: true, tipo: true, prazoDias: true, ordem: true } },
       candidates: {
@@ -128,6 +134,7 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
           cobradoEm: true,
           applicationSentAt: true,
           applicationAnsweredAt: true,
+          entrevistaEm: true,
           etapa: { select: { tipo: true, prazoDias: true } },
           testes: {
             orderBy: { enviadoEm: "asc" },
@@ -163,6 +170,8 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
       anotacao: notas[c.etapaId ?? "SEM_ETAPA"] ?? "",
       avisado: Boolean(c.avisadoEm),
       cobradoEm: c.cobradoEm ? dataCurta(c.cobradoEm) : null,
+      ficha: c.applicationAnsweredAt ? "RESPONDIDA" : c.applicationSentAt ? "ENVIADA" : "NAO_ENVIADA",
+      entrevistaRegistrada: Boolean(c.entrevistaEm),
       ultimoMotivo: c.movimentos.find((m) => m.motivo)?.motivo ?? null,
       testes: c.testes.map((t) => ({
         id: t.id,
@@ -193,5 +202,56 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
       { id: "DISC", nome: "Perfil comportamental (DISC)" },
       ...cadastrados.map((t) => ({ id: t.id, nome: t.name })),
     ],
+    perguntas: lerPerguntas(vaga.perguntasDaEntrevista),
   };
+}
+
+// ------------------------------------------------------- pasta do candidato
+
+export async function carregarPastaDoCandidato(vagaId: string, candidatoId: string) {
+  const c = await prisma.candidate.findFirst({
+    where: { id: candidatoId, jobOpeningId: vagaId },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      outcome: true,
+      applicationToken: true,
+      applicationAnswers: true,
+      applicationSentAt: true,
+      applicationAnsweredAt: true,
+      entrevista: true,
+      etapa: { select: { nome: true } },
+      jobOpening: { select: { id: true, title: true, perguntasDaEntrevista: true, company: { select: { id: true, name: true } } } },
+      testes: {
+        orderBy: { enviadoEm: "asc" },
+        select: { id: true, tipo: true, nomeDoTeste: true, status: true, resultado: true, enviadoEm: true, respondidoEm: true },
+      },
+    },
+  });
+  if (!c || !c.jobOpening) return null;
+  return {
+    ...c,
+    ficha: c.applicationAnsweredAt ? lerFicha(c.applicationAnswers) : null,
+    entrevista: lerEntrevista(c.entrevista),
+    perguntas: lerPerguntas(c.jobOpening.perguntasDaEntrevista),
+  };
+}
+
+/** As outras vagas que já têm roteiro de entrevista, para copiar. */
+export async function vagasComRoteiro(excetoId: string): Promise<{ id: string; nome: string; perguntas: number }[]> {
+  const vagas = await prisma.jobOpening.findMany({
+    where: { id: { not: excetoId }, NOT: { perguntasDaEntrevista: { equals: Prisma.AnyNull } } },
+    orderBy: { openedAt: "desc" },
+    take: 50,
+    select: { id: true, title: true, perguntasDaEntrevista: true, company: { select: { name: true } } },
+  });
+  return vagas
+    .map((v) => ({
+      id: v.id,
+      nome: v.company ? `${v.title} · ${v.company.name}` : v.title,
+      perguntas: lerPerguntas(v.perguntasDaEntrevista).length,
+    }))
+    .filter((v) => v.perguntas > 0);
 }

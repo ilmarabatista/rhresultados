@@ -17,6 +17,11 @@ const OPENROUTER_URL =
   process.env.OPENROUTER_BASE_URL ||
   "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
+/**
+ * O modelo para dado pessoal (a entrevista do candidato). Modelo gratuito pode
+ * guardar o que recebe; este é pago e vai só para provedor com retenção zero.
+ */
+const MODELO_PRIVADO = "anthropic/claude-haiku-4.5";
 const TIMEOUT_MS = 240_000;
 const DEFAULT_MAX_TOKENS = 8_000;
 
@@ -87,10 +92,21 @@ const TENTATIVAS = 3;
  * Espera um pouco mais a cada tentativa: o modelo sobrecarregado precisa de
  * um instante, e insistir na mesma hora só piora.
  */
+export type OpcoesDaIA = {
+  /**
+   * Texto com dado pessoal: usa OPENROUTER_MODEL_PRIVADO (ou o modelo privado
+   * padrão) e pede ao OpenRouter só provedor que não guarda nem treina com o
+   * que recebe. Sem provedor assim disponível, a chamada falha em vez de cair
+   * num que guarda.
+   */
+  privado?: boolean;
+};
+
 export async function chamarIA(
   system: string,
   prompt: string,
   maxTokens = DEFAULT_MAX_TOKENS,
+  opcoes: OpcoesDaIA = {},
 ): Promise<string> {
   let ultimo: unknown;
 
@@ -98,7 +114,7 @@ export async function chamarIA(
     try {
       // O que a IA escreve vai para o banco, e o banco não aceita emoji.
       // Limpar aqui, na saída, vale para toda a IA do sistema de uma vez.
-      return textoSeguro(await chamarUmaVez(system, prompt, maxTokens));
+      return textoSeguro(await chamarUmaVez(system, prompt, maxTokens, opcoes));
     } catch (e) {
       ultimo = e;
       if (!valeRepetir(e) || tentativa === TENTATIVAS) break;
@@ -119,6 +135,7 @@ async function chamarUmaVez(
   system: string,
   prompt: string,
   maxTokens: number,
+  opcoes: OpcoesDaIA,
 ): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -141,8 +158,13 @@ async function chamarUmaVez(
           : {}),
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
+        model: opcoes.privado
+          ? process.env.OPENROUTER_MODEL_PRIVADO || MODELO_PRIVADO
+          : process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
         max_tokens: Number(process.env.OPENROUTER_MAX_TOKENS) || maxTokens,
+        ...(opcoes.privado
+          ? { provider: { data_collection: "deny", zdr: true } }
+          : {}),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },

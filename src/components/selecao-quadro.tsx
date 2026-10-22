@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { ArrowRight, Bell, Check, ClipboardCheck, Copy, MessageCircle, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Bell, Check, ClipboardCheck, Copy, FolderOpen, MessageCircle, Plus, Trash2 } from "lucide-react";
 import { enviarTesteAoCandidato } from "@/app/(app)/testes/actions";
 import {
   adicionarCandidato,
@@ -33,6 +33,7 @@ import {
 import { Etiqueta, Painel, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
 import { avisar } from "@/components/avisos";
+import EnviarFicha from "./enviar-ficha";
 
 /**
  * O quadro da vaga: uma coluna por etapa, com quem está em cada uma.
@@ -58,6 +59,8 @@ export type CandidatoNaTela = {
   ultimoMotivo: string | null;
   /** Os testes mandados a ele pelo quadro, com o resultado quando voltou. */
   testes: { id: string; token: string; nome: string; respondido: boolean }[];
+  ficha: "NAO_ENVIADA" | "ENVIADA" | "RESPONDIDA";
+  entrevistaRegistrada: boolean;
 };
 
 export type TesteDisponivel = { id: string; nome: string };
@@ -196,6 +199,7 @@ function oQueSeCobra(tipo: EtapaTipo): string {
 
 function Candidato({
   c,
+  vagaId,
   etapa,
   vaga,
   empresa,
@@ -203,6 +207,7 @@ function Candidato({
   testesDisponiveis,
 }: {
   c: CandidatoNaTela;
+  vagaId: string;
   etapa: EtapaNaTela | null;
   vaga: string;
   empresa: string | null;
@@ -251,6 +256,37 @@ function Candidato({
 
       {aberto ? (
         <div className="mt-2 space-y-2 border-t border-slate-100 pt-2">
+          <div className="space-y-1 rounded-md bg-slate-50 p-1.5">
+            <div className="flex flex-wrap items-center gap-1 text-micro text-slate-600">
+              <span className="min-w-0 flex-1">
+                Ficha:{" "}
+                {c.ficha === "RESPONDIDA" ? (
+                  <span className="text-emerald-700">respondida</span>
+                ) : c.ficha === "ENVIADA" ? (
+                  <span className="text-amber-700">esperando</span>
+                ) : (
+                  "não enviada"
+                )}
+                {" · "}Entrevista:{" "}
+                {c.entrevistaRegistrada ? <span className="text-emerald-700">registrada</span> : "pendente"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <Link href={`/selecao/${vagaId}/candidato/${c.id}`} className={botao}>
+                <FolderOpen className="h-3 w-3" /> Abrir pasta
+              </Link>
+              {!encerrado && c.ficha !== "RESPONDIDA" ? (
+                <EnviarFicha
+                  candidatoId={c.id}
+                  nome={c.nome}
+                  telefone={c.telefone}
+                  vaga={vaga}
+                  enviada={c.ficha === "ENVIADA"}
+                  className={botao}
+                />
+              ) : null}
+            </div>
+          </div>
           {!encerrado || c.testes.length > 0 ? (
             <TestesDoCandidato c={c} disponiveis={encerrado ? [] : testesDisponiveis} />
           ) : null}
@@ -328,6 +364,7 @@ function Candidato({
 // ------------------------------------------------------------------- etapas
 
 function ColunaDaEtapa({
+  vagaId,
   etapa,
   candidatos,
   etapas,
@@ -337,6 +374,7 @@ function ColunaDaEtapa({
   ultima,
   testesDisponiveis,
 }: {
+  vagaId: string;
   etapa: EtapaNaTela;
   candidatos: CandidatoNaTela[];
   etapas: EtapaNaTela[];
@@ -428,6 +466,7 @@ function ColunaDaEtapa({
             <Candidato
               key={c.id}
               c={c}
+              vagaId={vagaId}
               etapa={etapa}
               vaga={vaga}
               empresa={empresa}
@@ -570,6 +609,7 @@ export default function SelecaoQuadro({
         {etapas.map((e, i) => (
           <ColunaDaEtapa
             key={e.id}
+            vagaId={vagaId}
             etapa={e}
             etapas={etapas}
             candidatos={andando.filter((c) => c.etapaId === e.id)}
@@ -587,7 +627,7 @@ export default function SelecaoQuadro({
         <Painel titulo="Encerrados" descricao="Quem saiu do processo. O retorno ao candidato é dado aqui.">
           <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
             {encerrados.map((c) => (
-              <Candidato key={c.id} c={c} etapa={null} vaga={vaga} empresa={empresa} etapas={etapas} testesDisponiveis={testesDisponiveis} />
+              <Candidato key={c.id} c={c} vagaId={vagaId} etapa={null} vaga={vaga} empresa={empresa} etapas={etapas} testesDisponiveis={testesDisponiveis} />
             ))}
           </div>
         </Painel>
