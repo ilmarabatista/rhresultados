@@ -615,6 +615,18 @@ export async function salvarEntrevista(candidatoId: string, entrevista: Entrevis
   return { ok: true };
 }
 
+/** O parecer final da consultoria, na aba Resultado da pasta. */
+export async function salvarParecerFinal(candidatoId: string, parecer: string): Promise<SelecaoState> {
+  const session = await requireSession();
+  const c = await prisma.candidate.findUnique({ where: { id: candidatoId }, select: { name: true, companyId: true } });
+  if (!c) return { error: "Candidato não encontrado." };
+  const limpo = textoSeguro(parecer).trim().slice(0, 10_000);
+  await prisma.candidate.update({ where: { id: candidatoId }, data: { finalNotes: limpo || null } });
+  await log(c.companyId, session.userId, "EDITOU", candidatoId, `Atualizou o parecer final de ${c.name}.`);
+  refresh(c.companyId);
+  return { ok: true };
+}
+
 // --------------------------------------------------------------- currículo
 
 /** Anexa o currículo em PDF ao candidato. */
