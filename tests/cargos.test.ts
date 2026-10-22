@@ -53,14 +53,14 @@ test("lerRespostas descarta pergunta de outro nível, opção inventada e tarefa
     objetivo: "  Liderar a equipe de vendas.  ",
     risco: "Risco mínimo de acidente",
     escolaridade: { marcadas: ["Superior completo", "Doutorado em Marte"], qual: { "Superior completo": "Administração" } },
-    tarefas: [{ oQue: "Reunião semanal", como: "", porQue: "", quando: "" }, { oQue: "", como: "", porQue: "", quando: "" }],
+    tarefas: ["Reunião semanal", "   ", 3],
     lixo: "x",
   });
   assert.equal(r.objetivo, "Liderar a equipe de vendas.");
   assert.equal(r.risco, undefined);
   assert.equal(r.lixo, undefined);
   assert.deepEqual(r.escolaridade, { marcadas: ["Superior completo"], qual: { "Superior completo": "Administração" } });
-  assert.equal((r.tarefas as unknown[]).length, 1);
+  assert.deepEqual(r.tarefas, ["Reunião semanal"]);
 });
 
 test("escolher só aceita uma das opções", () => {
@@ -84,15 +84,18 @@ test("experiência: sem experiência só vale no operacional, e o total soma mes
   assert.equal(totalDeExperiencia(e), 2.5);
 });
 
-test("conferirParaEnviar pede tarefa completa e as perguntas que faltam", () => {
+test("tarefas: só o que faz, e o formato antigo em quatro partes ainda é lido", () => {
+  const r = lerRespostas("TECNICO", { tarefas: [{ oQue: "Lança notas", como: "x", porQue: "y", quando: "z" }, "Paga boletos"] });
+  assert.deepEqual(r.tarefas, ["Lança notas", "Paga boletos"]);
+});
+
+test("conferirParaEnviar pede uma tarefa e as perguntas que faltam", () => {
   const base: Respostas = lerRespostas("GERENCIAL", {});
   assert.match(conferirParaEnviar("GERENCIAL", base)!, /pelo menos uma tarefa/);
-
-  const comTarefaPela_metade = lerRespostas("GERENCIAL", { tarefas: [{ oQue: "a", como: "b", porQue: "", quando: "" }] });
-  assert.match(conferirParaEnviar("GERENCIAL", comTarefaPela_metade)!, /tarefa 1 está incompleta/);
+  assert.match(conferirParaEnviar("GERENCIAL", lerRespostas("GERENCIAL", { tarefas: ["a"] }))!, /^Faltam \d+ respostas/);
 
   const completo: Record<string, unknown> = {
-    tarefas: [{ oQue: "a", como: "b", porQue: "c", quando: "d" }],
+    tarefas: ["a"],
     escolaridade: { marcadas: ["Superior completo"] },
     experiencia: { noCargo: { quantidade: 3, unidade: "anos" } },
   };
@@ -100,11 +103,10 @@ test("conferirParaEnviar pede tarefa completa e as perguntas que faltam", () => 
   assert.equal(conferirParaEnviar("GERENCIAL", lerRespostas("GERENCIAL", completo)), null);
 });
 
-test("questionarioEmTexto escreve as tarefas com as quatro partes", () => {
-  const r = lerRespostas("TECNICO", { tarefas: [{ oQue: "Lança notas", como: "No sistema", porQue: "Para pagar", quando: "Todo dia" }] });
+test("questionarioEmTexto numera as tarefas", () => {
+  const r = lerRespostas("TECNICO", { tarefas: ["Lança notas", "Paga boletos"] });
   const texto = questionarioEmTexto("TECNICO", r);
-  assert.match(texto, /O que faz: Lança notas/);
-  assert.match(texto, /Quando faz: Todo dia/);
+  assert.match(texto, /1\. Lança notas\n2\. Paga boletos/);
   assert.match(texto, /\(sem resposta\)/);
 });
 

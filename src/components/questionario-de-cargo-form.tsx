@@ -5,7 +5,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { enviarQuestionario, guardarRascunho } from "@/app/questionario/[token]/actions";
 import {
   NAO_SE_APLICA,
-  tarefaCompleta,
   totalDeExperiencia,
   type Duracao,
   type Experiencia,
@@ -20,15 +19,13 @@ import {
 /**
  * O questionário de cargo no link. Cada mudança é guardada sozinha depois de
  * uma pausa curta: a pessoa pode fechar e voltar pelo mesmo link. As tarefas
- * entram uma a uma, em quatro campos curtos, para a resposta sair completa.
+ * entram uma por campo, só com o que a pessoa faz.
  */
 
 const campo =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
 const botaoClaro =
   "inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50";
-
-const TAREFA_VAZIA: Tarefa = { oQue: "", como: "", porQue: "", quando: "" };
 
 function Texto({ p, valor, mudar }: { p: Extract<Pergunta, { tipo: "texto" }>; valor: string; mudar: (v: string) => void }) {
   const naoSeAplica = valor === NAO_SE_APLICA;
@@ -48,52 +45,33 @@ function Texto({ p, valor, mudar }: { p: Extract<Pergunta, { tipo: "texto" }>; v
 }
 
 function Tarefas({ valor, mudar }: { valor: Tarefa[]; mudar: (v: Tarefa[]) => void }) {
-  const lista = valor.length ? valor : [TAREFA_VAZIA];
-  const trocar = (i: number, parte: keyof Tarefa, texto: string) =>
-    mudar(lista.map((t, n) => (n === i ? { ...t, [parte]: texto } : t)));
-  const partes: { chave: keyof Tarefa; rotulo: string; dica: string }[] = [
-    { chave: "oQue", rotulo: "O que faz", dica: "A atividade em si." },
-    { chave: "como", rotulo: "Como faz", dica: "Ferramentas, sistemas, decisões que toma." },
-    { chave: "porQue", rotulo: "Por que faz", dica: "O objetivo, o que garante para a empresa." },
-    { chave: "quando", rotulo: "Quando faz", dica: "Todo dia, toda semana, no fechamento do mês..." },
-  ];
+  const lista = valor.length ? valor : [""];
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {lista.map((t, i) => (
-        <div key={i} className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Tarefa {i + 1}
-              {tarefaCompleta(t) ? <span className="ml-2 text-emerald-700">completa</span> : null}
-            </span>
-            {lista.length > 1 ? (
-              <button
-                type="button"
-                onClick={() => mudar(lista.filter((_, n) => n !== i))}
-                className="text-slate-400 hover:text-red-600"
-                aria-label={`Tirar a tarefa ${i + 1}`}
-              >
-                <Trash2 size={14} />
-              </button>
-            ) : null}
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {partes.map((p) => (
-              <label key={p.chave} className="block">
-                <span className="block text-xs font-medium text-slate-700">{p.rotulo}</span>
-                <textarea
-                  value={t[p.chave]}
-                  onChange={(e) => trocar(i, p.chave, e.target.value)}
-                  rows={2}
-                  placeholder={p.dica}
-                  className={campo}
-                />
-              </label>
-            ))}
-          </div>
+        <div key={i} className="flex items-start gap-2">
+          <span className="w-5 shrink-0 pt-2 text-right text-xs text-slate-400">{i + 1}</span>
+          <textarea
+            value={t}
+            onChange={(e) => mudar(lista.map((x, n) => (n === i ? e.target.value : x)))}
+            rows={2}
+            placeholder="Ex.: Recebe os pagamentos dos clientes no caixa"
+            className={campo}
+            aria-label={`Tarefa ${i + 1}`}
+          />
+          {lista.length > 1 ? (
+            <button
+              type="button"
+              onClick={() => mudar(lista.filter((_, n) => n !== i))}
+              className="pt-2 text-slate-400 hover:text-red-600"
+              aria-label={`Tirar a tarefa ${i + 1}`}
+            >
+              <Trash2 size={14} />
+            </button>
+          ) : null}
         </div>
       ))}
-      <button type="button" onClick={() => mudar([...lista, TAREFA_VAZIA])} className={botaoClaro}>
+      <button type="button" onClick={() => mudar([...lista, ""])} className={botaoClaro}>
         <Plus size={14} /> Outra tarefa
       </button>
     </div>

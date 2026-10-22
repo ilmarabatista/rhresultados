@@ -228,10 +228,9 @@ function Descricao({
       </form>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h3 className="text-sm font-semibold text-slate-900">Competências e nível esperado</h3>
+        <h3 className="text-sm font-semibold text-slate-900">Competências do cargo</h3>
         <p className="mb-3 mt-0.5 text-xs text-slate-500">
-          A régua do PDI. Escala: 1 não conhece · 2 conhece, precisa de ajuda · 3 faz sozinho · 4 faz com excelência · 5
-          ensina os outros.
+          Técnicas, comportamentais e organizacionais. Adicione quantas quiser: a entrevista do cargo usa todas.
           {temValores ? null : (
             <>
               {" "}

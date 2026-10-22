@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { formatFullDate } from "@/lib/dates";
-import { lerTipoDeCompetencia, ROTULO_DO_NIVEL, TIPOS_DE_COMPETENCIA, type TipoDeCompetencia } from "@/lib/pdi";
+import { lerTipoDeCompetencia, TIPOS_DE_COMPETENCIA, type TipoDeCompetencia } from "@/lib/pdi";
 import { CAMPOS_DA_ESPECIFICACAO, lerEspecificacao, lerNivelDeCargo, lerResponsabilidades, ROTULO_DO_NIVEL_DE_CARGO } from "@/lib/cargos";
 import PrintButton from "@/components/print-button";
 
@@ -92,9 +92,6 @@ export default async function ImprimirCargoPage({ params }: { params: Promise<{ 
                   <tr key={c.id}>
                     <td className="w-1/3 border border-slate-200 px-2 py-1 align-top font-medium">{c.nome}</td>
                     <td className="border border-slate-200 px-2 py-1 align-top text-slate-600">{c.descricao}</td>
-                    <td className="w-32 border border-slate-200 px-2 py-1 text-center align-top">
-                      {c.nivelEsperado} · {ROTULO_DO_NIVEL[c.nivelEsperado]}
-                    </td>
                   </tr>
                 ))}
               </tbody>

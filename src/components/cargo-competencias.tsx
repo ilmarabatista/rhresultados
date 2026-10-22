@@ -9,7 +9,7 @@ import {
   salvarCompetencia,
   type PdiState,
 } from "@/app/(app)/empresas/[id]/pdi/actions";
-import { NIVEIS, ROTULO_DO_NIVEL, ROTULO_DO_TIPO, TIPOS_DE_COMPETENCIA, type TipoDeCompetencia } from "@/lib/pdi";
+import { ROTULO_DO_TIPO, TIPOS_DE_COMPETENCIA, type TipoDeCompetencia } from "@/lib/pdi";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { Etiqueta } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
@@ -78,7 +78,9 @@ function FormularioDeCompetencia({
     >
       <input type="hidden" name="cargoId" value={cargoId} />
       {inicial?.id ? <input type="hidden" name="competenciaId" value={inicial.id} /> : null}
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
+      {/* O nível esperado não aparece na descrição do cargo; fica o que já estava, ou o padrão. */}
+      <input type="hidden" name="nivelEsperado" value={String(inicial?.nivelEsperado ?? 3)} />
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Field label="Competência *">
           <Input name="nome" required defaultValue={inicial?.nome ?? ""} placeholder="Ex.: Atendimento ao cliente" />
         </Field>
@@ -87,15 +89,6 @@ function FormularioDeCompetencia({
             {TIPOS_DE_COMPETENCIA.map((t) => (
               <option key={t} value={t}>
                 {ROTULO_DO_TIPO[t]}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Nível que o cargo pede *">
-          <Select name="nivelEsperado" defaultValue={String(inicial?.nivelEsperado ?? 3)}>
-            {NIVEIS.map((n) => (
-              <option key={n} value={n}>
-                {n} · {ROTULO_DO_NIVEL[n]}
               </option>
             ))}
           </Select>
@@ -139,17 +132,6 @@ export default function CargoCompetencias({ cargo, outros }: { cargo: CargoComCo
                   <Etiqueta tom={c.tipo === "TECNICA" ? "azul" : c.tipo === "ORGANIZACIONAL" ? "bom" : "neutro"}>{ROTULO_DO_TIPO[c.tipo]}</Etiqueta>
                 </div>
                 {c.descricao ? <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{c.descricao}</p> : null}
-              </div>
-              <div className="shrink-0 text-right">
-                <div className="flex gap-0.5" aria-label={`Nível ${c.nivelEsperado}`}>
-                  {NIVEIS.map((n) => (
-                    <span
-                      key={n}
-                      className={`h-2 w-4 rounded-sm ${n <= c.nivelEsperado ? "bg-brand-600" : "bg-slate-200"}`}
-                    />
-                  ))}
-                </div>
-                <span className="text-micro text-slate-500">{ROTULO_DO_NIVEL[c.nivelEsperado]}</span>
               </div>
               <div className="flex shrink-0 items-center gap-1 text-slate-500">
                 <button
@@ -196,7 +178,7 @@ export default function CargoCompetencias({ cargo, outros }: { cargo: CargoComCo
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setEditando(null)} className={botaoClaro}>
-              + Competência
+              + Adicionar competência
             </button>
             {comCompetencias.length > 0 ? (
               <span className="flex items-center gap-1.5">
