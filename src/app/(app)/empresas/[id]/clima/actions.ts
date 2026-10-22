@@ -21,7 +21,7 @@ import {
   REGUA_PADRAO,
   type PerguntaDePerfil,
 } from "@/lib/clima";
-import { lerPerguntaDoFormulario } from "@/lib/clima-dados";
+import { lerPerguntaDoFormulario, perguntasPadrao } from "@/lib/clima-dados";
 
 /**
  * A pesquisa de clima de uma empresa: montar o ciclo, abrir e encerrar o link,
@@ -86,21 +86,7 @@ export async function criarPesquisa(_prev: ClimaState, formData: FormData): Prom
       ordem: p.ordem,
     }));
   } else {
-    const padrao = await prisma.perguntaDeClima.findMany({
-      where: { padrao: true, ativa: true, companyId: null, dimensao: { ativa: true } },
-      include: { dimensao: { select: { nome: true, ordem: true } } },
-    });
-    perguntas = padrao.map((p) => ({
-      pergunta: { connect: { id: p.id } },
-      dimensao: p.dimensao.nome,
-      dimensaoOrdem: p.dimensao.ordem,
-      enunciado: p.enunciado,
-      tipo: p.tipo,
-      opcoes: p.opcoes ?? undefined,
-      maxEscolhas: p.maxEscolhas,
-      enps: p.enps,
-      ordem: p.ordem,
-    }));
+    perguntas = await perguntasPadrao();
   }
 
   const ativos = await prisma.employee.count({ where: { companyId, status: "ATIVO" } });
@@ -122,6 +108,22 @@ export async function criarPesquisa(_prev: ClimaState, formData: FormData): Prom
   await log(companyId, session.userId, "CRIOU", nova.id, `Criou a pesquisa de clima ${nome}.`);
   refresh(companyId);
   redirect(`/empresas/${companyId}/clima/${nova.id}`);
+}
+
+/** Um rascunho que ficou sem nenhuma pergunta recebe as perguntas padrão. */
+export async function usarPerguntasPadrao(pesquisaId: string): Promise<ClimaState> {
+  const session = await requireSession();
+  const pesquisa = await daPesquisa(pesquisaId);
+  if (!pesquisa) return { error: "Pesquisa não encontrada." };
+  if (pesquisa.status !== "RASCUNHO") return { error: "As perguntas só mudam com a pesquisa em rascunho." };
+  if (await prisma.perguntaDaPesquisa.count({ where: { pesquisaId } })) return { error: "A pesquisa já tem perguntas." };
+
+  const perguntas = await perguntasPadrao();
+  if (perguntas.length === 0) return { error: "A biblioteca não tem perguntas padrão ativas." };
+  await prisma.pesquisaDeClima.update({ where: { id: pesquisaId }, data: { perguntas: { create: perguntas } } });
+  await log(pesquisa.companyId, session.userId, "ATUALIZOU", pesquisaId, `Pôs as perguntas padrão na pesquisa de clima ${pesquisa.nome}.`);
+  refresh(pesquisa.companyId);
+  return { ok: true };
 }
 
 /**

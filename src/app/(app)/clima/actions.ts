@@ -4,8 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { textoDoFormulario } from "@/lib/texto-seguro";
-import { lerPerguntaDoFormulario } from "@/lib/clima-dados";
-import { BIBLIOTECA_INICIAL } from "@/lib/clima-biblioteca";
+import { garantirBiblioteca, lerPerguntaDoFormulario } from "@/lib/clima-dados";
 
 /**
  * A biblioteca da pesquisa de clima: as dimensões e as perguntas de onde cada
@@ -21,30 +20,7 @@ function refresh() {
 
 export async function carregarBibliotecaInicial(): Promise<BibliotecaState> {
   await requireSession();
-  if (await prisma.dimensaoDeClima.count()) return { error: "A biblioteca já tem dimensões." };
-
-  await prisma.$transaction(
-    BIBLIOTECA_INICIAL.map((d, i) =>
-      prisma.dimensaoDeClima.create({
-        data: {
-          nome: d.nome,
-          descricao: d.descricao,
-          ordem: (i + 1) * 10,
-          perguntas: {
-            create: d.perguntas.map((p, j) => ({
-              enunciado: p.enunciado,
-              tipo: p.tipo ?? "NOTA",
-              opcoes: p.opcoes ?? undefined,
-              maxEscolhas: p.maxEscolhas ?? null,
-              enps: p.enps ?? false,
-              padrao: p.padrao ?? false,
-              ordem: (j + 1) * 10,
-            })),
-          },
-        },
-      }),
-    ),
-  );
+  if (!(await garantirBiblioteca())) return { error: "A biblioteca já tem dimensões." };
   refresh();
   return { ok: true };
 }
