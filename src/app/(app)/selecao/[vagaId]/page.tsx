@@ -5,11 +5,12 @@ import { carregarVaga, vagasComRoteiro } from "@/lib/selecao-dados";
 import { TituloDaSecao } from "@/components/ui";
 import SelecaoQuadro from "@/components/selecao-quadro";
 import PerguntasDaEntrevista from "@/components/selecao-perguntas";
+import FluxoDaVaga from "@/components/selecao-fluxo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Vaga — RH Resultados" };
 
-/** O quadro de uma vaga: as etapas em colunas, com os candidatos. */
+/** A vaga: o fluxo em cinco passos e o quadro com os candidatos em cada etapa. */
 export default async function VagaPage({ params }: { params: Promise<{ vagaId: string }> }) {
   await requireSession();
   const { vagaId } = await params;
@@ -33,6 +34,16 @@ export default async function VagaPage({ params }: { params: Promise<{ vagaId: s
             </Link>
           </span>
         }
+      />
+
+      <FluxoDaVaga
+        vagaId={vaga.id}
+        empresaId={vaga.empresa?.id ?? null}
+        cargo={vaga.cargo}
+        cargosDaEmpresa={vaga.cargosDaEmpresa}
+        candidatos={vaga.candidatos}
+        perguntas={vaga.perguntas.length}
+        testesSoltos={vaga.testesSoltos}
       />
 
       <SelecaoQuadro

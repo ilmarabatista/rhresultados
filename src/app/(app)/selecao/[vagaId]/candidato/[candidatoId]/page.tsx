@@ -9,9 +9,10 @@ import { Etiqueta, Painel, TituloDaSecao, Vazio } from "@/components/ui";
 import PrintButton from "@/components/print-button";
 import FichaDoCandidato from "@/components/ficha-do-candidato";
 import EntrevistaDoCandidato from "@/components/entrevista-do-candidato";
-import EnviarFicha from "@/components/enviar-ficha";
+import EnviarFicha, { PreencherFicha } from "@/components/enviar-ficha";
 import { ResultadoDoDisc, ResultadoDoTesteCadastrado } from "@/components/resultado-teste";
 import CurriculoDoCandidato from "@/components/curriculo-do-candidato";
+import PaginasDoCurriculo from "@/components/paginas-do-curriculo";
 import ParecerFinal from "@/components/resultado-do-candidato";
 import { BaixarPastaPdf, ImprimirAoAbrir } from "@/components/baixar-pasta-pdf";
 
@@ -88,8 +89,8 @@ export default async function PastaDoCandidatoPage({
       {aba === "tudo" ? <h2 className="text-sm font-semibold text-brand-800">Currículo</h2> : null}
       <Painel>
         <CurriculoDoCandidato candidatoId={c.id} arquivos={c.curriculos} />
-        {c.curriculos.length ? <p className="mt-1 hidden text-micro text-slate-500 print:block">O currículo é um PDF à parte, anexado no sistema.</p> : null}
       </Painel>
+      {aba === "tudo" ? <PaginasDoCurriculo arquivos={c.curriculos} /> : null}
     </section>
   );
 
@@ -105,14 +106,17 @@ export default async function PastaDoCandidatoPage({
         <Vazio
           acao={
             c.outcome === "EM_ANDAMENTO" ? (
-              <EnviarFicha
-                candidatoId={c.id}
-                nome={c.name}
-                telefone={c.phone}
-                vaga={vaga.title}
-                enviada={Boolean(c.applicationSentAt)}
-                className={`${botao} no-print`}
-              />
+              <span className="flex gap-1">
+                <PreencherFicha candidatoId={c.id} className={`${botao} no-print`} />
+                <EnviarFicha
+                  candidatoId={c.id}
+                  nome={c.name}
+                  telefone={c.phone}
+                  vaga={vaga.title}
+                  enviada={Boolean(c.applicationSentAt)}
+                  className={`${botao} no-print`}
+                />
+              </span>
             ) : null
           }
         >

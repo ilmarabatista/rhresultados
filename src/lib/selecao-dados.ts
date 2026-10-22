@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { lerFicha } from "./ficha";
 import { lerEntrevista, lerPerguntas } from "./entrevista";
+import { candidatoProvavel } from "./fluxo-da-vaga";
 import { diasDesde, funilDaVaga, pendenciasDoCandidato, type EtapaTipo } from "./selecao";
 import type { CandidatoNaTela, EtapaNaTela, FunilNaTela } from "@/components/selecao-quadro";
 import type { VagaNaLista } from "@/components/selecao-vagas";
@@ -101,6 +102,11 @@ export type DadosDaVaga = {
   testesDisponiveis: { id: string; nome: string }[];
   /** O roteiro da entrevista da vaga. */
   perguntas: string[];
+  /** O cargo da lista da empresa a que a vaga está ligada: é a descrição do cargo do fluxo. */
+  cargo: { id: string; nome: string; temDescricao: boolean; aprovadaEm: string | null } | null;
+  cargosDaEmpresa: { id: string; nome: string }[];
+  /** Testes feitos pela aba Testes para esta empresa (ou sem empresa) que ainda não são de nenhum candidato. */
+  testesSoltos: { id: string; pessoa: string; teste: string; respondido: boolean; enviadoEm: string; daEmpresa: boolean; sugerido: string | null }[];
 };
 
 export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> {
@@ -118,6 +124,7 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
       notes: true,
       perguntasDaEntrevista: true,
       company: { select: { id: true, name: true } },
+      cargo: { select: { id: true, nome: true, missao: true, responsabilidades: true, aprovadaEm: true } },
       etapas: { orderBy: { ordem: "asc" }, select: { id: true, nome: true, tipo: true, prazoDias: true, ordem: true } },
       candidates: {
         orderBy: { createdAt: "asc" },
@@ -147,6 +154,19 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
     },
   });
   if (!vaga) return null;
+
+  const [cargosDaEmpresa, soltos] = vaga.company
+    ? await Promise.all([
+        prisma.cargo.findMany({ where: { companyId: vaga.company.id }, orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
+        prisma.testeEnviado.findMany({
+          where: { candidateId: null, OR: [{ companyId: vaga.company.id }, { companyId: null }] },
+          orderBy: { enviadoEm: "desc" },
+          take: 100,
+          select: { id: true, pessoa: true, nomeDoTeste: true, status: true, enviadoEm: true, companyId: true },
+        }),
+      ])
+    : [[], []];
+  const paraLigar = vaga.candidates.map((c) => ({ id: c.id, nome: c.name, situacao: c.outcome }));
 
   const candidatos: CandidatoNaTela[] = vaga.candidates.map((c) => {
     const notas = (c.stageNotes && typeof c.stageNotes === "object" && !Array.isArray(c.stageNotes)
@@ -205,6 +225,27 @@ export async function carregarVaga(vagaId: string): Promise<DadosDaVaga | null> 
       ...cadastrados.map((t) => ({ id: t.id, nome: t.name })),
     ],
     perguntas: lerPerguntas(vaga.perguntasDaEntrevista),
+    cargo: vaga.cargo
+      ? {
+          id: vaga.cargo.id,
+          nome: vaga.cargo.nome,
+          temDescricao: Boolean(vaga.cargo.missao?.trim() || vaga.cargo.responsabilidades?.trim()),
+          aprovadaEm: vaga.cargo.aprovadaEm ? dataCurta(vaga.cargo.aprovadaEm) : null,
+        }
+      : null,
+    cargosDaEmpresa,
+    // Os da empresa primeiro; os sem empresa (mandados sem escolher) depois.
+    testesSoltos: [...soltos]
+      .sort((a, b) => Number(Boolean(b.companyId)) - Number(Boolean(a.companyId)))
+      .map((t) => ({
+        id: t.id,
+        pessoa: t.pessoa,
+        teste: t.nomeDoTeste,
+        respondido: t.status === "RESPONDIDO",
+        enviadoEm: dataCurta(t.enviadoEm),
+        daEmpresa: Boolean(t.companyId),
+        sugerido: candidatoProvavel(t.pessoa, paraLigar),
+      })),
   };
 }
 

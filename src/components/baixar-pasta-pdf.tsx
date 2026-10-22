@@ -9,7 +9,8 @@ import { Download } from "lucide-react";
  * Baixar a pasta inteira do candidato em PDF.
  *
  * O PDF sai do próprio navegador (imprimir > salvar como PDF): abre a pasta
- * inteira e já chama a impressão. O título da página vira o nome do arquivo.
+ * inteira, espera as páginas do currículo e chama a impressão. O título da
+ * página vira o nome do arquivo.
  */
 
 export function BaixarPastaPdf({ candidato, vaga }: { candidato: string; vaga: string }) {
@@ -31,12 +32,20 @@ export function ImprimirAoAbrir({ nomeDoArquivo }: { nomeDoArquivo: string }) {
   useEffect(() => {
     const titulo = document.title;
     document.title = nomeDoArquivo;
-    // Um respiro para as fontes e os gráficos dos testes terminarem de desenhar.
-    const t = setTimeout(() => {
+    // Espera as páginas do currículo (PaginasDoCurriculo) e dá um respiro para
+    // as fontes e os gráficos dos testes; desiste de esperar em 30 segundos.
+    const inicio = Date.now();
+    let t: ReturnType<typeof setTimeout>;
+    const tentar = () => {
+      if (document.body.dataset.curriculos === "carregando" && Date.now() - inicio < 30_000) {
+        t = setTimeout(tentar, 300);
+        return;
+      }
       window.print();
       document.title = titulo;
       router.replace("?aba=tudo", { scroll: false });
-    }, 600);
+    };
+    t = setTimeout(tentar, 600);
     return () => {
       clearTimeout(t);
       document.title = titulo;
