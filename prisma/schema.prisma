@@ -1236,10 +1236,29 @@ model Candidate {
   movimentos MovimentoDoCandidato[]
   /// Os testes mandados a ele pela aba Testes, direto do quadro da vaga.
   testes     TesteEnviado[]
+  /// O currículo em PDF (um ou mais), anexado por ela.
+  arquivos   ArquivoDoCandidato[]
 
   @@index([companyId, jobOpeningId])
   @@index([jobOpeningId, etapaId])
   @@index([etapaId])
+}
+
+/// Um arquivo do candidato, guardado no próprio banco como os anexos da
+/// reunião. Só PDF, conferido pelo conteúdo e não pelo nome.
+model ArquivoDoCandidato {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  nome       String
+  tamanho    Int
+  dados      Bytes
+  enviadoPor String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([candidateId])
 }
 
 // ------------------------------------------------------ Testes cadastrados

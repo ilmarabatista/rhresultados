@@ -5,8 +5,8 @@ import { pedidoDaEntrevista, respostasDaIA, SYSTEM_DA_ENTREVISTA, type RespostaD
 /**
  * Organiza a transcrição da entrevista nas perguntas da vaga.
  *
- * Vai pelo modelo privado: a transcrição tem dado pessoal do candidato e não
- * pode passar por modelo que guarda o que recebe.
+ * Marcada como privada: se um dia houver modelo pago configurado, a
+ * transcrição (dado pessoal do candidato) vai por ele, com retenção zero.
  */
 export async function organizarTranscricao(
   perguntas: string[],
