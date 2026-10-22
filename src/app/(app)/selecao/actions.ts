@@ -7,6 +7,8 @@ import { requireSession } from "@/lib/session";
 import { textoDoFormulario as texto, textoSeguro } from "@/lib/texto-seguro";
 import { atividade } from "@/lib/atividade";
 import { MODELO_SUGERIDO, tipoValido, type EtapaTipo } from "@/lib/selecao";
+import { lerEntrevista, lerPerguntas, TETO_DA_TRANSCRICAO, type Entrevista } from "@/lib/entrevista";
+import { organizarTranscricao } from "@/lib/ai-entrevista";
 
 /**
  * O processo seletivo: modelos de processo, vagas, etapas e candidatos.
@@ -507,6 +509,107 @@ export async function marcarAvisado(id: string, avisado: boolean): Promise<Selec
   if (!c) return { error: "Candidato não encontrado." };
   await prisma.candidate.update({ where: { id }, data: { avisadoEm: avisado ? new Date() : null } });
   if (avisado) await log(c.companyId, session.userId, "EDITOU", id, `Avisou ${c.name} do resultado do processo.`);
+  refresh(c.companyId);
+  return { ok: true };
+}
+
+// ------------------------------------------------------------------- ficha
+
+/**
+ * Prepara o envio da ficha: marca a data e devolve o token do link. Mandar de
+ * novo não gera outro link — é o mesmo, para a pessoa não ficar com dois.
+ */
+export async function enviarFicha(id: string): Promise<SelecaoState & { token?: string }> {
+  const session = await requireSession();
+  const c = await prisma.candidate.findUnique({
+    where: { id },
+    select: { name: true, companyId: true, applicationToken: true, applicationSentAt: true, applicationAnsweredAt: true },
+  });
+  if (!c) return { error: "Candidato não encontrado." };
+  if (c.applicationAnsweredAt) return { error: "A ficha deste candidato já foi respondida." };
+  if (!c.applicationSentAt) {
+    await prisma.candidate.update({ where: { id }, data: { applicationSentAt: new Date() } });
+    await log(c.companyId, session.userId, "EDITOU", id, `Mandou a ficha de solicitação de emprego para ${c.name}.`);
+    refresh(c.companyId);
+  }
+  return { ok: true, token: c.applicationToken };
+}
+
+// -------------------------------------------------------------- entrevista
+
+/** O roteiro de perguntas da vaga, uma por linha. */
+export async function salvarPerguntasDaEntrevista(vagaId: string, perguntas: string[]): Promise<SelecaoState> {
+  await requireSession();
+  const vaga = await prisma.jobOpening.findUnique({ where: { id: vagaId }, select: { companyId: true } });
+  if (!vaga) return { error: "Vaga não encontrada." };
+  await prisma.jobOpening.update({ where: { id: vagaId }, data: { perguntasDaEntrevista: lerPerguntas(perguntas) } });
+  refresh(vaga.companyId);
+  return { ok: true };
+}
+
+/** Copia o roteiro de outra vaga para esta, substituindo o que houver. */
+export async function copiarPerguntasDaEntrevista(vagaId: string, deVagaId: string): Promise<SelecaoState> {
+  await requireSession();
+  const [vaga, origem] = await Promise.all([
+    prisma.jobOpening.findUnique({ where: { id: vagaId }, select: { companyId: true } }),
+    prisma.jobOpening.findUnique({ where: { id: deVagaId }, select: { perguntasDaEntrevista: true } }),
+  ]);
+  if (!vaga || !origem) return { error: "Vaga não encontrada." };
+  const perguntas = lerPerguntas(origem.perguntasDaEntrevista);
+  if (perguntas.length === 0) return { error: "A vaga escolhida não tem perguntas cadastradas." };
+  await prisma.jobOpening.update({ where: { id: vagaId }, data: { perguntasDaEntrevista: perguntas } });
+  refresh(vaga.companyId);
+  return { ok: true };
+}
+
+/**
+ * Organiza a transcrição nas perguntas da vaga, pela IA.
+ *
+ * Não grava: devolve o rascunho para ela revisar na tela, e só o "Salvar"
+ * grava. Assim nada que a IA escreveu entra na pasta sem ela ter lido.
+ */
+export async function organizarEntrevista(
+  candidatoId: string,
+  transcricao: string,
+): Promise<SelecaoState & { entrevista?: Entrevista }> {
+  await requireSession();
+  const limpo = textoSeguro(transcricao).trim();
+  if (limpo.length < 200) return { error: "Cole a transcrição da entrevista: o texto está curto demais para organizar." };
+  if (limpo.length > TETO_DA_TRANSCRICAO) {
+    return { error: `A transcrição passou de ${TETO_DA_TRANSCRICAO.toLocaleString("pt-BR")} caracteres. Divida em partes ou corte o que não é entrevista.` };
+  }
+
+  const c = await prisma.candidate.findUnique({
+    where: { id: candidatoId },
+    select: { entrevista: true, jobOpening: { select: { perguntasDaEntrevista: true } } },
+  });
+  if (!c) return { error: "Candidato não encontrado." };
+  // Reorganizar uma entrevista já salva usa as perguntas dela, não as de hoje.
+  const salvas = lerEntrevista(c.entrevista);
+  const perguntas = salvas?.respostas.length ? salvas.respostas.map((r) => r.pergunta) : lerPerguntas(c.jobOpening?.perguntasDaEntrevista);
+  if (perguntas.length === 0) return { error: "Cadastre as perguntas da entrevista na vaga antes de organizar." };
+
+  try {
+    const { respostas, outros } = await organizarTranscricao(perguntas, limpo);
+    return {
+      ok: true,
+      entrevista: { transcricao: limpo, respostas, outros, avaliacao: salvas?.avaliacao ?? "", organizadaEm: new Date().toISOString() },
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Não foi possível organizar a entrevista." };
+  }
+}
+
+/** Grava a entrevista como ela revisou. */
+export async function salvarEntrevista(candidatoId: string, entrevista: Entrevista): Promise<SelecaoState> {
+  const session = await requireSession();
+  const c = await prisma.candidate.findUnique({ where: { id: candidatoId }, select: { name: true, companyId: true, entrevistaEm: true } });
+  if (!c) return { error: "Candidato não encontrado." };
+  const lida = lerEntrevista(entrevista);
+  if (!lida || lida.respostas.length === 0) return { error: "A entrevista está vazia." };
+
+  await prisma.candidate.update({ where: { id: candidatoId }, data: { entrevista: lida, entrevistaEm: c.entrevistaEm ?? new Date() } });
+  if (!c.entrevistaEm) await log(c.companyId, session.userId, "EDITOU", candidatoId, `Registrou a entrevista de ${c.name}.`);
   refresh(c.companyId);
   return { ok: true };
 }

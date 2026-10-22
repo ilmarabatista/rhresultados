@@ -1082,6 +1082,10 @@ model JobOpening {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// O roteiro da entrevista desta vaga: ["Pergunta 1", "Pergunta 2"].
+  /// Editar depois não muda as entrevistas já organizadas, que guardam cópia.
+  perguntasDaEntrevista Json?
+
   /// As etapas desta vaga, copiadas do modelo escolhido e editáveis aqui:
   /// mexer no modelo depois não mexe nas vagas já abertas.
   etapas     EtapaDaVaga[]
@@ -1208,6 +1212,12 @@ model Candidate {
   applicationAnswers    Json?
   applicationSentAt     DateTime?
   applicationAnsweredAt DateTime?
+
+  /// A entrevista: a transcrição colada, as respostas organizadas pelas
+  /// perguntas da vaga (cópia delas) e a avaliação de quem entrevistou.
+  entrevista   Json?
+  /// Quando a entrevista foi registrada, para o quadro mostrar sem ler o JSON.
+  entrevistaEm DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
