@@ -122,6 +122,7 @@ export default async function PesquisaDeClimaPage({
     regua,
     introducao: pesquisa.introducao ?? "",
     respostas: respostas.length,
+    perguntas: perguntas.length,
   };
 
   let conteudo: React.ReactNode;

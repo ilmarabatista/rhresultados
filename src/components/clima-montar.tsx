@@ -11,6 +11,7 @@ import {
   mudarStatus,
   salvarConfiguracao,
   salvarPerfil,
+  usarPerguntasPadrao,
   type ClimaState,
 } from "@/app/(app)/empresas/[id]/clima/actions";
 import { NOME_DO_TIPO, TIPOS, type PerguntaDePerfil, type StatusDaPesquisa, type TipoDePergunta } from "@/lib/clima";
@@ -50,6 +51,7 @@ export type PesquisaParaMontar = {
   regua: number;
   introducao: string;
   respostas: number;
+  perguntas: number;
 };
 
 const botaoClaro =
@@ -68,6 +70,14 @@ export function ClimaSituacao({ pesquisa }: { pesquisa: PesquisaParaMontar }) {
   function mudar(para: StatusDaPesquisa) {
     start(async () => {
       const r = await mudarStatus(pesquisa.id, para);
+      avisarSeErro(r);
+      router.refresh();
+    });
+  }
+
+  function usarPadrao() {
+    start(async () => {
+      const r = await usarPerguntasPadrao(pesquisa.id);
       avisarSeErro(r);
       router.refresh();
     });
@@ -92,7 +102,9 @@ export function ClimaSituacao({ pesquisa }: { pesquisa: PesquisaParaMontar }) {
         <div className="min-w-0 space-y-1">
           <p className="text-xs text-slate-600">
             {pesquisa.status === "RASCUNHO"
-              ? "Em rascunho: monte as perguntas e o perfil, e abra quando estiver pronta."
+              ? pesquisa.perguntas === 0
+                ? "Esta pesquisa ainda não tem perguntas. Use as perguntas padrão (ou escolha na aba Montar) e depois abra a pesquisa para gerar o link."
+                : "Em rascunho: monte as perguntas e o perfil. O link para responder aparece quando você abrir a pesquisa."
               : aberta
                 ? `Aberta, com ${pesquisa.respostas} ${pesquisa.respostas === 1 ? "resposta" : "respostas"}. Divulgue o link para a equipe.`
                 : `Encerrada, com ${pesquisa.respostas} respostas. O link não aceita mais respostas.`}
@@ -116,7 +128,12 @@ export function ClimaSituacao({ pesquisa }: { pesquisa: PesquisaParaMontar }) {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          {pesquisa.status === "RASCUNHO" ? (
+          {pesquisa.status === "RASCUNHO" && pesquisa.perguntas === 0 ? (
+            <button type="button" disabled={pendente} onClick={usarPadrao} className={botao}>
+              Usar as perguntas padrão
+            </button>
+          ) : null}
+          {pesquisa.status === "RASCUNHO" && pesquisa.perguntas > 0 ? (
             <button type="button" disabled={pendente} onClick={() => mudar("ABERTA")} className={botao}>
               Abrir pesquisa
             </button>

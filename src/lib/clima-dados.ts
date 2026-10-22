@@ -2,6 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { textoDoFormulario } from "./texto-seguro";
+import { BIBLIOTECA_INICIAL } from "./clima-biblioteca";
 import {
   apurar,
   lerMediasDigitadas,
@@ -139,4 +140,56 @@ export async function ciclosDaEmpresa(companyId: string) {
   }
   // Os de histórico guardam em abertaEm o ano em que foram aplicados.
   return ciclos.sort((a, b) => a.quando.getTime() - b.quando.getTime());
+}
+
+/**
+ * Com a biblioteca vazia, carrega a inicial. Assim o primeiro ciclo de uma
+ * empresa nunca nasce sem perguntas, mesmo que ninguém tenha passado antes
+ * pela tela da biblioteca. Devolve true quando carregou.
+ */
+export async function garantirBiblioteca(): Promise<boolean> {
+  if (await prisma.dimensaoDeClima.count()) return false;
+  await prisma.$transaction(
+    BIBLIOTECA_INICIAL.map((d, i) =>
+      prisma.dimensaoDeClima.create({
+        data: {
+          nome: d.nome,
+          descricao: d.descricao,
+          ordem: (i + 1) * 10,
+          perguntas: {
+            create: d.perguntas.map((p, j) => ({
+              enunciado: p.enunciado,
+              tipo: p.tipo ?? "NOTA",
+              opcoes: p.opcoes ?? undefined,
+              maxEscolhas: p.maxEscolhas ?? null,
+              enps: p.enps ?? false,
+              padrao: p.padrao ?? false,
+              ordem: (j + 1) * 10,
+            })),
+          },
+        },
+      }),
+    ),
+  );
+  return true;
+}
+
+/** As perguntas padrão da biblioteca, prontas para entrar num ciclo. */
+export async function perguntasPadrao(): Promise<Prisma.PerguntaDaPesquisaCreateWithoutPesquisaInput[]> {
+  await garantirBiblioteca();
+  const padrao = await prisma.perguntaDeClima.findMany({
+    where: { padrao: true, ativa: true, companyId: null, dimensao: { ativa: true } },
+    include: { dimensao: { select: { nome: true, ordem: true } } },
+  });
+  return padrao.map((p) => ({
+    pergunta: { connect: { id: p.id } },
+    dimensao: p.dimensao.nome,
+    dimensaoOrdem: p.dimensao.ordem,
+    enunciado: p.enunciado,
+    tipo: p.tipo,
+    opcoes: p.opcoes ?? undefined,
+    maxEscolhas: p.maxEscolhas,
+    enps: p.enps,
+    ordem: p.ordem,
+  }));
 }
