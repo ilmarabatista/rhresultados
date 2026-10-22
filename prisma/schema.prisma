@@ -94,6 +94,10 @@ model Company {
   briefing   String?   @db.Text
   briefingAt DateTime?
 
+  /// Os valores da empresa, um por linha: viram as competências
+  /// organizacionais das descrições de cargo.
+  valores String? @db.Text
+
   createdById String?
   createdBy   User?   @relation("CompanyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
@@ -1074,9 +1078,13 @@ model JobOpening {
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   /// O cargo, como aparece no anúncio: "Recepcionista".
-  title  String
-  status JobOpeningStatus @default(ABERTA)
-  notes  String?          @db.Text
+  title   String
+  /// O cargo da lista da empresa, quando a vaga é para um deles: de lá vêm as
+  /// perguntas da entrevista na abertura.
+  cargoId String?
+  cargo   Cargo?           @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+  status  JobOpeningStatus @default(ABERTA)
+  notes   String?          @db.Text
 
   openedAt DateTime  @default(now())
   closedAt DateTime?
@@ -1094,6 +1102,7 @@ model JobOpening {
   candidates Candidate[]
 
   @@index([companyId, status])
+  @@index([cargoId])
 }
 
 /// Um modelo de processo seletivo: a lista de etapas que ela costuma usar.
@@ -1391,12 +1400,57 @@ model Cargo {
   /// Formação, experiência e conhecimentos.
   requisitos        String? @db.Text
 
+  /// GERENCIAL, TECNICO ou OPERACIONAL: decide a versão do questionário de
+  /// cargo. Vazio nos cargos criados antes da aba Cargos, até ela escolher.
+  nivel                 String?
+  setor                 String?
+  cbo                   String?
+  /// O cargo do superior imediato, como texto: pode ser de fora da lista.
+  superior              String?
+  subordinados          String?
+  /// As condições do cargo (autonomia, riscos, esforço...), um texto por
+  /// chave. As chaves e os rótulos estão em src/lib/cargos.ts.
+  especificacao         Json?
+  /// O roteiro de entrevista para contratar o cargo: array de strings, no
+  /// mesmo formato de JobOpening.perguntasDaEntrevista, que copia daqui.
+  perguntasDaEntrevista Json?
+  /// A última vez que a descrição foi aprovada: vale como data de revisão.
+  aprovadaEm            DateTime?
+
   colaboradores Employee[]
+  questionarios QuestionarioDeCargo[]
+  vagas         JobOpening[]
   treinamentos  TreinamentoDoCargo[]
   competencias  CompetenciaDoCargo[]
   avaliacoes    AvaliacaoDeCompetencias[]
 
   @@unique([companyId, nome])
+}
+
+/// O questionário de cargo mandado por link a quem ocupa o cargo. As respostas
+/// viram a descrição. Como no teste, o link é a credencial; enquanto não é
+/// enviado, as respostas parciais ficam guardadas para continuar depois.
+model QuestionarioDeCargo {
+  id      String @id @default(cuid())
+  token   String @unique
+  cargoId String
+  cargo   Cargo  @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+
+  /// O nível no dia do envio: mudar o nível do cargo depois não muda o formulário.
+  nivel  String
+  /// Quem vai responder. Não vai para a IA.
+  pessoa String
+  prazo  DateTime?
+
+  /// ENVIADO ou RESPONDIDO.
+  status    String @default("ENVIADO")
+  respostas Json?
+
+  enviadoPor   String?
+  enviadoEm    DateTime  @default(now())
+  respondidoEm DateTime?
+
+  @@index([cargoId])
 }
 
 /// Um treinamento do catálogo da empresa: o procedimento, a norma ou o tema

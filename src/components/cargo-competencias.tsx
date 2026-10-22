@@ -1,30 +1,25 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
 import {
   copiarCompetencias,
   excluirCompetencia,
   moverCompetencia,
   salvarCompetencia,
-  salvarDescricaoDoCargo,
   type PdiState,
 } from "@/app/(app)/empresas/[id]/pdi/actions";
-import { criarCargo } from "@/app/(app)/empresas/[id]/treinamentos/actions";
 import { NIVEIS, ROTULO_DO_NIVEL, ROTULO_DO_TIPO, TIPOS_DE_COMPETENCIA, type TipoDeCompetencia } from "@/lib/pdi";
-import { Field, FormError, FormOk, Input, Select, SubmitButton, Textarea } from "./form";
+import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { Etiqueta } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
 
 /**
- * As descrições de cargo da empresa: missão, responsabilidades, requisitos e
- * as competências com o nível que o cargo pede. É daqui que toda avaliação de
- * PDI tira a régua.
+ * As competências do cargo, com o nível que ele pede: técnicas, comportamentais
+ * e organizacionais. É daqui que toda avaliação de PDI tira a régua.
  */
 
-type Competencia = {
+export type Competencia = {
   id: string;
   nome: string;
   tipo: TipoDeCompetencia;
@@ -32,13 +27,9 @@ type Competencia = {
   nivelEsperado: number;
 };
 
-type Cargo = {
+export type CargoComCompetencias = {
   id: string;
   nome: string;
-  pessoas: number;
-  missao: string;
-  responsabilidades: string;
-  requisitos: string;
   competencias: Competencia[];
 };
 
@@ -58,31 +49,6 @@ const SUGESTOES = [
 
 const botaoClaro =
   "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50 disabled:opacity-60";
-
-function Descricao({ cargo }: { cargo: Cargo }) {
-  const [state, action] = useActionState<PdiState, FormData>(salvarDescricaoDoCargo, {});
-  return (
-    <form action={action} className="space-y-3">
-      <input type="hidden" name="cargoId" value={cargo.id} />
-      <Field label="Missão do cargo" hint="Para que o cargo existe, em uma ou duas frases.">
-        <Textarea name="missao" rows={2} defaultValue={cargo.missao} />
-      </Field>
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Responsabilidades" hint="Uma por linha.">
-          <Textarea name="responsabilidades" rows={6} defaultValue={cargo.responsabilidades} />
-        </Field>
-        <Field label="Requisitos" hint="Formação, experiência, conhecimentos.">
-          <Textarea name="requisitos" rows={6} defaultValue={cargo.requisitos} />
-        </Field>
-      </div>
-      <FormError message={state.error} />
-      {state.ok ? <FormOk message="Descrição salva." /> : null}
-      <div className="flex justify-end">
-        <SubmitButton>Salvar descrição</SubmitButton>
-      </div>
-    </form>
-  );
-}
 
 function FormularioDeCompetencia({
   cargoId,
@@ -149,7 +115,7 @@ function FormularioDeCompetencia({
   );
 }
 
-function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
+export default function CargoCompetencias({ cargo, outros }: { cargo: CargoComCompetencias; outros: CargoComCompetencias[] }) {
   const [pending, startTransition] = useTransition();
   const [editando, setEditando] = useState<Partial<Competencia> | null | false>(false);
   const [origem, setOrigem] = useState("");
@@ -160,8 +126,8 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
     <div className={pending ? "opacity-60" : ""}>
       {cargo.competencias.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500">
-          Nenhuma competência ainda. Inclua as técnicas (o que o cargo precisa saber fazer) e as comportamentais (como
-          precisa agir).
+          Nenhuma competência ainda. Inclua as técnicas (o que o cargo precisa saber fazer), as comportamentais (como
+          precisa agir) e as organizacionais (os valores da empresa no dia a dia do cargo).
         </p>
       ) : (
         <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
@@ -170,7 +136,7 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-slate-800">{c.nome}</span>
-                  <Etiqueta tom={c.tipo === "TECNICA" ? "azul" : "neutro"}>{ROTULO_DO_TIPO[c.tipo]}</Etiqueta>
+                  <Etiqueta tom={c.tipo === "TECNICA" ? "azul" : c.tipo === "ORGANIZACIONAL" ? "bom" : "neutro"}>{ROTULO_DO_TIPO[c.tipo]}</Etiqueta>
                 </div>
                 {c.descricao ? <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{c.descricao}</p> : null}
               </div>
@@ -282,98 +248,6 @@ function Competencias({ cargo, outros }: { cargo: Cargo; outros: Cargo[] }) {
           </div>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-export default function PdiCargos({
-  companyId,
-  cargos,
-  selecionado,
-}: {
-  companyId: string;
-  cargos: Cargo[];
-  selecionado: string | null;
-}) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [novo, setNovo] = useState("");
-  const cargo = cargos.find((c) => c.id === selecionado) ?? cargos[0] ?? null;
-
-  return (
-    <div className="grid gap-3.5 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="space-y-2">
-        <nav className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          {cargos.map((c) => (
-            <Link
-              key={c.id}
-              href={`?aba=cargos&cargo=${c.id}`}
-              className={`flex items-center justify-between gap-2 border-l-2 px-2.5 py-1.5 text-mini transition ${
-                cargo?.id === c.id
-                  ? "border-brand-600 bg-brand-50/60 font-semibold text-brand-800"
-                  : "border-transparent text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <span className="truncate">{c.nome}</span>
-              <span
-                className={`shrink-0 text-micro ${c.competencias.length === 0 && c.pessoas > 0 ? "text-amber-700" : "text-slate-500"}`}
-                title={`${c.competencias.length} competência(s), ${c.pessoas} pessoa(s)`}
-              >
-                {c.competencias.length === 0 ? "sem descrição" : `${c.competencias.length} comp.`}
-              </span>
-            </Link>
-          ))}
-          {cargos.length === 0 ? <p className="px-3 py-2 text-sm text-slate-500">Nenhum cargo ainda.</p> : null}
-        </nav>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            startTransition(async () => {
-              const r = await criarCargo(companyId, novo);
-              if (r.error) avisar(r.error);
-              else {
-                setNovo("");
-                router.push(`?aba=cargos&cargo=${r.id}`);
-              }
-            });
-          }}
-          className="flex gap-1.5"
-        >
-          <input
-            value={novo}
-            onChange={(e) => setNovo(e.target.value)}
-            placeholder="Novo cargo"
-            className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1 text-sm outline-none focus:border-brand-500"
-          />
-          <button type="submit" disabled={pending} className={botaoClaro}>
-            +
-          </button>
-        </form>
-      </aside>
-
-      {cargo ? (
-        <div key={cargo.id} className="space-y-3.5">
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-base font-semibold text-slate-900">{cargo.nome}</h2>
-              <span className="text-xs text-slate-500">{cargo.pessoas} pessoa(s) neste cargo</span>
-            </div>
-            <Descricao cargo={cargo} />
-          </section>
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-semibold text-slate-900">Competências e nível esperado</h3>
-            <p className="mb-3 mt-0.5 text-xs text-slate-500">
-              A régua da avaliação. Escala: 1 não conhece · 2 conhece, precisa de ajuda · 3 faz sozinho · 4 faz com
-              excelência · 5 ensina os outros.
-            </p>
-            <Competencias cargo={cargo} outros={cargos.filter((c) => c.id !== cargo.id)} />
-          </section>
-        </div>
-      ) : (
-        <p className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
-          Crie o primeiro cargo ao lado.
-        </p>
-      )}
     </div>
   );
 }

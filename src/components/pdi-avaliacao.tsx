@@ -349,6 +349,7 @@ function Incluir({ avaliacaoId }: { avaliacaoId: string }) {
       <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="rounded-md border border-slate-300 px-2 py-1 text-sm">
         <option value="TECNICA">Técnica</option>
         <option value="COMPORTAMENTAL">Comportamental</option>
+        <option value="ORGANIZACIONAL">Organizacional</option>
       </select>
       <select
         value={esperado}

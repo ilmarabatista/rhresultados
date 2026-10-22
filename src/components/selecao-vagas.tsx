@@ -30,6 +30,9 @@ export type VagaNaLista = {
 
 type Opcao = { id: string; nome: string };
 
+/** Um cargo da lista da empresa, para a vaga puxar o roteiro de entrevista. */
+export type CargoParaVaga = { id: string; nome: string; empresaId: string; perguntas: number };
+
 const TOM: Record<string, "azul" | "atencao" | "neutro"> = {
   ABERTA: "azul",
   PAUSADA: "atencao",
@@ -49,15 +52,22 @@ function NovaVaga({
   empresas,
   empresaFixa,
   modelos,
+  cargos,
   fechar,
 }: {
   empresas: Opcao[];
   empresaFixa: string | null;
   modelos: { id: string; nome: string; etapas: number }[];
+  cargos: CargoParaVaga[];
   fechar: () => void;
 }) {
   const [state, action] = useActionState<SelecaoState, FormData>(criarVaga, {});
   const [modeloId, setModeloId] = useState(modelos[0]?.id ?? "");
+  const [empresaId, setEmpresaId] = useState(empresaFixa ?? "");
+  const [cargoId, setCargoId] = useState("");
+  const [titulo, setTitulo] = useState("");
+  const cargosDaEmpresa = cargos.filter((c) => c.empresaId === empresaId);
+  const cargo = cargosDaEmpresa.find((c) => c.id === cargoId);
 
   useEffect(() => {
     if (state.ok) fechar();
@@ -72,7 +82,15 @@ function NovaVaga({
         <div className="grid gap-2 sm:grid-cols-2">
           {empresaFixa ? null : (
             <Field label="Empresa">
-              <Select name="companyId" required defaultValue="">
+              <Select
+                name="companyId"
+                required
+                value={empresaId}
+                onChange={(e) => {
+                  setEmpresaId(e.target.value);
+                  setCargoId("");
+                }}
+              >
                 <option value="" disabled>
                   Escolha…
                 </option>
@@ -84,8 +102,43 @@ function NovaVaga({
               </Select>
             </Field>
           )}
-          <Field label="Cargo">
-            <Input name="title" required placeholder="Ex.: Recepcionista" />
+          {cargosDaEmpresa.length > 0 ? (
+            <Field
+              label="Cargo da empresa"
+              hint={
+                cargo
+                  ? cargo.perguntas > 0
+                    ? `${cargo.perguntas} pergunta(s) de entrevista vêm do cargo`
+                    : "o cargo ainda não tem roteiro de entrevista"
+                  : "escolha para trazer o roteiro de entrevista do cargo"
+              }
+            >
+              <Select
+                name="cargoId"
+                value={cargoId}
+                onChange={(e) => {
+                  setCargoId(e.target.value);
+                  const escolhido = cargosDaEmpresa.find((c) => c.id === e.target.value);
+                  if (escolhido) setTitulo(escolhido.nome);
+                }}
+              >
+                <option value="">Nenhum</option>
+                {cargosDaEmpresa.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+          <Field label="Cargo no anúncio">
+            <Input
+              name="title"
+              required
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ex.: Recepcionista"
+            />
           </Field>
           <Field
             label="Modelo de processo"
@@ -178,11 +231,13 @@ export default function SelecaoVagas({
   vagas,
   empresas,
   modelos,
+  cargos = [],
   empresaFixa = null,
 }: {
   vagas: VagaNaLista[];
   empresas: Opcao[];
   modelos: { id: string; nome: string; etapas: number }[];
+  cargos?: CargoParaVaga[];
   /** Na aba da empresa, a vaga já nasce dela e a coluna da empresa some. */
   empresaFixa?: string | null;
 }) {
@@ -195,7 +250,7 @@ export default function SelecaoVagas({
   return (
     <div className="space-y-3">
       {abrindo ? (
-        <NovaVaga empresas={empresas} empresaFixa={empresaFixa} modelos={modelos} fechar={() => setAbrindo(false)} />
+        <NovaVaga empresas={empresas} empresaFixa={empresaFixa} modelos={modelos} cargos={cargos} fechar={() => setAbrindo(false)} />
       ) : (
         <div className="flex items-center justify-between">
           <button type="button" className={botao} onClick={() => setAbrindo(true)}>

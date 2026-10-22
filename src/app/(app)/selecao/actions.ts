@@ -168,6 +168,13 @@ export async function criarVaga(_: SelecaoState, formData: FormData): Promise<Se
   const empresa = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true, name: true } });
   if (!empresa) return { error: "Empresa não encontrada." };
 
+  // O cargo da lista traz o roteiro de entrevista; daqui em diante a vaga anda sozinha.
+  const cargoId = String(formData.get("cargoId") ?? "");
+  const cargo = cargoId
+    ? await prisma.cargo.findFirst({ where: { id: cargoId, companyId }, select: { id: true, perguntasDaEntrevista: true } })
+    : null;
+  const perguntas = cargo ? lerPerguntas(cargo.perguntasDaEntrevista) : [];
+
   const modeloId = String(formData.get("modeloId") ?? "");
   const etapas = modeloId
     ? await prisma.etapaDoModelo.findMany({ where: { modeloId }, orderBy: { ordem: "asc" }, select: { nome: true, tipo: true, prazoDias: true } })
@@ -177,6 +184,8 @@ export async function criarVaga(_: SelecaoState, formData: FormData): Promise<Se
     data: {
       companyId,
       title,
+      cargoId: cargo?.id ?? null,
+      ...(perguntas.length ? { perguntasDaEntrevista: perguntas } : {}),
       notes: texto(formData.get("notes")) || null,
       etapas: { create: etapas.map((e, i) => ({ nome: e.nome, tipo: e.tipo, prazoDias: e.prazoDias, ordem: i })) },
     },

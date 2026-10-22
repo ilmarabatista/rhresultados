@@ -42,26 +42,7 @@ function dia(valor: FormDataEntryValue | string | null | undefined): Date | null
   return diaValido(v) ? dayKeyToDate(v) : null;
 }
 
-// --------------------------------------------------------- descrição do cargo
-
-export async function salvarDescricaoDoCargo(_prev: PdiState, formData: FormData): Promise<PdiState> {
-  const session = await requireSession();
-  const cargoId = String(formData.get("cargoId") ?? "");
-  const cargo = await prisma.cargo.findUnique({ where: { id: cargoId }, select: { companyId: true, nome: true } });
-  if (!cargo) return { error: "Cargo não encontrado." };
-
-  await prisma.cargo.update({
-    where: { id: cargoId },
-    data: {
-      missao: texto(formData.get("missao")),
-      responsabilidades: texto(formData.get("responsabilidades"), 8000),
-      requisitos: texto(formData.get("requisitos")),
-    },
-  });
-  await log(cargo.companyId, session.userId, "ATUALIZOU", cargoId, `Atualizou a descrição do cargo ${cargo.nome}.`);
-  refresh(cargo.companyId);
-  return { ok: true };
-}
+// ------------------------------------------------------- competências do cargo
 
 export async function salvarCompetencia(_prev: PdiState, formData: FormData): Promise<PdiState> {
   const session = await requireSession();
