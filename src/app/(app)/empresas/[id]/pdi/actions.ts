@@ -332,6 +332,16 @@ export async function criarPlano(_prev: PdiState, formData: FormData): Promise<P
   });
 
   await log(pessoa.companyId, session.userId, "CRIOU", employeeId, `Criou o PDI "${title}" de ${pessoa.name}, com ${notas.length} meta(s).`);
+
+  // A primeira conversa de acompanhamento já nasce na agenda.
+  const proxima = String(formData.get("proximaDia") ?? "").trim();
+  if (proxima) {
+    const r = await acertarProximaConversa(plano.id, proxima, String(formData.get("proximaHora") ?? ""), session.userId);
+    if (r.error) {
+      refresh(pessoa.companyId);
+      return { ok: true, id: plano.id, error: `O PDI foi criado, mas a conversa não foi marcada: ${r.error}` };
+    }
+  }
   refresh(pessoa.companyId);
   return { ok: true, id: plano.id };
 }

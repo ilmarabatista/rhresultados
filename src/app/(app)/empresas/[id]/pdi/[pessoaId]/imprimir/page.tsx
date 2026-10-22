@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { formatFullDate } from "@/lib/dates";
+import { dateToDayKey, dayKeyToDate, formatFullDate } from "@/lib/dates";
 import {
   gap,
   lerStatusDaMeta,
@@ -14,11 +14,15 @@ import {
   ROTULO_DA_META,
 } from "@/lib/pdi";
 import PrintButton from "@/components/print-button";
+import { calendarioDoPdi } from "@/lib/autoavaliacao";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI para imprimir — RH Resultados" };
 
-/** O PDI em uma folha: o diagnóstico, as metas SMART com as ações e as conversas. */
+/**
+ * O PDI em uma folha, para a conversa 1 a 1: o diagnóstico, as metas SMART com
+ * as ações, os encontros de acompanhamento dos 3 meses e as assinaturas.
+ */
 export default async function ImprimirPdiPage({
   params,
   searchParams,
@@ -60,6 +64,7 @@ export default async function ImprimirPdiPage({
   const notas = plano.avaliacao?.notas ?? [];
   const resumo = resumoDaAvaliacao(notas);
   const progresso = progressoDoPlano(plano.metas);
+  const encontros = plano.startDate ? calendarioDoPdi(dateToDayKey(plano.startDate)).conversas : [];
 
   return (
     <main className="mx-auto max-w-4xl space-y-5 bg-white p-6 text-slate-800 print:p-0">
@@ -72,7 +77,7 @@ export default async function ImprimirPdiPage({
 
       <header className="border-b-2 border-brand-900 pb-3">
         <p className="text-micro uppercase tracking-wider text-slate-500">
-          Plano de Desenvolvimento Individual · {pessoa.company.name}
+          Plano de Desenvolvimento Individual · conversa 1 a 1 · {pessoa.company.name}
         </p>
         <h1 className="mt-1 text-xl font-semibold">{pessoa.name}</h1>
         <p className="text-sm text-slate-600">
@@ -198,12 +203,40 @@ export default async function ImprimirPdiPage({
         </section>
       ) : null}
 
+      {encontros.length > 0 && plano.status === "EM_ANDAMENTO" ? (
+        <section className="break-inside-avoid">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-brand-800">Encontros de acompanhamento</h2>
+          <table className="w-full border-collapse text-mini">
+            <tbody>
+              {encontros.map((d, i) => (
+                <tr key={d}>
+                  <td className="w-40 border border-slate-200 px-2 py-2 font-semibold">
+                    {i + 1}º mês · {formatFullDate(dayKeyToDate(d))}
+                  </td>
+                  <td className="border border-slate-200 px-2 py-2 text-slate-400">{i === 2 ? "Fechamento do plano" : "Como está cada meta"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
+
       {plano.balanco ? (
         <section>
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-brand-800">Balanço</h2>
           <p className="whitespace-pre-wrap text-mini">{plano.balanco}</p>
         </section>
       ) : null}
+      <section className="break-inside-avoid pt-8">
+        <div className="grid gap-8 text-mini sm:grid-cols-2">
+          {[pessoa.name, "Liderança / RH"].map((quem) => (
+            <div key={quem} className="text-center">
+              <div className="border-t border-slate-400 pt-1">{quem}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-center text-micro text-slate-500">Data da conversa: ____/____/________</p>
+      </section>
     </main>
   );
 }

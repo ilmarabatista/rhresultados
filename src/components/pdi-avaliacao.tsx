@@ -29,6 +29,7 @@ import {
   ROTULO_DO_TIPO,
   lerTipoDeCompetencia,
 } from "@/lib/pdi";
+import { calendarioDoPdi } from "@/lib/autoavaliacao";
 import { Field, FormError, Input, SubmitButton, Textarea } from "./form";
 import { Aviso, Etiqueta, Numeros } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
@@ -373,6 +374,16 @@ function Incluir({ avaliacaoId }: { avaliacaoId: string }) {
   );
 }
 
+/** Na avaliação que veio da autoavaliação, cada resposta vem depois da pergunta: no objetivo fica só a resposta. */
+function semPerguntas(texto: string) {
+  return texto
+    .split("\n")
+    .filter((l) => !l.trim().endsWith("?"))
+    .join("\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
 function NovoPlano({
   employeeId,
   nome,
@@ -388,18 +399,16 @@ function NovoPlano({
 }) {
   const [state, action] = useActionState<PdiState, FormData>(criarPlano, {});
   const gaps = gapsPrioritarios(avaliacao.notas);
-  const seisMeses = (() => {
-    const d = new Date(`${hoje}T00:00:00Z`);
-    d.setUTCMonth(d.getUTCMonth() + 6);
-    return d.toISOString().slice(0, 10);
-  })();
+  const [inicio, setInicio] = useState(hoje);
+  const calendario = calendarioDoPdi(inicio || hoje);
 
   useEffect(() => {
     if (state.ok) {
+      if (state.error) avisar(state.error);
       onClose();
       document.getElementById("plano")?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [state.ok, onClose]);
+  }, [state.ok, state.error, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
@@ -417,14 +426,20 @@ function NovoPlano({
           <Input name="title" required defaultValue={`PDI ${nome.split(/\s+/)[0]} — ${hoje.slice(0, 4)}`} />
         </Field>
         <Field label="Objetivo geral" hint="Onde a pessoa quer chegar com este plano.">
-          <Textarea name="objective" rows={2} defaultValue={avaliacao.carreira || avaliacao.querDesenvolver} />
+          <Textarea name="objective" rows={2} defaultValue={semPerguntas(avaliacao.carreira || avaliacao.querDesenvolver)} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Início">
-            <Input name="startDate" type="date" defaultValue={hoje} />
+            <Input name="startDate" type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} />
           </Field>
-          <Field label="Fim" hint="O prazo das metas, se não mudar.">
-            <Input name="endDate" type="date" defaultValue={seisMeses} />
+          <Field label="Fim" hint="3 meses. É o prazo das metas, se não mudar.">
+            <Input name="endDate" type="date" key={`fim-${calendario.fim}`} defaultValue={calendario.fim} />
+          </Field>
+          <Field label="Primeira conversa de acompanhamento" hint="Vai para a agenda. As próximas: 60 e 90 dias.">
+            <Input name="proximaDia" type="date" key={`conversa-${calendario.conversas[0]}`} defaultValue={calendario.conversas[0]} />
+          </Field>
+          <Field label="Hora">
+            <Input name="proximaHora" type="time" defaultValue="09:00" />
           </Field>
         </div>
         <fieldset>
@@ -456,7 +471,7 @@ function NovoPlano({
             <p className="mt-1 text-micro text-slate-500">Dica: de 2 a 4 metas por plano. Mais que isso dispersa.</p>
           ) : null}
         </fieldset>
-        <FormError message={state.error} />
+        <FormError message={state.ok ? undefined : state.error} />
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className={botaoClaro}>
             Cancelar
@@ -531,7 +546,7 @@ export default function PdiAvaliacao({
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-900">
-            <span className="mr-1.5 text-brand-600">2</span>Avaliação dos gaps
+            <span className="mr-1.5 text-brand-600">3</span>Avaliação dos gaps
           </h2>
           <p className="mt-0.5 max-w-2xl text-xs text-slate-500">
             Feita junto com a pessoa. Primeiro ela dá a nota dela, depois você dá a sua, e conversando chegam ao nível
@@ -541,13 +556,15 @@ export default function PdiAvaliacao({
         {nova}
       </div>
 
-      {!temCargo ? (
+      {avaliacoes.length > 0 ? null : !temCargo ? (
         <Aviso rotulo="Falta o cargo">
-          A pessoa está sem cargo. Escolha o cargo no cadastro dela (ficha da pessoa, Editar cadastro).
+          A pessoa está sem cargo. Escolha o cargo no cadastro dela (ficha da pessoa, Editar cadastro), ou monte a
+          avaliação a partir da autoavaliação, no passo 2.
         </Aviso>
       ) : !cargoDescrito ? (
         <Aviso rotulo="Falta a descrição do cargo">
-          O cargo ainda não tem competências. Descreva o cargo no passo 1 para poder avaliar.
+          O cargo ainda não tem competências. Descreva o cargo no passo 1, ou monte a avaliação a partir da
+          autoavaliação, no passo 2.
         </Aviso>
       ) : null}
 
@@ -657,7 +674,7 @@ export default function PdiAvaliacao({
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-3">
             {temPlanoAtivo ? (
               <span className="text-xs text-slate-500">
-                Já existe um PDI em andamento. Para incluir um gap nele, crie uma meta no passo 3.
+                Já existe um PDI em andamento. Para incluir um gap nele, crie uma meta no passo 4.
               </span>
             ) : null}
             <button

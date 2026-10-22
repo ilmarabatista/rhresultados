@@ -121,6 +121,7 @@ model Company {
   testesEnviados   TesteEnviado[]
   pesquisasDeClima PesquisaDeClima[]
   perguntasDeClima PerguntaDeClima[]
+  modelosDeAutoavaliacao ModeloDeAutoavaliacao[]
 
   @@index([name])
 }
@@ -404,6 +405,7 @@ model Employee {
   plans       DevelopmentPlan[]
   assessments SkillAssessment[]
   avaliacoes  AvaliacaoDeCompetencias[]
+  autoavaliacoes Autoavaliacao[]
   exams       HealthExam[]
 
   @@index([companyId, name])
@@ -662,6 +664,9 @@ model AvaliacaoDeCompetencias {
   notas  NotaDeCompetencia[]
   planos DevelopmentPlan[]
 
+  /// A autoavaliação por link de onde a avaliação saiu, quando veio de uma.
+  autoavaliacao Autoavaliacao?
+
   @@index([employeeId, data])
   @@index([cargoId])
 }
@@ -691,6 +696,82 @@ model NotaDeCompetencia {
 
   @@index([avaliacaoId])
   @@index([competenciaId])
+}
+
+/// Um modelo de autoavaliação da empresa: a ficha de uma função, com as
+/// perguntas que a empresa monta. É respondido por link e vira a avaliação
+/// do PDI.
+model ModeloDeAutoavaliacao {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// A função, como a empresa chama: "Recepção", "Auxiliar de Saúde Bucal".
+  nome       String
+  /// O cargo da lista da empresa, quando há: sugere o modelo para quem o ocupa.
+  cargoId    String?
+  cargo      Cargo?  @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+  /// O texto de abertura que a pessoa lê antes de responder.
+  instrucoes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  perguntas PerguntaDeAutoavaliacao[]
+  enviadas  Autoavaliacao[]
+
+  @@index([companyId])
+  @@index([cargoId])
+}
+
+/// Uma pergunta do modelo. O tipo decide a seção e as opções de resposta (em
+/// src/lib/autoavaliacao.ts).
+model PerguntaDeAutoavaliacao {
+  id       String                @id @default(cuid())
+  modeloId String
+  modelo   ModeloDeAutoavaliacao @relation(fields: [modeloId], references: [id], onDelete: Cascade)
+
+  /// TECNICA, COMPORTAMENTAL, TAREFA, CONDUTA ou ABERTA.
+  tipo    String
+  texto   String  @db.Text
+  /// Só em ABERTA: o campo da avaliação para onde a resposta vai.
+  destino String?
+  ordem   Int     @default(0)
+
+  @@index([modeloId])
+}
+
+/// A autoavaliação mandada por link a uma pessoa. Como no questionário de
+/// cargo, o link é a credencial. As perguntas são copiadas no envio: mexer no
+/// modelo depois não muda o que a pessoa recebeu.
+model Autoavaliacao {
+  id         String                 @id @default(cuid())
+  token      String                 @unique
+  employeeId String
+  employee   Employee               @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  modeloId   String?
+  modelo     ModeloDeAutoavaliacao? @relation(fields: [modeloId], references: [id], onDelete: SetNull)
+
+  /// O nome do modelo e as perguntas no dia do envio.
+  titulo     String
+  instrucoes String? @db.Text
+  perguntas  Json
+  prazo      DateTime?
+
+  /// ENVIADO ou RESPONDIDO.
+  status    String @default("ENVIADO")
+  respostas Json?
+
+  /// A avaliação do PDI montada a partir das respostas.
+  avaliacaoId String?                  @unique
+  avaliacao   AvaliacaoDeCompetencias? @relation(fields: [avaliacaoId], references: [id], onDelete: SetNull)
+
+  enviadoPor   String?
+  enviadoEm    DateTime  @default(now())
+  respondidoEm DateTime?
+
+  @@index([employeeId])
+  @@index([modeloId])
 }
 
 /// Autoavaliação técnica respondida pelo colaborador. É a base do plano de
@@ -1442,6 +1523,7 @@ model Cargo {
   treinamentos  TreinamentoDoCargo[]
   competencias  CompetenciaDoCargo[]
   avaliacoes    AvaliacaoDeCompetencias[]
+  modelosDeAutoavaliacao ModeloDeAutoavaliacao[]
 
   @@unique([companyId, nome])
 }

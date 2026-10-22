@@ -10,15 +10,10 @@ import {
   situacaoDaConversa,
 } from "@/lib/pdi";
 import { Aviso, Etiqueta, Numeros, Tabela, Vazio } from "@/components/ui";
+import PdiAbas from "@/components/pdi-abas";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI — RH Resultados" };
-
-/** As descrições de cargo moram na aba Cargos; aqui fica só o atalho. */
-const ABAS = [
-  { slug: "equipe", rotulo: "Equipe" },
-  { slug: "cargos", rotulo: "Descrições de cargo" },
-] as const;
 
 /**
  * O PDI da empresa: quem já tem plano, onde cada um está e quando é a próxima
@@ -36,7 +31,6 @@ export default async function PdiPage({
   const { id } = await params;
   const sp = await searchParams;
   if (sp.aba === "cargos") redirect(`/empresas/${id}/cargos${sp.cargo ? `?cargo=${encodeURIComponent(sp.cargo)}` : ""}`);
-  const aba = "equipe";
   const hoje = todayKey();
 
   const [pessoas, cargos] = await Promise.all([
@@ -124,26 +118,7 @@ export default async function PdiPage({
         </p>
       </div>
 
-      <nav className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
-        {ABAS.map((a) => (
-          <Link
-            key={a.slug}
-            href={a.slug === "cargos" ? `/empresas/${id}/cargos` : `?aba=${a.slug}`}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm transition ${
-              aba === a.slug
-                ? "border-brand-600 font-semibold text-brand-800"
-                : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {a.rotulo}
-            {a.slug === "cargos" && cargosSemDescricao > 0 ? (
-              <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-micro font-medium text-amber-800">
-                {cargosSemDescricao}
-              </span>
-            ) : null}
-          </Link>
-        ))}
-      </nav>
+      <PdiAbas companyId={id} atual="equipe" cargosSemDescricao={cargosSemDescricao} />
 
         <div className="space-y-3">
           <Numeros

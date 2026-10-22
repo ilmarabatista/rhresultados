@@ -271,7 +271,7 @@ export default function PdiAcompanhamento({
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-900">
-            <span className="mr-1.5 text-brand-600">4</span>Acompanhamento
+            <span className="mr-1.5 text-brand-600">5</span>Acompanhamento
           </h2>
           <p className="mt-0.5 max-w-2xl text-xs text-slate-500">
             Uma conversa por mês costuma bastar. Em cada uma, registre o que avançou e onde cada meta está — o
@@ -295,7 +295,7 @@ export default function PdiAcompanhamento({
         <div className="space-y-3">
           {aberto ? <ProximaConversa planId={planId} dia={proximaDia} hora={proximaHora} situacao={situacao} /> : null}
           {aberto && metas.length === 0 ? (
-            <Aviso>O plano ainda não tem metas: crie as metas no passo 3 antes da primeira conversa.</Aviso>
+            <Aviso>O plano ainda não tem metas: crie as metas no passo 4 antes da primeira conversa.</Aviso>
           ) : null}
           {registrando ? (
             <NovaConversa

@@ -8,6 +8,9 @@ import { execucaoDasAcoes, gap, nivelFinal, situacaoDaConversa } from "@/lib/pdi
 import PdiAvaliacao from "@/components/pdi-avaliacao";
 import PdiPlano from "@/components/pdi-plano";
 import PdiAcompanhamento from "@/components/pdi-acompanhamento";
+import PdiAutoavaliacao from "@/components/pdi-autoavaliacao";
+import { lerPerguntas, lerRespostas } from "@/lib/autoavaliacao";
+import { semAcento } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI — RH Resultados" };
@@ -15,8 +18,9 @@ export const metadata = { title: "PDI — RH Resultados" };
 const dia = (d: Date | null) => (d ? dateToDayKey(d) : "");
 
 /**
- * O PDI de uma pessoa, nos quatro passos: a descrição do cargo, a avaliação
- * dos gaps, o plano com metas SMART e o acompanhamento.
+ * O PDI de uma pessoa, nos cinco passos: a descrição do cargo, a
+ * autoavaliação que a pessoa responde pelo link, a avaliação dos gaps, o plano
+ * com metas SMART e o acompanhamento.
  */
 export default async function PdiDaPessoaPage({
   params,
@@ -30,7 +34,7 @@ export default async function PdiDaPessoaPage({
   const sp = await searchParams;
   const hoje = todayKey();
 
-  const [pessoa, treinamentos, presencas] = await Promise.all([
+  const [pessoa, treinamentos, presencas, modelos] = await Promise.all([
     prisma.employee.findFirst({
       where: { id: pessoaId, companyId: id },
       select: {
@@ -38,6 +42,7 @@ export default async function PdiDaPessoaPage({
         name: true,
         role: true,
         department: true,
+        autoavaliacoes: { orderBy: { enviadoEm: "desc" } },
         cargo: {
           select: {
             id: true,
@@ -83,6 +88,11 @@ export default async function PdiDaPessoaPage({
     prisma.meetingParticipant.findMany({
       where: { employeeId: pessoaId, present: true, meeting: { companyId: id, status: "REALIZADA", turma: { isNot: null } } },
       select: { meeting: { select: { date: true, turma: { select: { treinamentoId: true } } } } },
+    }),
+    prisma.modeloDeAutoavaliacao.findMany({
+      where: { companyId: id },
+      orderBy: { nome: "asc" },
+      select: { id: true, nome: true, cargoId: true, _count: { select: { perguntas: true } } },
     }),
   ]);
   if (!pessoa) notFound();
@@ -189,11 +199,35 @@ export default async function PdiDaPessoaPage({
     };
   });
 
+  const autoavaliacoes = pessoa.autoavaliacoes.map((a) => {
+    const perguntas = lerPerguntas(a.perguntas);
+    return {
+      id: a.id,
+      token: a.token,
+      titulo: a.titulo,
+      status: a.status,
+      enviadoEm: formatFullDate(a.enviadoEm),
+      respondidoEm: a.respondidoEm ? formatFullDate(a.respondidoEm) : null,
+      prazo: a.prazo ? formatFullDate(a.prazo) : null,
+      atrasado: a.status === "ENVIADO" && a.prazo != null && dateToDayKey(a.prazo) < hoje,
+      avaliacaoId: a.avaliacaoId,
+      perguntas,
+      respostas: lerRespostas(perguntas, a.respostas),
+    };
+  });
+  // O modelo sugerido: o do cargo da pessoa; senão, o que tem o nome do cargo.
+  const chave = (t: string | null | undefined) => semAcento(t ?? "").trim().toLowerCase();
+  const sugerido =
+    modelos.find((m) => cargo && m.cargoId === cargo.id) ??
+    modelos.find((m) => pessoa.role && chave(m.nome) === chave(pessoa.role)) ??
+    modelos.find((m) => m._count.perguntas > 0);
+
   const passos = [
     { n: 1, rotulo: "Cargo", href: "#cargo", feito: (cargo?.competencias.length ?? 0) > 0 },
-    { n: 2, rotulo: "Avaliação", href: "#avaliacao", feito: avaliacoes.length > 0 },
-    { n: 3, rotulo: "Plano", href: "#plano", feito: Boolean(plano && plano.metas.length > 0) },
-    { n: 4, rotulo: "Acompanhamento", href: "#acompanhamento", feito: Boolean(plano && plano.conversas.length > 0) },
+    { n: 2, rotulo: "Autoavaliação", href: "#autoavaliacao", feito: autoavaliacoes.some((a) => a.status === "RESPONDIDO") },
+    { n: 3, rotulo: "Avaliação", href: "#avaliacao", feito: avaliacoes.length > 0 },
+    { n: 4, rotulo: "Plano", href: "#plano", feito: Boolean(plano && plano.metas.length > 0) },
+    { n: 5, rotulo: "Acompanhamento", href: "#acompanhamento", feito: Boolean(plano && plano.conversas.length > 0) },
   ];
 
   return (
@@ -209,7 +243,7 @@ export default async function PdiDaPessoaPage({
           href={`/empresas/${id}/pdi/${pessoa.id}/imprimir${plano ? `?plano=${plano.id}` : ""}`}
           className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 text-slate-700 transition hover:bg-slate-50"
         >
-          Imprimir PDI
+          PDI para a conversa 1 a 1
         </Link>
       </div>
 
@@ -308,6 +342,15 @@ export default async function PdiDaPessoaPage({
           </details>
         )}
       </section>
+
+      <PdiAutoavaliacao
+        companyId={id}
+        employeeId={pessoa.id}
+        nome={pessoa.name}
+        modelos={modelos.map((m) => ({ id: m.id, nome: m.nome, perguntas: m._count.perguntas }))}
+        sugerido={sugerido?.id ?? ""}
+        autoavaliacoes={autoavaliacoes}
+      />
 
       <PdiAvaliacao
         companyId={id}
