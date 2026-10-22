@@ -9,7 +9,7 @@ import { Etiqueta, Painel, TituloDaSecao, Vazio } from "@/components/ui";
 import PrintButton from "@/components/print-button";
 import FichaDoCandidato from "@/components/ficha-do-candidato";
 import EntrevistaDoCandidato from "@/components/entrevista-do-candidato";
-import EnviarFicha from "@/components/enviar-ficha";
+import EnviarFicha, { PreencherFicha } from "@/components/enviar-ficha";
 import { ResultadoDoDisc, ResultadoDoTesteCadastrado } from "@/components/resultado-teste";
 import CurriculoDoCandidato from "@/components/curriculo-do-candidato";
 import ParecerFinal from "@/components/resultado-do-candidato";
@@ -105,14 +105,17 @@ export default async function PastaDoCandidatoPage({
         <Vazio
           acao={
             c.outcome === "EM_ANDAMENTO" ? (
-              <EnviarFicha
-                candidatoId={c.id}
-                nome={c.name}
-                telefone={c.phone}
-                vaga={vaga.title}
-                enviada={Boolean(c.applicationSentAt)}
-                className={`${botao} no-print`}
-              />
+              <span className="flex gap-1">
+                <PreencherFicha candidatoId={c.id} className={`${botao} no-print`} />
+                <EnviarFicha
+                  candidatoId={c.id}
+                  nome={c.name}
+                  telefone={c.phone}
+                  vaga={vaga.title}
+                  enviada={Boolean(c.applicationSentAt)}
+                  className={`${botao} no-print`}
+                />
+              </span>
             ) : null
           }
         >
