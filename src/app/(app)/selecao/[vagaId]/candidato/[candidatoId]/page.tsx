@@ -12,6 +12,7 @@ import EntrevistaDoCandidato from "@/components/entrevista-do-candidato";
 import EnviarFicha, { PreencherFicha } from "@/components/enviar-ficha";
 import { ResultadoDoDisc, ResultadoDoTesteCadastrado } from "@/components/resultado-teste";
 import CurriculoDoCandidato from "@/components/curriculo-do-candidato";
+import PaginasDoCurriculo from "@/components/paginas-do-curriculo";
 import ParecerFinal from "@/components/resultado-do-candidato";
 import { BaixarPastaPdf, ImprimirAoAbrir } from "@/components/baixar-pasta-pdf";
 
@@ -88,8 +89,8 @@ export default async function PastaDoCandidatoPage({
       {aba === "tudo" ? <h2 className="text-sm font-semibold text-brand-800">Currículo</h2> : null}
       <Painel>
         <CurriculoDoCandidato candidatoId={c.id} arquivos={c.curriculos} />
-        {c.curriculos.length ? <p className="mt-1 hidden text-micro text-slate-500 print:block">O currículo é um PDF à parte, anexado no sistema.</p> : null}
       </Painel>
+      {aba === "tudo" ? <PaginasDoCurriculo arquivos={c.curriculos} /> : null}
     </section>
   );
 
