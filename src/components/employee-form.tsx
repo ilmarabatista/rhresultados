@@ -6,6 +6,8 @@ import {
   type EquipeState,
 } from "@/app/(app)/empresas/[id]/equipe/actions";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
+import { linkDoWhatsApp, mensagemDoLink, telefoneDoWhatsApp } from "@/lib/autoavaliacao";
+import { copiarLink } from "./autoavaliacao-modelos";
 
 export type ColaboradorDados = {
   id: string;
@@ -44,11 +46,14 @@ export default function EmployeeForm({
   );
 
   useEffect(() => {
-    if (state.ok) onClose();
-  }, [state.ok, onClose]);
+    // Com o link da autoavaliação pronto, a janela fica aberta para mandar.
+    if (state.ok && !state.autoavaliacao) onClose();
+  }, [state, onClose]);
 
   // Sem cargos na lista, o campo já abre para escrever o primeiro.
   const [cargoNovo, setCargoNovo] = useState(cargos.length === 0);
+
+  if (state.ok && state.autoavaliacao) return <LinkPronto {...state.autoavaliacao} onClose={onClose} />;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
@@ -208,6 +213,59 @@ export default function EmployeeForm({
             </SubmitButton>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function LinkPronto({
+  token,
+  titulo,
+  nome,
+  telefone,
+  onClose,
+}: {
+  token: string;
+  titulo: string;
+  nome: string;
+  telefone: string | null;
+  onClose: () => void;
+}) {
+  const link = `${window.location.origin}/autoavaliacao/${token}`;
+  const temCelular = Boolean(telefoneDoWhatsApp(telefone));
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
+      <div className="my-8 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+        <h3 className="text-sm font-semibold text-slate-900">Cadastro salvo</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          O link da autoavaliação de {nome.split(/\s+/)[0]} já está pronto, com o modelo {titulo}. Mande agora ou depois,
+          em PDI &gt; Autoavaliações.
+        </p>
+        <p className="mt-3 truncate rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">{link}</p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            onClick={() => copiarLink(token)}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+          >
+            Copiar link
+          </button>
+          <a
+            href={linkDoWhatsApp(telefone, mensagemDoLink(nome, link))}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700"
+          >
+            {temCelular ? "Mandar no WhatsApp" : "Mandar no WhatsApp (escolher contato)"}
+          </a>
+        </div>
       </div>
     </div>
   );

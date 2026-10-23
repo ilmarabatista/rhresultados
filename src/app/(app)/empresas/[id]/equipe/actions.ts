@@ -6,8 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { cargoDoCadastro, gerarIntegracaoDe } from "@/lib/treinamentos-dados";
+import { gerarLinkDaFuncao } from "@/lib/autoavaliacao-envio";
 
-export type EquipeState = { error?: string; ok?: boolean };
+export type EquipeState = {
+  error?: string;
+  ok?: boolean;
+  /** O link da autoavaliação que nasceu com o cadastro, para mandar na hora. */
+  autoavaliacao?: { token: string; titulo: string; nome: string; telefone: string | null };
+};
 
 function refresh(companyId: string) {
   revalidatePath(`/empresas/${companyId}`, "layout");
@@ -97,10 +103,12 @@ export async function saveEmployee(
   const cargo = await cargoDoCadastro(companyId, cargoId ?? null, novoCargo ?? null);
   const dados = { ...resto, cargoId: cargo?.id ?? null, role: cargo?.nome ?? null };
 
+  let pessoaId: string;
   if (employeeId) {
     // Só atualiza quem é desta empresa.
     const { count } = await prisma.employee.updateMany({ where: { id: employeeId, companyId }, data: dados });
     if (count === 0) return { error: "Colaborador não encontrado nesta empresa." };
+    pessoaId = employeeId;
     await log(
       companyId,
       session.userId,
@@ -115,6 +123,7 @@ export async function saveEmployee(
     });
     // Toda pessoa nova na equipe já nasce com o checklist de integração.
     await gerarIntegracaoDe(criado.id, companyId);
+    pessoaId = criado.id;
     await log(
       companyId,
       session.userId,
@@ -124,8 +133,19 @@ export async function saveEmployee(
     );
   }
 
+  // Com a função preenchida e o modelo dela pronto, a autoavaliação do PDI já
+  // sai com o cadastro (só para quem ainda não tem link nenhum).
+  let autoavaliacao: EquipeState["autoavaliacao"];
+  if (dados.status !== "DESLIGADO" && dados.cargoId) {
+    const link = await gerarLinkDaFuncao(pessoaId, session.userId);
+    if (link) {
+      autoavaliacao = { ...link, nome: dados.name, telefone: dados.phone ?? null };
+      await log(companyId, session.userId, "CRIOU", pessoaId, `Gerou o link da autoavaliação (${link.titulo}) de ${dados.name}.`);
+    }
+  }
+
   refresh(companyId);
-  return { ok: true };
+  return { ok: true, autoavaliacao };
 }
 
 export async function deleteEmployee(employeeId: string) {
