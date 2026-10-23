@@ -14,7 +14,7 @@ import { Field, FormError, Input, Select, SubmitButton } from "./form";
 import { Etiqueta, Tabela, Vazio } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
 
-/** Os modelos de autoavaliação da empresa e os links já mandados. */
+/** Os modelos de autoavaliação da empresa: um por função. */
 
 type ModeloNaLista = {
   id: string;
@@ -101,12 +101,10 @@ export default function AutoavaliacaoModelos({
   companyId,
   cargos,
   modelos,
-  enviadas,
 }: {
   companyId: string;
   cargos: { id: string; nome: string }[];
   modelos: ModeloNaLista[];
-  enviadas: EnviadaNaLista[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -180,41 +178,6 @@ export default function AutoavaliacaoModelos({
         </Tabela>
       )}
 
-      <Tabela titulo="Links mandados" direita={`${enviadas.length}`}>
-        {enviadas.length === 0 ? (
-          <p className="px-3 py-4 text-sm text-slate-500">
-            Nenhum ainda. Para mandar, abra o PDI da pessoa (aba Equipe) e gere o link no passo Autoavaliação.
-          </p>
-        ) : (
-          enviadas.map((e) => (
-            <div
-              key={e.id}
-              className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-100 px-3 py-2 last:border-b-0 even:bg-slate-50/60"
-            >
-              <div className="min-w-[12rem] flex-1">
-                <Link href={`/empresas/${companyId}/pdi/${e.pessoaId}#autoavaliacao`} className="text-sm font-medium text-slate-800 hover:text-brand-700">
-                  {e.pessoa}
-                </Link>
-                <span className="block text-micro text-slate-500">
-                  {e.titulo} · enviado em {e.enviadoEm}
-                  {e.prazo ? ` · prazo ${e.prazo}` : ""}
-                  {e.respondidoEm ? ` · respondido em ${e.respondidoEm}` : ""}
-                </span>
-              </div>
-              <SituacaoDoEnvio e={e} />
-              {e.status === "RESPONDIDO" ? (
-                <Link href={`/empresas/${companyId}/pdi/${e.pessoaId}#autoavaliacao`} className={botaoClaro}>
-                  Ver no PDI
-                </Link>
-              ) : (
-                <button type="button" className={botaoClaro} onClick={() => copiarLink(e.token)}>
-                  <Copy size={13} /> Copiar link
-                </button>
-              )}
-            </div>
-          ))
-        )}
-      </Tabela>
     </div>
   );
 }
