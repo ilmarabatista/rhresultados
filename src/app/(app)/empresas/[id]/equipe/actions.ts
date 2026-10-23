@@ -148,6 +148,39 @@ export async function saveEmployee(
   return { ok: true, autoavaliacao };
 }
 
+/**
+ * Desativar tira a pessoa do PDI, da autoavaliação e das listas da equipe: ela
+ * fica só na aba Desativados, com o histórico guardado. No banco é a situação
+ * DESLIGADO; a data de desligamento, se vazia, fica com o dia de hoje.
+ */
+export async function definirAtivo(employeeId: string, ativo: boolean) {
+  const session = await requireSession();
+
+  const pessoa = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: { companyId: true, name: true, terminatedAt: true },
+  });
+  if (!pessoa) return;
+
+  const hoje = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: ativo
+      ? { status: "ATIVO", terminatedAt: null }
+      : { status: "DESLIGADO", terminatedAt: pessoa.terminatedAt ?? hoje },
+  });
+
+  await log(
+    pessoa.companyId,
+    session.userId,
+    "ATUALIZOU",
+    employeeId,
+    ativo ? `Reativou ${pessoa.name}.` : `Desativou ${pessoa.name}.`,
+  );
+
+  refresh(pessoa.companyId);
+}
+
 export async function deleteEmployee(employeeId: string) {
   const session = await requireSession();
 

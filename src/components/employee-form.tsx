@@ -52,6 +52,7 @@ export default function EmployeeForm({
 
   // Sem cargos na lista, o campo já abre para escrever o primeiro.
   const [cargoNovo, setCargoNovo] = useState(cargos.length === 0);
+  const [cargoId, setCargoId] = useState(colaborador?.cargoId ?? "");
 
   if (state.ok && state.autoavaliacao) return <LinkPronto {...state.autoavaliacao} onClose={onClose} />;
 
@@ -88,7 +89,22 @@ export default function EmployeeForm({
 
             <Field
               label="Cargo"
-              hint={cargoNovo ? "Entra na lista de cargos da empresa." : "Da lista de cargos da empresa."}
+              hint={
+                cargoNovo ? (
+                  "Entra na lista de cargos da empresa."
+                ) : cargoId ? (
+                  <a
+                    href={`/empresas/${companyId}/cargos?cargo=${cargoId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand-700 underline-offset-2 hover:underline"
+                  >
+                    Ver a descrição deste cargo
+                  </a>
+                ) : (
+                  "Os cargos cadastrados em Cargos."
+                )
+              }
               className="sm:col-span-3"
             >
               {cargoNovo ? (
@@ -107,9 +123,10 @@ export default function EmployeeForm({
               ) : (
                 <Select
                   name="cargoId"
-                  defaultValue={colaborador?.cargoId ?? ""}
+                  value={cargoId}
                   onChange={(e) => {
                     if (e.target.value === "__novo") setCargoNovo(true);
+                    else setCargoId(e.target.value);
                   }}
                 >
                   <option value="">Sem cargo</option>
@@ -159,7 +176,7 @@ export default function EmployeeForm({
               <Select name="status" defaultValue={colaborador?.status ?? "ATIVO"}>
                 <option value="ATIVO">Ativo</option>
                 <option value="AFASTADO">Afastado</option>
-                <option value="DESLIGADO">Desligado</option>
+                <option value="DESLIGADO">Desativado (desligado)</option>
               </Select>
             </Field>
 
