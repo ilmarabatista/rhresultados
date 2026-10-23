@@ -8,6 +8,7 @@ import { diaValido } from "@/lib/agenda";
 import { dateToDayKey, dayKeyToDate, todayKey } from "@/lib/dates";
 import { textoDoFormulario } from "@/lib/texto-seguro";
 import { novoToken, perguntasParaEnviar } from "@/lib/autoavaliacao-envio";
+import { ehDentista } from "@/lib/prestadores";
 import {
   camposAbertos,
   INSTRUCOES_PADRAO,
@@ -192,8 +193,9 @@ export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: F
   if (!modeloId) return { error: "Escolha o modelo de autoavaliação." };
   if (prazoCru && !diaValido(prazoCru)) return { error: "Data de prazo inválida." };
 
-  const pessoa = await prisma.employee.findUnique({ where: { id: employeeId }, select: { companyId: true, name: true } });
+  const pessoa = await prisma.employee.findUnique({ where: { id: employeeId }, select: { companyId: true, name: true, role: true } });
   if (!pessoa) return { error: "Pessoa não encontrada." };
+  if (ehDentista(pessoa.role)) return { error: "Dentistas são prestadores de serviço e não fazem autoavaliação." };
   const modelo = await prisma.modeloDeAutoavaliacao.findFirst({
     where: { id: modeloId, companyId: pessoa.companyId },
     include: { perguntas: true },
@@ -238,14 +240,14 @@ export async function gerarLinks(
   const [pessoas, modelos] = await Promise.all([
     prisma.employee.findMany({
       where: { companyId, id: { in: validos.map((p) => p.employeeId) }, autoavaliacoes: { none: {} } },
-      select: { id: true },
+      select: { id: true, role: true },
     }),
     prisma.modeloDeAutoavaliacao.findMany({
       where: { companyId, id: { in: validos.map((p) => p.modeloId) } },
       include: { perguntas: true },
     }),
   ]);
-  const semLink = new Set(pessoas.map((p) => p.id));
+  const semLink = new Set(pessoas.filter((p) => !ehDentista(p.role)).map((p) => p.id));
   const porId = new Map(modelos.filter((m) => m.perguntas.length > 0).map((m) => [m.id, m]));
 
   const dados = validos.flatMap((p) => {
