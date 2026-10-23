@@ -8,6 +8,7 @@ import { diaValido } from "@/lib/agenda";
 import { dayKeyToDate, todayKey } from "@/lib/dates";
 import { textoDoFormulario } from "@/lib/texto-seguro";
 import { organizarMapeamento, sugerirItens } from "@/lib/ai-mapeamento";
+import { novoToken } from "@/lib/autoavaliacao-envio";
 import {
   chaveDoTexto,
   itensSemIA,
@@ -49,7 +50,7 @@ async function carregar(mapId: string) {
   });
 }
 
-export async function criarMapeamento(employeeId: string): Promise<MapeamentoState> {
+export async function criarMapeamento(employeeId: string, porLink = false): Promise<MapeamentoState & { token?: string }> {
   const session = await requireSession();
   const pessoa = await prisma.employee.findUnique({
     where: { id: employeeId },
@@ -64,12 +65,43 @@ export async function criarMapeamento(employeeId: string): Promise<MapeamentoSta
       dataDaEntrevista: dayKeyToDate(todayKey()),
       entrevistador: session.name,
       dados: mapeamentoVazio({ cargo: pessoa.role ?? "", setor: pessoa.department ?? "" }),
+      ...(porLink ? { token: novoToken(), status: "ENVIADO", enviadoEm: new Date() } : {}),
     },
-    select: { id: true },
+    select: { id: true, token: true },
   });
-  await log(pessoa.companyId, session.userId, "CRIOU", employeeId, `Começou o mapeamento de rotinas de ${pessoa.name}.`);
+  await log(
+    pessoa.companyId,
+    session.userId,
+    "CRIOU",
+    employeeId,
+    porLink
+      ? `Gerou o link do mapeamento de rotinas para ${pessoa.name} preencher.`
+      : `Começou o mapeamento de rotinas de ${pessoa.name}.`,
+  );
   refresh(pessoa.companyId);
-  return { ok: true, id: m.id };
+  return { ok: true, id: m.id, token: m.token ?? undefined };
+}
+
+/**
+ * O link de um mapeamento que já existe: a pessoa recebe o que o RH já
+ * escreveu (sem as observações do RH) e completa. Depois de respondido, gerar
+ * de novo reabre o mesmo link para ela corrigir.
+ */
+export async function linkDoMapeamento(mapId: string): Promise<MapeamentoState & { token?: string }> {
+  const session = await requireSession();
+  const m = await prisma.mapeamentoDeRotina.findUnique({
+    where: { id: mapId },
+    select: { id: true, companyId: true, employeeId: true, token: true, employee: { select: { name: true } } },
+  });
+  if (!m) return { error: "Mapeamento não encontrado." };
+  const token = m.token ?? novoToken();
+  await prisma.mapeamentoDeRotina.update({
+    where: { id: mapId },
+    data: { token, status: "ENVIADO", enviadoEm: new Date(), respondidoEm: null },
+  });
+  await log(m.companyId, session.userId, "EDITOU", m.employeeId, `Mandou o link do mapeamento de rotinas para ${m.employee.name}.`);
+  refresh(m.companyId);
+  return { ok: true, id: m.id, token };
 }
 
 export type CabecalhoDoMapeamento = {

@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   chaveDoTexto,
+  conferirMapeamento,
+  dadosParaAPessoa,
+  juntarDaPessoa,
   itensDaIA,
   itensSemIA,
   juntarRascunho,
@@ -74,4 +77,14 @@ test("itensSemIA e metasDoMapeamento", () => {
   );
   assert.equal(metas[2].titulo, "Formalizar o sistema de cores");
   assert.equal(metas[3].titulo, "Migração Clinicorp para CAIO. Checklist do fluxo");
+});
+
+test("o link não leva nem aceita as observações do RH", () => {
+  const gravado = { ...mapeamentoVazio(), rhAtencao: "Só o RH vê", resumo: "antes" };
+  assert.equal(dadosParaAPessoa(gravado).rhAtencao, "");
+  const junto = juntarDaPessoa(gravado, { resumo: "Faço a cobrança", rhAtencao: "tentativa da pessoa" });
+  assert.equal(junto.resumo, "Faço a cobrança");
+  assert.equal(junto.rhAtencao, "Só o RH vê");
+  assert.match(conferirMapeamento(junto) ?? "", /tarefa/);
+  assert.equal(conferirMapeamento({ ...junto, tarefas: [{ descricao: "Cobrar", periodicidade: null, criticidade: null }] }), null);
 });
