@@ -1,6 +1,5 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
@@ -8,6 +7,7 @@ import { atividade } from "@/lib/atividade";
 import { diaValido } from "@/lib/agenda";
 import { dateToDayKey, dayKeyToDate, todayKey } from "@/lib/dates";
 import { textoDoFormulario } from "@/lib/texto-seguro";
+import { novoToken, perguntasParaEnviar } from "@/lib/autoavaliacao-envio";
 import {
   camposAbertos,
   INSTRUCOES_PADRAO,
@@ -16,8 +16,6 @@ import {
   lerRespostas,
   lerTipoDePergunta,
   notasDaAutoavaliacao,
-  TIPOS_DE_PERGUNTA,
-  type PerguntaEnviada,
 } from "@/lib/autoavaliacao";
 
 /**
@@ -185,17 +183,6 @@ export async function moverPergunta(perguntaId: string, direcao: -1 | 1): Promis
 
 // ------------------------------------------------------------------- envio
 
-/** As perguntas do modelo na ordem da ficha, para copiar no envio. */
-function perguntasParaEnviar(perguntas: { id: string; tipo: string; texto: string; destino: string | null; ordem: number }[]) {
-  const ordemDoTipo = (t: string) => (TIPOS_DE_PERGUNTA as readonly string[]).indexOf(t);
-  return [...perguntas]
-    .sort((a, b) => ordemDoTipo(a.tipo) - ordemDoTipo(b.tipo) || a.ordem - b.ordem)
-    .flatMap((p): PerguntaEnviada[] => {
-      const tipo = lerTipoDePergunta(p.tipo);
-      return tipo ? [{ id: p.id, tipo, texto: p.texto, destino: tipo === "ABERTA" ? lerDestino(p.destino) : null }] : [];
-    });
-}
-
 /** Gera o link da pessoa, com uma cópia das perguntas do modelo naquele dia. */
 export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: FormData): Promise<AutoavaliacaoState> {
   const session = await requireSession();
@@ -214,7 +201,7 @@ export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: F
   if (!modelo) return { error: "Modelo não encontrado." };
   if (modelo.perguntas.length === 0) return { error: "O modelo ainda não tem perguntas." };
 
-  const token = randomBytes(24).toString("hex");
+  const token = novoToken();
   const enviada = await prisma.autoavaliacao.create({
     data: {
       token,
@@ -267,7 +254,7 @@ export async function gerarLinks(
     semLink.delete(p.employeeId);
     return [
       {
-        token: randomBytes(24).toString("hex"),
+        token: novoToken(),
         employeeId: p.employeeId,
         modeloId: modelo.id,
         titulo: modelo.nome,
