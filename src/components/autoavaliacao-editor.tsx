@@ -105,12 +105,16 @@ function FormularioDaPergunta({
         defaultValue={pergunta?.texto ?? ""}
         placeholder={
           tipoEscolhido === "ABERTA"
-            ? "Ex.: O que mais trava o seu dia a dia?"
+            ? "Ex.: Dificuldades: o que mais trava o meu dia a dia?"
             : tipoEscolhido === "CONDUTA"
-              ? "Ex.: Usei o celular durante um atendimento"
-              : "Ex.: Escuta ativa: contato visual, não interrompo e confirmo o que entendi"
+              ? "Ex.: Celular no atendimento: usei o celular durante um atendimento"
+              : "Ex.: Pontualidade: chego sempre no horário e respeito os horários de pausa"
         }
       />
+      <p className="text-micro text-slate-500">
+        Padrão: o tema, dois-pontos e a frase como a pessoa falaria de si. Ex.: Pontualidade: chego sempre no horário e
+        respeito os horários de pausa.
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <Select
           name="tipo"
