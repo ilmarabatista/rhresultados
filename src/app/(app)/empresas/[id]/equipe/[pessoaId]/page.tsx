@@ -121,6 +121,23 @@ export default async function ColaboradorPage({
         companyId={id}
         unidades={unidades.map((u) => ({ id: u.id, nome: u.name }))}
         cargos={cargos}
+        mapeamento={
+          <MapeamentosDaPessoa
+            companyId={id}
+            employeeId={pessoa.id}
+            mapeamentos={pessoa.mapeamentos.map((m) => {
+              const d = lerDados(m.dados);
+              return {
+                id: m.id,
+                data: formatFullDate(m.dataDaEntrevista ?? m.createdAt),
+                entrevistador: m.entrevistador,
+                versao: m.versao,
+                tarefas: d.tarefas.length,
+                passos: d.passos.length,
+              };
+            })}
+          />
+        }
         treinamento={
           <EmployeeTraining
             companyId={id}
@@ -235,22 +252,6 @@ export default async function ColaboradorPage({
         })()}
         planosConcluidos={pessoa.plans.filter((p) => p.status !== "EM_ANDAMENTO").length}
         avaliadaEm={pessoa.avaliacoes[0] ? formatFullDate(pessoa.avaliacoes[0].data) : null}
-      />
-
-      <MapeamentosDaPessoa
-        companyId={id}
-        employeeId={pessoa.id}
-        mapeamentos={pessoa.mapeamentos.map((m) => {
-          const d = lerDados(m.dados);
-          return {
-            id: m.id,
-            data: formatFullDate(m.dataDaEntrevista ?? m.createdAt),
-            entrevistador: m.entrevistador,
-            versao: m.versao,
-            tarefas: d.tarefas.length,
-            passos: d.passos.length,
-          };
-        })}
       />
     </main>
   );

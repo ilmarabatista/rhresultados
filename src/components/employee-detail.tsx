@@ -242,6 +242,7 @@ export default function EmployeeDetail({
   unidades,
   cargos,
   treinamento,
+  mapeamento,
   pessoa,
   registros,
   pdi,
@@ -255,6 +256,8 @@ export default function EmployeeDetail({
   cargos: { id: string; nome: string }[];
   /** Integração e treinamentos, montados pela página. */
   treinamento: ReactNode;
+  /** Os mapeamentos de rotinas, montados pela página. */
+  mapeamento?: ReactNode;
   pessoa: ColaboradorDados & { unidade: string | null; admissao: string | null };
   registros: RegistroItem[];
   pdi: ResumoDoPdi;
@@ -340,6 +343,8 @@ export default function EmployeeDetail({
         exames={exames}
         hoje={hoje}
       />
+
+      {mapeamento ? <div className="mb-4">{mapeamento}</div> : null}
 
       {/* Dentistas e laboratório: sem PDI. */}
       {foraDoPdi(pessoa.role) && !pdi && planosConcluidos === 0 ? null : (
