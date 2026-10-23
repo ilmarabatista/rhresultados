@@ -14,7 +14,7 @@ import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form"
 import EmployeeForm, { type ColaboradorDados } from "./employee-form";
 import EmployeeExams, { type ExameDaFicha } from "./employee-exams";
 import { confirmar } from "@/components/avisos";
-import { ehDentista } from "@/lib/prestadores";
+import { foraDoPdi } from "@/lib/prestadores";
 
 export type RegistroItem = {
   id: string;
@@ -341,8 +341,8 @@ export default function EmployeeDetail({
         hoje={hoje}
       />
 
-      {/* Dentistas são prestadores de serviço: sem PDI. */}
-      {ehDentista(pessoa.role) && !pdi && planosConcluidos === 0 ? null : (
+      {/* Dentistas e laboratório: sem PDI. */}
+      {foraDoPdi(pessoa.role) && !pdi && planosConcluidos === 0 ? null : (
         <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
