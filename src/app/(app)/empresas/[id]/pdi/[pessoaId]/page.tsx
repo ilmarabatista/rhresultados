@@ -9,6 +9,8 @@ import PdiAvaliacao from "@/components/pdi-avaliacao";
 import PdiPlano from "@/components/pdi-plano";
 import PdiAcompanhamento from "@/components/pdi-acompanhamento";
 import PdiAutoavaliacao from "@/components/pdi-autoavaliacao";
+import PdiMapeamento from "@/components/pdi-mapeamento";
+import { lerDados, metasDoMapeamento } from "@/lib/mapeamento";
 import { lerPerguntas, lerRespostas } from "@/lib/autoavaliacao";
 import { semAcento } from "@/lib/text";
 
@@ -44,6 +46,11 @@ export default async function PdiDaPessoaPage({
         department: true,
         phone: true,
         autoavaliacoes: { orderBy: { enviadoEm: "desc" } },
+        mapeamentos: {
+          orderBy: [{ dataDaEntrevista: "desc" }, { createdAt: "desc" }],
+          take: 1,
+          select: { id: true, dataDaEntrevista: true, createdAt: true, dados: true },
+        },
         cargo: {
           select: {
             id: true,
@@ -223,6 +230,8 @@ export default async function PdiDaPessoaPage({
     modelos.find((m) => pessoa.role && chave(m.nome) === chave(pessoa.role)) ??
     modelos.find((m) => m._count.perguntas > 0);
 
+  const mapeamento = pessoa.mapeamentos[0] ?? null;
+
   const passos = [
     { n: 1, rotulo: "Cargo", href: "#cargo", feito: (cargo?.competencias.length ?? 0) > 0 },
     { n: 2, rotulo: "Autoavaliação", href: "#autoavaliacao", feito: autoavaliacoes.some((a) => a.status === "RESPONDIDO") },
@@ -373,6 +382,16 @@ export default async function PdiDaPessoaPage({
         treinamentos={treinamentos.map((t) => ({ id: t.id, nome: t.codigo ? `${t.codigo} · ${t.nome}` : t.nome }))}
         hoje={hoje}
       />
+
+      {mapeamento ? (
+        <PdiMapeamento
+          href={`/empresas/${id}/equipe/${pessoa.id}/mapeamento/${mapeamento.id}`}
+          data={formatFullDate(mapeamento.dataDaEntrevista ?? mapeamento.createdAt)}
+          sugestoes={metasDoMapeamento(lerDados(mapeamento.dados))}
+          planId={plano?.status === "EM_ANDAMENTO" ? plano.id : null}
+          jaNoPlano={(plano?.metas ?? []).map((m) => m.titulo)}
+        />
+      ) : null}
 
       <PdiAcompanhamento
         planId={plano?.id ?? null}

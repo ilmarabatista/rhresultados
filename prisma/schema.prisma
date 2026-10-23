@@ -122,6 +122,7 @@ model Company {
   pesquisasDeClima PesquisaDeClima[]
   perguntasDeClima PerguntaDeClima[]
   modelosDeAutoavaliacao ModeloDeAutoavaliacao[]
+  mapeamentos            MapeamentoDeRotina[]
 
   @@index([name])
 }
@@ -406,6 +407,7 @@ model Employee {
   assessments SkillAssessment[]
   avaliacoes  AvaliacaoDeCompetencias[]
   autoavaliacoes Autoavaliacao[]
+  mapeamentos MapeamentoDeRotina[]
   exams       HealthExam[]
 
   @@index([companyId, name])
@@ -776,6 +778,32 @@ model Autoavaliacao {
 
 /// Autoavaliação técnica respondida pelo colaborador. É a base do plano de
 /// desenvolvimento técnico (um PDI), montado à mão ou com a ajuda da IA.
+/// O mapeamento de rotinas: a entrevista do RH com a pessoa sobre o que ela faz,
+/// no modelo da clínica (tarefas, passo a passo, ferramentas, conhecimento que
+/// não está escrito, gargalos, indicadores). Serve de base para os itens da
+/// autoavaliação da função e para as metas do PDI.
+model MapeamentoDeRotina {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  dataDaEntrevista DateTime?
+  entrevistador    String?
+  versao           String    @default("1.0")
+  proximaRevisao   DateTime?
+  /// As seções do mapeamento, lidas por lerDados em src/lib/mapeamento.ts.
+  /// As observações do RH ficam aqui também e não saem para a pessoa.
+  dados            Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([employeeId])
+}
+
 model SkillAssessment {
   id         String   @id @default(cuid())
   employeeId String
