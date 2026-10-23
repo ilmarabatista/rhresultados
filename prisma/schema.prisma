@@ -797,6 +797,13 @@ model MapeamentoDeRotina {
   /// As observações do RH ficam aqui também e não saem para a pessoa.
   dados            Json
 
+  /// O link para a própria pessoa preencher as seções dela.
+  token        String?   @unique
+  /// RASCUNHO (só o RH), ENVIADO (link com a pessoa) ou RESPONDIDO.
+  status       String    @default("RASCUNHO")
+  enviadoEm    DateTime?
+  respondidoEm DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

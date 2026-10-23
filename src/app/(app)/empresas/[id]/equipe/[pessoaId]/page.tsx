@@ -7,7 +7,7 @@ import { progressoDoPlano } from "@/lib/pdi";
 import EmployeeDetail from "@/components/employee-detail";
 import EmployeeTraining from "@/components/employee-training";
 import MapeamentosDaPessoa from "@/components/mapeamentos-da-pessoa";
-import { lerDados } from "@/lib/mapeamento";
+import { lerDados, lerStatus } from "@/lib/mapeamento";
 import { matrizDaEmpresa } from "@/lib/treinamentos-dados";
 import {
   escreverHoras,
@@ -51,7 +51,18 @@ export default async function ColaboradorPage({
         integracao: { orderBy: { ordem: "asc" } },
         mapeamentos: {
           orderBy: [{ dataDaEntrevista: "desc" }, { createdAt: "desc" }],
-          select: { id: true, dataDaEntrevista: true, createdAt: true, entrevistador: true, versao: true, dados: true },
+          select: {
+            id: true,
+            dataDaEntrevista: true,
+            createdAt: true,
+            entrevistador: true,
+            versao: true,
+            dados: true,
+            status: true,
+            token: true,
+            enviadoEm: true,
+            respondidoEm: true,
+          },
         },
       },
     }),
@@ -125,15 +136,20 @@ export default async function ColaboradorPage({
           <MapeamentosDaPessoa
             companyId={id}
             employeeId={pessoa.id}
+            nome={pessoa.name}
+            telefone={pessoa.phone}
             mapeamentos={pessoa.mapeamentos.map((m) => {
               const d = lerDados(m.dados);
               return {
                 id: m.id,
-                data: formatFullDate(m.dataDaEntrevista ?? m.createdAt),
+                data: formatFullDate(m.status === "RASCUNHO" ? (m.dataDaEntrevista ?? m.createdAt) : (m.enviadoEm ?? m.createdAt)),
                 entrevistador: m.entrevistador,
                 versao: m.versao,
                 tarefas: d.tarefas.length,
                 passos: d.passos.length,
+                status: lerStatus(m.status),
+                token: m.token,
+                respondidoEm: m.respondidoEm ? formatFullDate(m.respondidoEm) : null,
               };
             })}
           />
