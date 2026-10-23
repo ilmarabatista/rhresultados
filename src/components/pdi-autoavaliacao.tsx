@@ -13,6 +13,8 @@ import {
 } from "@/app/(app)/empresas/[id]/pdi/autoavaliacoes/actions";
 import {
   emSecoes,
+  linkDoWhatsApp,
+  mensagemDoLink,
   opcaoDaResposta,
   pedeAtencao,
   resumoDaAutoavaliacao,
@@ -50,12 +52,14 @@ const botaoClaro =
 function NovoLink({
   employeeId,
   nome,
+  telefone,
   modelos,
   sugerido,
   companyId,
 }: {
   employeeId: string;
   nome: string;
+  telefone: string | null;
   modelos: { id: string; nome: string; perguntas: number }[];
   sugerido: string;
   companyId: string;
@@ -77,7 +81,6 @@ function NovoLink({
     );
   }
 
-  const mensagem = `Olá, ${nome.split(/\s+/)[0]}! Esta é a sua autoavaliação, o ponto de partida do seu plano de desenvolvimento. Responda com calma pelo link: ${link}`;
   return (
     <form action={action} className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
       <input type="hidden" name="employeeId" value={employeeId} />
@@ -105,7 +108,7 @@ function NovoLink({
             <Copy size={13} /> Copiar link
           </button>
           <a
-            href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`}
+            href={linkDoWhatsApp(telefone, mensagemDoLink(nome, link))}
             target="_blank"
             rel="noreferrer"
             className={botaoClaro}
@@ -159,6 +162,7 @@ export default function PdiAutoavaliacao({
   companyId,
   employeeId,
   nome,
+  telefone,
   modelos,
   sugerido,
   autoavaliacoes,
@@ -166,6 +170,7 @@ export default function PdiAutoavaliacao({
   companyId: string;
   employeeId: string;
   nome: string;
+  telefone: string | null;
   modelos: { id: string; nome: string; perguntas: number }[];
   sugerido: string;
   autoavaliacoes: AutoavaliacaoDaTela[];
@@ -175,6 +180,8 @@ export default function PdiAutoavaliacao({
   const respondida = autoavaliacoes.find((a) => a.status === "RESPONDIDO");
   const [aberto, setAberto] = useState<string | null>(respondida && !respondida.avaliacaoId ? respondida.id : null);
   const [gerando, setGerando] = useState(autoavaliacoes.length === 0);
+  const [origem, setOrigem] = useState("");
+  useEffect(() => setOrigem(window.location.origin), []);
 
   const fazer = (acao: () => Promise<AutoavaliacaoState>, depois?: (r: AutoavaliacaoState) => void) =>
     startTransition(async () => {
@@ -205,7 +212,7 @@ export default function PdiAutoavaliacao({
 
       <div className="space-y-3">
         {gerando ? (
-          <NovoLink employeeId={employeeId} nome={nome} modelos={modelos} sugerido={sugerido} companyId={companyId} />
+          <NovoLink employeeId={employeeId} nome={nome} telefone={telefone} modelos={modelos} sugerido={sugerido} companyId={companyId} />
         ) : null}
 
         {autoavaliacoes.length > 0 ? (
@@ -266,9 +273,19 @@ export default function PdiAutoavaliacao({
                           </button>
                         </>
                       ) : (
-                        <button type="button" className={botaoClaro} onClick={() => copiarLink(a.token)}>
-                          <Copy size={13} /> Copiar link
-                        </button>
+                        <>
+                          <a
+                            href={linkDoWhatsApp(telefone, mensagemDoLink(nome, `${origem}/autoavaliacao/${a.token}`))}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={botaoClaro}
+                          >
+                            WhatsApp
+                          </a>
+                          <button type="button" className={botaoClaro} onClick={() => copiarLink(a.token)}>
+                            <Copy size={13} /> Copiar link
+                          </button>
+                        </>
                       )}
                       <button
                         type="button"

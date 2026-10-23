@@ -42,6 +42,7 @@ export default async function PdiDaPessoaPage({
         name: true,
         role: true,
         department: true,
+        phone: true,
         autoavaliacoes: { orderBy: { enviadoEm: "desc" } },
         cargo: {
           select: {
@@ -347,6 +348,7 @@ export default async function PdiDaPessoaPage({
         companyId={id}
         employeeId={pessoa.id}
         nome={pessoa.name}
+        telefone={pessoa.phone}
         modelos={modelos.map((m) => ({ id: m.id, nome: m.nome, perguntas: m._count.perguntas }))}
         sugerido={sugerido?.id ?? ""}
         autoavaliacoes={autoavaliacoes}

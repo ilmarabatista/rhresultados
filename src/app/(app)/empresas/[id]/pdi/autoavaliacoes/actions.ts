@@ -185,6 +185,17 @@ export async function moverPergunta(perguntaId: string, direcao: -1 | 1): Promis
 
 // ------------------------------------------------------------------- envio
 
+/** As perguntas do modelo na ordem da ficha, para copiar no envio. */
+function perguntasParaEnviar(perguntas: { id: string; tipo: string; texto: string; destino: string | null; ordem: number }[]) {
+  const ordemDoTipo = (t: string) => (TIPOS_DE_PERGUNTA as readonly string[]).indexOf(t);
+  return [...perguntas]
+    .sort((a, b) => ordemDoTipo(a.tipo) - ordemDoTipo(b.tipo) || a.ordem - b.ordem)
+    .flatMap((p): PerguntaEnviada[] => {
+      const tipo = lerTipoDePergunta(p.tipo);
+      return tipo ? [{ id: p.id, tipo, texto: p.texto, destino: tipo === "ABERTA" ? lerDestino(p.destino) : null }] : [];
+    });
+}
+
 /** Gera o link da pessoa, com uma cópia das perguntas do modelo naquele dia. */
 export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: FormData): Promise<AutoavaliacaoState> {
   const session = await requireSession();
@@ -203,14 +214,6 @@ export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: F
   if (!modelo) return { error: "Modelo não encontrado." };
   if (modelo.perguntas.length === 0) return { error: "O modelo ainda não tem perguntas." };
 
-  const ordemDoTipo = (t: string) => (TIPOS_DE_PERGUNTA as readonly string[]).indexOf(t);
-  const perguntas: PerguntaEnviada[] = modelo.perguntas
-    .sort((a, b) => ordemDoTipo(a.tipo) - ordemDoTipo(b.tipo) || a.ordem - b.ordem)
-    .flatMap((p) => {
-      const tipo = lerTipoDePergunta(p.tipo);
-      return tipo ? [{ id: p.id, tipo, texto: p.texto, destino: tipo === "ABERTA" ? lerDestino(p.destino) : null }] : [];
-    });
-
   const token = randomBytes(24).toString("hex");
   const enviada = await prisma.autoavaliacao.create({
     data: {
@@ -219,7 +222,7 @@ export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: F
       modeloId,
       titulo: modelo.nome,
       instrucoes: modelo.instrucoes,
-      perguntas,
+      perguntas: perguntasParaEnviar(modelo.perguntas),
       prazo: prazoCru ? dayKeyToDate(prazoCru) : null,
       enviadoPor: session.userId,
     },
@@ -228,6 +231,58 @@ export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: F
   await log(pessoa.companyId, session.userId, "CRIOU", employeeId, `Gerou o link da autoavaliação (${modelo.nome}) de ${pessoa.name}.`);
   refresh(pessoa.companyId);
   return { ok: true, id: enviada.id, token };
+}
+
+/**
+ * Gera de uma vez os links de várias pessoas, cada uma com o modelo escolhido
+ * para ela. Quem já tem link aberto ou respondido fica de fora: o link dela
+ * continua o mesmo.
+ */
+export async function gerarLinks(
+  companyId: string,
+  pedidos: { employeeId: string; modeloId: string }[],
+  prazo: string,
+): Promise<AutoavaliacaoState & { gerados?: number }> {
+  const session = await requireSession();
+  if (prazo && !diaValido(prazo)) return { error: "Data de prazo inválida." };
+  const validos = pedidos.filter((p) => p.employeeId && p.modeloId).slice(0, 300);
+  if (validos.length === 0) return { error: "Escolha o modelo de cada pessoa." };
+
+  const [pessoas, modelos] = await Promise.all([
+    prisma.employee.findMany({
+      where: { companyId, id: { in: validos.map((p) => p.employeeId) }, autoavaliacoes: { none: {} } },
+      select: { id: true },
+    }),
+    prisma.modeloDeAutoavaliacao.findMany({
+      where: { companyId, id: { in: validos.map((p) => p.modeloId) } },
+      include: { perguntas: true },
+    }),
+  ]);
+  const semLink = new Set(pessoas.map((p) => p.id));
+  const porId = new Map(modelos.filter((m) => m.perguntas.length > 0).map((m) => [m.id, m]));
+
+  const dados = validos.flatMap((p) => {
+    const modelo = porId.get(p.modeloId);
+    if (!semLink.has(p.employeeId) || !modelo) return [];
+    semLink.delete(p.employeeId);
+    return [
+      {
+        token: randomBytes(24).toString("hex"),
+        employeeId: p.employeeId,
+        modeloId: modelo.id,
+        titulo: modelo.nome,
+        instrucoes: modelo.instrucoes,
+        perguntas: perguntasParaEnviar(modelo.perguntas),
+        prazo: prazo ? dayKeyToDate(prazo) : null,
+        enviadoPor: session.userId,
+      },
+    ];
+  });
+  if (dados.length === 0) return { error: "Ninguém da lista está sem link." };
+  await prisma.autoavaliacao.createMany({ data: dados });
+  await log(companyId, session.userId, "CRIOU", companyId, `Gerou ${dados.length} link(s) de autoavaliação.`);
+  refresh(companyId);
+  return { ok: true, gerados: dados.length };
 }
 
 async function carregarEnvio(autoId: string) {

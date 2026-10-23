@@ -231,3 +231,44 @@ function somarDias(dia: string, dias: number): string {
 export function calendarioDoPdi(inicio: string): { fim: string; conversas: string[] } {
   return { fim: somarDias(inicio, 90), conversas: [somarDias(inicio, 30), somarDias(inicio, 60), somarDias(inicio, 90)] };
 }
+
+// ---------------------------------------------------------------- envio
+
+/** O modelo sugerido para a pessoa: o do cargo dela; senão, o que tem o nome do cargo; senão, nenhum. */
+export function modeloSugerido<T extends { id: string; nome: string; cargoId: string | null }>(
+  modelos: T[],
+  pessoa: { cargoId: string | null; role: string | null },
+): T | null {
+  const chave = (t: string) =>
+    t
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .trim()
+      .toLowerCase();
+  return (
+    modelos.find((m) => pessoa.cargoId && m.cargoId === pessoa.cargoId) ??
+    modelos.find((m) => pessoa.role && chave(m.nome) === chave(pessoa.role)) ??
+    null
+  );
+}
+
+/**
+ * O número no formato do WhatsApp (só dígitos, com o 55 do Brasil). Sem um
+ * número que pareça de verdade, null: o WhatsApp abre para escolher o contato.
+ */
+export function telefoneDoWhatsApp(telefone: string | null | undefined): string | null {
+  const d = (telefone ?? "").replace(/\D/g, "").replace(/^0+/, "");
+  if (d.length === 10 || d.length === 11) return `55${d}`;
+  if ((d.length === 12 || d.length === 13) && d.startsWith("55")) return d;
+  return null;
+}
+
+export function mensagemDoLink(nome: string, link: string): string {
+  const primeiro = nome.trim().split(/\s+/)[0] ?? "";
+  return `Olá, ${primeiro}! Esta é a sua autoavaliação, o ponto de partida do seu plano de desenvolvimento. Responda com calma, pelo celular mesmo: ${link}`;
+}
+
+export function linkDoWhatsApp(telefone: string | null | undefined, mensagem: string): string {
+  const numero = telefoneDoWhatsApp(telefone);
+  return `https://wa.me/${numero ?? ""}?text=${encodeURIComponent(mensagem)}`;
+}

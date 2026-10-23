@@ -5,6 +5,9 @@ import {
   camposAbertos,
   conferirParaEnviar,
   lerPerguntas,
+  linkDoWhatsApp,
+  modeloSugerido,
+  telefoneDoWhatsApp,
   lerRespostas,
   notasDaAutoavaliacao,
   pedeAtencao,
@@ -75,4 +78,27 @@ test("resumo conta itens, marcados e abaixo do padrão", () => {
 
 test("calendário: fim em 90 dias, conversas em 30, 60 e 90", () => {
   assert.deepEqual(calendarioDoPdi("2026-10-23"), { fim: "2027-01-21", conversas: ["2026-11-22", "2026-12-22", "2027-01-21"] });
+});
+
+test("telefoneDoWhatsApp põe o 55 e recusa o que não é celular", () => {
+  assert.equal(telefoneDoWhatsApp("(11) 98765-4321"), "5511987654321");
+  assert.equal(telefoneDoWhatsApp("+55 11 98765-4321"), "5511987654321");
+  assert.equal(telefoneDoWhatsApp("011 3333-4444"), "551133334444");
+  assert.equal(telefoneDoWhatsApp("1234"), null);
+  assert.equal(telefoneDoWhatsApp(null), null);
+});
+
+test("linkDoWhatsApp sem número abre para escolher o contato", () => {
+  assert.ok(linkDoWhatsApp(null, "oi").startsWith("https://wa.me/?text=oi"));
+  assert.ok(linkDoWhatsApp("11987654321", "oi").startsWith("https://wa.me/5511987654321?text="));
+});
+
+test("modeloSugerido: cargo, depois nome da função", () => {
+  const modelos = [
+    { id: "a", nome: "Recepção", cargoId: null },
+    { id: "b", nome: "Auxiliar", cargoId: "asb" },
+  ];
+  assert.equal(modeloSugerido(modelos, { cargoId: "asb", role: "ASB" })?.id, "b");
+  assert.equal(modeloSugerido(modelos, { cargoId: null, role: "recepcao" })?.id, "a");
+  assert.equal(modeloSugerido(modelos, { cargoId: null, role: "Financeiro" }), null);
 });
