@@ -239,7 +239,12 @@ export async function gerarLinks(
 
   const [pessoas, modelos] = await Promise.all([
     prisma.employee.findMany({
-      where: { companyId, id: { in: validos.map((p) => p.employeeId) }, autoavaliacoes: { none: {} } },
+      where: {
+        companyId,
+        id: { in: validos.map((p) => p.employeeId) },
+        status: { not: "DESLIGADO" },
+        autoavaliacoes: { none: {} },
+      },
       select: { id: true, role: true },
     }),
     prisma.modeloDeAutoavaliacao.findMany({

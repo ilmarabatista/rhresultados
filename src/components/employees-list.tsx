@@ -24,6 +24,12 @@ export type ColaboradorItem = {
   treinamentosPendentes: number;
 };
 
+const STATUS_ROTULO: Record<string, string> = {
+  ATIVO: "Ativo",
+  AFASTADO: "Afastado",
+  DESLIGADO: "Desativado",
+};
+
 const STATUS_STYLE: Record<string, string> = {
   ATIVO: "bg-emerald-50 text-emerald-700",
   AFASTADO: "bg-amber-50 text-amber-700",
@@ -43,16 +49,20 @@ export default function EmployeesList({
 }) {
   const [novo, setNovo] = useState(false);
   const [busca, setBusca] = useState("");
-  const [aba, setAba] = useState<"equipe" | "dentistas" | "laboratorio">("equipe");
+  const [aba, setAba] = useState<"equipe" | "dentistas" | "laboratorio" | "desativados">("equipe");
 
-  // Dentistas (prestadores) e protéticos (laboratório) aparecem em abas à parte.
-  const daAba = colaboradores.filter((c) => (grupoDoCargo(c.cargo) ?? "equipe") === aba);
+  // Dentistas (prestadores) e protéticos (laboratório) aparecem em abas à parte,
+  // e quem foi desativado sai de todas e fica só na aba Desativados.
+  const abaDe = (c: ColaboradorItem) =>
+    c.status === "DESLIGADO" ? "desativados" : (grupoDoCargo(c.cargo) ?? "equipe");
+  const daAba = colaboradores.filter((c) => abaDe(c) === aba);
   const abas = [
     { slug: "equipe", rotulo: "Colaboradores" },
     { slug: "dentistas", rotulo: "Dentistas" },
     { slug: "laboratorio", rotulo: "Laboratório" },
+    { slug: "desativados", rotulo: "Desativados" },
   ] as const;
-  const total = (slug: string) => colaboradores.filter((c) => (grupoDoCargo(c.cargo) ?? "equipe") === slug).length;
+  const total = (slug: string) => colaboradores.filter((c) => abaDe(c) === slug).length;
   const abasComGente = abas.filter((a) => a.slug === "equipe" || total(a.slug) > 0);
 
   const termo = busca.trim().toLowerCase();
@@ -128,7 +138,12 @@ export default function EmployeesList({
             </nav>
           ) : null}
 
-          {aba !== "equipe" ? (
+          {aba === "desativados" ? (
+            <p className="mb-3 text-xs text-slate-500">
+              Quem foi desativado fica só aqui, fora do PDI e da autoavaliação. Para voltar, abra a pessoa e clique em
+              Reativar.
+            </p>
+          ) : aba !== "equipe" ? (
             <p className="mb-3 text-xs text-slate-500">
               {aba === "dentistas" ? "Prestadores de serviço" : "Protéticos do laboratório"}: ficam fora do PDI e da
               autoavaliação.
@@ -145,7 +160,7 @@ export default function EmployeesList({
               className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
             <p className="text-xs text-slate-500">
-              {ativos} ativo(s) de {daAba.length}
+              {aba === "desativados" ? `${daAba.length} desativado(s)` : `${ativos} ativo(s) de ${daAba.length}`}
             </p>
           </div>
 
@@ -212,7 +227,7 @@ export default function EmployeesList({
                           STATUS_STYLE[c.status] ?? STATUS_STYLE.DESLIGADO
                         }`}
                       >
-                        {c.status}
+                        {STATUS_ROTULO[c.status] ?? c.status}
                       </span>
                     </span>
                   </Link>
