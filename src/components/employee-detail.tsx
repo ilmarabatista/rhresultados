@@ -14,6 +14,7 @@ import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form"
 import EmployeeForm, { type ColaboradorDados } from "./employee-form";
 import EmployeeExams, { type ExameDaFicha } from "./employee-exams";
 import { confirmar } from "@/components/avisos";
+import { ehDentista } from "@/lib/prestadores";
 
 export type RegistroItem = {
   id: string;
@@ -340,50 +341,53 @@ export default function EmployeeDetail({
         hoje={hoje}
       />
 
-      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-slate-900">Plano de Desenvolvimento Individual</h2>
-            {pdi ? (
-              <>
-                <p className="mt-0.5 text-sm text-slate-700">{pdi.titulo}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                  <span className="flex items-center gap-2">
-                    <span className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
-                      <span
-                        className="block h-full rounded-full bg-emerald-500"
-                        style={{ width: `${pdi.progresso ?? 0}%` }}
-                      />
+      {/* Dentistas são prestadores de serviço: sem PDI. */}
+      {ehDentista(pessoa.role) && !pdi && planosConcluidos === 0 ? null : (
+        <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-slate-900">Plano de Desenvolvimento Individual</h2>
+              {pdi ? (
+                <>
+                  <p className="mt-0.5 text-sm text-slate-700">{pdi.titulo}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    <span className="flex items-center gap-2">
+                      <span className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                        <span
+                          className="block h-full rounded-full bg-emerald-500"
+                          style={{ width: `${pdi.progresso ?? 0}%` }}
+                        />
+                      </span>
+                      {pdi.progresso ?? 0}%
                     </span>
-                    {pdi.progresso ?? 0}%
-                  </span>
-                  <span>
-                    {pdi.atingidas}/{pdi.metas} metas atingidas
-                  </span>
-                  <span className={pdi.atrasada ? "font-medium text-red-700" : ""}>
-                    {pdi.proxima
-                      ? `próxima conversa ${pdi.proxima}${pdi.atrasada ? " (atrasada)" : ""}`
-                      : "sem próxima conversa"}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <p className="mt-0.5 text-xs text-slate-500">
-                {avaliadaEm
-                  ? `Avaliada em ${avaliadaEm}, ainda sem plano em andamento.`
-                  : "Nenhum PDI em andamento."}
-                {planosConcluidos > 0 ? ` ${planosConcluidos} plano(s) encerrado(s).` : ""}
-              </p>
-            )}
+                    <span>
+                      {pdi.atingidas}/{pdi.metas} metas atingidas
+                    </span>
+                    <span className={pdi.atrasada ? "font-medium text-red-700" : ""}>
+                      {pdi.proxima
+                        ? `próxima conversa ${pdi.proxima}${pdi.atrasada ? " (atrasada)" : ""}`
+                        : "sem próxima conversa"}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {avaliadaEm
+                    ? `Avaliada em ${avaliadaEm}, ainda sem plano em andamento.`
+                    : "Nenhum PDI em andamento."}
+                  {planosConcluidos > 0 ? ` ${planosConcluidos} plano(s) encerrado(s).` : ""}
+                </p>
+              )}
+            </div>
+            <Link
+              href={`/empresas/${companyId}/pdi/${pessoa.id}`}
+              className="shrink-0 rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+            >
+              {pdi ? "Abrir PDI" : "Começar PDI"}
+            </Link>
           </div>
-          <Link
-            href={`/empresas/${companyId}/pdi/${pessoa.id}`}
-            className="shrink-0 rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
-          >
-            {pdi ? "Abrir PDI" : "Começar PDI"}
-          </Link>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import EmployeeForm from "./employee-form";
 import { iniciais } from "@/lib/text";
+import { ehDentista } from "@/lib/prestadores";
 
 export type ColaboradorItem = {
   id: string;
@@ -42,17 +43,22 @@ export default function EmployeesList({
 }) {
   const [novo, setNovo] = useState(false);
   const [busca, setBusca] = useState("");
+  const [aba, setAba] = useState<"equipe" | "dentistas">("equipe");
+
+  // Os dentistas são prestadores: aparecem numa aba à parte.
+  const dentistas = colaboradores.filter((c) => ehDentista(c.cargo));
+  const daAba = aba === "dentistas" ? dentistas : colaboradores.filter((c) => !ehDentista(c.cargo));
 
   const termo = busca.trim().toLowerCase();
   const lista = termo
-    ? colaboradores.filter((c) =>
+    ? daAba.filter((c) =>
         [c.nome, c.cargo, c.setor]
           .filter(Boolean)
           .some((v) => v!.toLowerCase().includes(termo)),
       )
-    : colaboradores;
+    : daAba;
 
-  const ativos = colaboradores.filter((c) => c.status === "ATIVO").length;
+  const ativos = daAba.filter((c) => c.status === "ATIVO").length;
 
   return (
     <>
@@ -94,6 +100,39 @@ export default function EmployeesList({
         </div>
       ) : (
         <>
+          {dentistas.length > 0 ? (
+            <nav className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
+              {(
+                [
+                  { slug: "equipe", rotulo: "Colaboradores", total: colaboradores.length - dentistas.length },
+                  { slug: "dentistas", rotulo: "Dentistas", total: dentistas.length },
+                ] as const
+              ).map((a) => (
+                <button
+                  key={a.slug}
+                  type="button"
+                  onClick={() => setAba(a.slug)}
+                  className={`-mb-px border-b-2 px-3 py-2 text-sm transition ${
+                    aba === a.slug
+                      ? "border-brand-600 font-semibold text-brand-800"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {a.rotulo}
+                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 text-micro font-medium text-slate-600">
+                    {a.total}
+                  </span>
+                </button>
+              ))}
+            </nav>
+          ) : null}
+
+          {aba === "dentistas" ? (
+            <p className="mb-3 text-xs text-slate-500">
+              Prestadores de serviço: ficam fora do PDI e da autoavaliação.
+            </p>
+          ) : null}
+
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <input
               type="search"
@@ -104,7 +143,7 @@ export default function EmployeesList({
               className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
             <p className="text-xs text-slate-500">
-              {ativos} ativo(s) de {colaboradores.length}
+              {ativos} ativo(s) de {daAba.length}
             </p>
           </div>
 

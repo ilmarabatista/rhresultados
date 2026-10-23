@@ -11,6 +11,7 @@ import {
 } from "@/lib/pdi";
 import { Aviso, Etiqueta, Numeros, Tabela, Vazio } from "@/components/ui";
 import PdiAbas from "@/components/pdi-abas";
+import { ehDentista } from "@/lib/prestadores";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI — RH Resultados" };
@@ -75,7 +76,8 @@ export default async function PdiPage({
     }),
   ]);
 
-  const linhas = pessoas.map((p) => {
+  // Os dentistas são prestadores de serviço: não têm PDI.
+  const linhas = pessoas.filter((p) => !ehDentista(p.role)).map((p) => {
     const avaliacao = p.avaliacoes[0] ?? null;
     const plano = p.plans[0] ?? null;
     const resumo = avaliacao ? resumoDaAvaliacao(avaliacao.notas) : null;
