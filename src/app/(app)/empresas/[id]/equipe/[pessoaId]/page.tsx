@@ -6,6 +6,8 @@ import { dateToDayKey, formatFullDate, formatMoment, paraCampoDeData, todayKey }
 import { progressoDoPlano } from "@/lib/pdi";
 import EmployeeDetail from "@/components/employee-detail";
 import EmployeeTraining from "@/components/employee-training";
+import MapeamentosDaPessoa from "@/components/mapeamentos-da-pessoa";
+import { lerDados } from "@/lib/mapeamento";
 import { matrizDaEmpresa } from "@/lib/treinamentos-dados";
 import {
   escreverHoras,
@@ -47,6 +49,10 @@ export default async function ColaboradorPage({
         avaliacoes: { orderBy: { data: "desc" }, take: 1, select: { data: true } },
         exams: { orderBy: { createdAt: "desc" } },
         integracao: { orderBy: { ordem: "asc" } },
+        mapeamentos: {
+          orderBy: [{ dataDaEntrevista: "desc" }, { createdAt: "desc" }],
+          select: { id: true, dataDaEntrevista: true, createdAt: true, entrevistador: true, versao: true, dados: true },
+        },
       },
     }),
     prisma.branch.findMany({
@@ -115,6 +121,23 @@ export default async function ColaboradorPage({
         companyId={id}
         unidades={unidades.map((u) => ({ id: u.id, nome: u.name }))}
         cargos={cargos}
+        mapeamento={
+          <MapeamentosDaPessoa
+            companyId={id}
+            employeeId={pessoa.id}
+            mapeamentos={pessoa.mapeamentos.map((m) => {
+              const d = lerDados(m.dados);
+              return {
+                id: m.id,
+                data: formatFullDate(m.dataDaEntrevista ?? m.createdAt),
+                entrevistador: m.entrevistador,
+                versao: m.versao,
+                tarefas: d.tarefas.length,
+                passos: d.passos.length,
+              };
+            })}
+          />
+        }
         treinamento={
           <EmployeeTraining
             companyId={id}
