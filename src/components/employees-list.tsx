@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import EmployeeForm from "./employee-form";
 import { iniciais } from "@/lib/text";
-import { ehDentista } from "@/lib/prestadores";
+import { grupoDoCargo } from "@/lib/prestadores";
 
 export type ColaboradorItem = {
   id: string;
@@ -43,11 +43,17 @@ export default function EmployeesList({
 }) {
   const [novo, setNovo] = useState(false);
   const [busca, setBusca] = useState("");
-  const [aba, setAba] = useState<"equipe" | "dentistas">("equipe");
+  const [aba, setAba] = useState<"equipe" | "dentistas" | "laboratorio">("equipe");
 
-  // Os dentistas são prestadores: aparecem numa aba à parte.
-  const dentistas = colaboradores.filter((c) => ehDentista(c.cargo));
-  const daAba = aba === "dentistas" ? dentistas : colaboradores.filter((c) => !ehDentista(c.cargo));
+  // Dentistas (prestadores) e protéticos (laboratório) aparecem em abas à parte.
+  const daAba = colaboradores.filter((c) => (grupoDoCargo(c.cargo) ?? "equipe") === aba);
+  const abas = [
+    { slug: "equipe", rotulo: "Colaboradores" },
+    { slug: "dentistas", rotulo: "Dentistas" },
+    { slug: "laboratorio", rotulo: "Laboratório" },
+  ] as const;
+  const total = (slug: string) => colaboradores.filter((c) => (grupoDoCargo(c.cargo) ?? "equipe") === slug).length;
+  const abasComGente = abas.filter((a) => a.slug === "equipe" || total(a.slug) > 0);
 
   const termo = busca.trim().toLowerCase();
   const lista = termo
@@ -100,14 +106,9 @@ export default function EmployeesList({
         </div>
       ) : (
         <>
-          {dentistas.length > 0 ? (
+          {abasComGente.length > 1 ? (
             <nav className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
-              {(
-                [
-                  { slug: "equipe", rotulo: "Colaboradores", total: colaboradores.length - dentistas.length },
-                  { slug: "dentistas", rotulo: "Dentistas", total: dentistas.length },
-                ] as const
-              ).map((a) => (
+              {abasComGente.map((a) => (
                 <button
                   key={a.slug}
                   type="button"
@@ -120,16 +121,17 @@ export default function EmployeesList({
                 >
                   {a.rotulo}
                   <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 text-micro font-medium text-slate-600">
-                    {a.total}
+                    {total(a.slug)}
                   </span>
                 </button>
               ))}
             </nav>
           ) : null}
 
-          {aba === "dentistas" ? (
+          {aba !== "equipe" ? (
             <p className="mb-3 text-xs text-slate-500">
-              Prestadores de serviço: ficam fora do PDI e da autoavaliação.
+              {aba === "dentistas" ? "Prestadores de serviço" : "Protéticos do laboratório"}: ficam fora do PDI e da
+              autoavaliação.
             </p>
           ) : null}
 

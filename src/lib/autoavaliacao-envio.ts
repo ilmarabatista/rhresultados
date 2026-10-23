@@ -7,7 +7,7 @@ import {
   TIPOS_DE_PERGUNTA,
   type PerguntaEnviada,
 } from "@/lib/autoavaliacao";
-import { ehDentista } from "@/lib/prestadores";
+import { foraDoPdi } from "@/lib/prestadores";
 
 /** O que o servidor faz no envio da autoavaliação, usado pelo PDI e pelo cadastro da equipe. */
 
@@ -40,7 +40,7 @@ export async function gerarLinkDaFuncao(
     where: { id: employeeId },
     select: { companyId: true, cargoId: true, role: true, _count: { select: { autoavaliacoes: true } } },
   });
-  if (!pessoa || pessoa._count.autoavaliacoes > 0 || ehDentista(pessoa.role)) return null;
+  if (!pessoa || pessoa._count.autoavaliacoes > 0 || foraDoPdi(pessoa.role)) return null;
   const modelos = await prisma.modeloDeAutoavaliacao.findMany({
     where: { companyId: pessoa.companyId, perguntas: { some: {} } },
     select: { id: true, nome: true, cargoId: true },

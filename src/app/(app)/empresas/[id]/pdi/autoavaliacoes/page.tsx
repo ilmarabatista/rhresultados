@@ -3,7 +3,7 @@ import { requireSession } from "@/lib/session";
 import { formatFullDate, todayKey, dateToDayKey } from "@/lib/dates";
 import { lerPerguntas, lerRespostas, modeloSugerido, resumoDaAutoavaliacao } from "@/lib/autoavaliacao";
 import PdiAbas from "@/components/pdi-abas";
-import { ehDentista } from "@/lib/prestadores";
+import { foraDoPdi } from "@/lib/prestadores";
 import AutoavaliacaoModelos from "@/components/autoavaliacao-modelos";
 import AutoavaliacaoEnvios, { type PessoaNoEnvio } from "@/components/autoavaliacao-envios";
 
@@ -66,8 +66,8 @@ export default async function AutoavaliacoesPage({ params }: { params: Promise<{
   ]);
 
   const comPerguntas = modelos.filter((m) => m._count.perguntas > 0);
-  // Os dentistas são prestadores de serviço: não fazem autoavaliação.
-  const pessoas: PessoaNoEnvio[] = equipe.filter((p) => !ehDentista(p.cargo?.nome ?? p.role)).map((p) => {
+  // Dentistas e laboratório não fazem autoavaliação.
+  const pessoas: PessoaNoEnvio[] = equipe.filter((p) => !foraDoPdi(p.cargo?.nome ?? p.role)).map((p) => {
     const a = p.autoavaliacoes[0];
     let envio: PessoaNoEnvio["envio"] = null;
     if (a) {
