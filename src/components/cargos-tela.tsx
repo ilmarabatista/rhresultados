@@ -160,6 +160,11 @@ function Descricao({
         </p>
         <div className="flex flex-wrap gap-2">
           {cargo.respondidos > 0 ? (
+            <Link href={`/empresas/${companyId}/cargos?cargo=${cargo.id}&aba=questionarios`} className={botaoClaro}>
+              Ver respostas
+            </Link>
+          ) : null}
+          {cargo.respondidos > 0 ? (
             <button type="button" onClick={gerar} disabled={pending} className={botaoClaro}>
               <Sparkles size={14} /> {pending ? "Gerando…" : "Gerar com IA"}
             </button>
@@ -706,6 +711,7 @@ export default function CargosTela({
               <span className="mt-0.5 flex items-center gap-1.5 text-micro text-slate-500">
                 {c.nivel ? ROTULO_DO_NIVEL_DE_CARGO[c.nivel] : <span className="text-amber-700">sem nível</span>}
                 <Etiqueta tom={SITUACAO[c.situacao].tom}>{SITUACAO[c.situacao].texto}</Etiqueta>
+                {c.respondidos > 0 ? <Etiqueta tom="bom">{c.respondidos === 1 ? "1 respondido" : `${c.respondidos} respondidos`}</Etiqueta> : null}
               </span>
             </Link>
           ))}
