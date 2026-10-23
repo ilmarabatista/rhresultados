@@ -84,6 +84,10 @@ export default function AutoavaliacaoEnvios({
   );
   const [prazo, setPrazo] = useState("");
   const [origem, setOrigem] = useState("");
+  // A fila do "Enviar todos": o WhatsApp não manda em massa, então cada clique
+  // abre a conversa da próxima pessoa, já com a mensagem e o link.
+  const [fila, setFila] = useState<string[] | null>(null);
+  const [mandados, setMandados] = useState<Set<string>>(() => new Set());
   useEffect(() => setOrigem(window.location.origin), []);
 
   const contagem = useMemo(() => {
@@ -118,6 +122,22 @@ export default function AutoavaliacaoEnvios({
 
   const whatsapp = (p: PessoaNoEnvio) =>
     p.envio && origem ? linkDoWhatsApp(p.telefone, mensagemDoLink(p.nome, `${origem}/autoavaliacao/${p.envio.token}`)) : "#";
+
+  const aguardando = pessoas.filter((p) => situacao(p) === "AGUARDANDO");
+  const naFila = fila ? fila.map((id) => pessoas.find((p) => p.id === id)).filter((p): p is PessoaNoEnvio => Boolean(p)) : [];
+  const proximo = naFila.find((p) => !mandados.has(p.id));
+  const feitos = naFila.filter((p) => mandados.has(p.id)).length;
+
+  const abrir = (p: PessoaNoEnvio) => {
+    window.open(whatsapp(p), "_blank", "noreferrer");
+    setMandados((atual) => new Set(atual).add(p.id));
+  };
+  const comecarFila = () => {
+    const lista = aguardando.filter((p) => !mandados.has(p.id));
+    if (lista.length === 0) return;
+    setFila(lista.map((p) => p.id));
+    abrir(lista[0]);
+  };
 
   if (pessoas.length === 0) return <Vazio>Ninguém na equipe ainda. Cadastre as pessoas na aba Equipe.</Vazio>;
 
@@ -163,6 +183,42 @@ export default function AutoavaliacaoEnvios({
         </div>
       ) : null}
 
+      {aguardando.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm">
+          {!fila ? (
+            <>
+              <span className="text-slate-700">
+                {aguardando.length} link(s) aguardando resposta. Mande para todos em sequência: cada clique abre o WhatsApp da
+                próxima pessoa, com a mensagem pronta. É só apertar enviar lá e voltar aqui.
+              </span>
+              <button type="button" className={`${botaoWhats} ml-auto`} onClick={comecarFila} disabled={!origem}>
+                <MessageCircle size={13} /> Enviar todos pelo WhatsApp ({aguardando.filter((p) => !mandados.has(p.id)).length})
+              </button>
+            </>
+          ) : proximo ? (
+            <>
+              <span className="text-slate-700">
+                {feitos} de {naFila.length} abertos. Próximo: <strong>{proximo.nome}</strong>
+                {telefoneDoWhatsApp(proximo.telefone) ? "" : " (sem celular no cadastro, escolha o contato)"}.
+              </span>
+              <button type="button" className={`${botaoWhats} ml-auto`} onClick={() => abrir(proximo)}>
+                <MessageCircle size={13} /> Abrir o WhatsApp de {proximo.nome.split(" ")[0]}
+              </button>
+              <button type="button" className={botaoClaro} onClick={() => setFila(null)}>
+                Parar
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-slate-700">Pronto: o WhatsApp foi aberto para as {naFila.length} pessoa(s) da lista.</span>
+              <button type="button" className={`${botaoClaro} ml-auto`} onClick={() => setFila(null)}>
+                Fechar
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
+
       {visiveis.length === 0 ? (
         <Vazio>Ninguém nesta situação.</Vazio>
       ) : (
@@ -186,6 +242,7 @@ export default function AutoavaliacaoEnvios({
                     {p.envio?.prazo ? ` · prazo ${p.envio.prazo}` : ""}
                     {p.envio?.respondidoEm ? ` · respondida em ${p.envio.respondidoEm}` : ""}
                     {s === "AGUARDANDO" && p.envio && p.envio.marcados > 0 ? ` · ${p.envio.marcados}/${p.envio.itens} marcados` : ""}
+                    {s === "AGUARDANDO" && mandados.has(p.id) ? " · WhatsApp aberto agora" : ""}
                   </span>
                 </div>
 
@@ -221,7 +278,7 @@ export default function AutoavaliacaoEnvios({
                     </>
                   ) : s === "AGUARDANDO" ? (
                     <>
-                      <a href={whatsapp(p)} target="_blank" rel="noreferrer" className={botaoWhats} title={temCelular ? p.telefone ?? "" : "Sem celular no cadastro: o WhatsApp abre para escolher o contato"}>
+                      <a href={whatsapp(p)} target="_blank" rel="noreferrer" onClick={() => setMandados((atual) => new Set(atual).add(p.id))} className={botaoWhats} title={temCelular ? p.telefone ?? "" : "Sem celular no cadastro: o WhatsApp abre para escolher o contato"}>
                         <MessageCircle size={13} /> {temCelular ? "WhatsApp" : "WhatsApp (escolher contato)"}
                       </a>
                       <button type="button" className={botaoClaro} onClick={() => copiarLink(p.envio!.token)}>
