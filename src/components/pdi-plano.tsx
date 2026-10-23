@@ -653,7 +653,7 @@ export default function PdiPlano({
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-900">
-            <span className="mr-1.5 text-brand-600">3</span>Plano e metas SMART
+            <span className="mr-1.5 text-brand-600">4</span>Plano e metas SMART
           </h2>
           <p className="mt-0.5 max-w-2xl text-xs text-slate-500">
             Cada meta precisa ser específica, mensurável, atingível, relevante e ter prazo — as letras ficam verdes
