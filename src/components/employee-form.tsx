@@ -50,8 +50,11 @@ export default function EmployeeForm({
     if (state.ok && !state.autoavaliacao) onClose();
   }, [state, onClose]);
 
-  // Sem cargos na lista, o campo já abre para escrever o primeiro.
-  const [cargoNovo, setCargoNovo] = useState(cargos.length === 0);
+  // Sem cargos na lista, o campo já abre para escrever o primeiro. Quem tem
+  // cargo só em texto, fora da lista, também: salvar assim liga a pessoa ao
+  // cargo (criando-o em Cargos), em vez de apagar o que estava escrito.
+  const cargoSoEmTexto = colaborador?.role && !colaborador.cargoId ? colaborador.role : "";
+  const [cargoNovo, setCargoNovo] = useState(cargos.length === 0 || Boolean(cargoSoEmTexto));
   const [cargoId, setCargoId] = useState(colaborador?.cargoId ?? "");
 
   if (state.ok && state.autoavaliacao) return <LinkPronto {...state.autoavaliacao} onClose={onClose} />;
@@ -109,7 +112,12 @@ export default function EmployeeForm({
             >
               {cargoNovo ? (
                 <div className="flex gap-2">
-                  <Input name="novoCargo" autoFocus={!colaborador} placeholder="Nome do cargo novo" />
+                  <Input
+                    name="novoCargo"
+                    autoFocus={!colaborador}
+                    defaultValue={cargoSoEmTexto}
+                    placeholder="Nome do cargo novo"
+                  />
                   {cargos.length > 0 ? (
                     <button
                       type="button"
