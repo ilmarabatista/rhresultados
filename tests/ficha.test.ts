@@ -26,6 +26,9 @@ function fichaCompleta(): Ficha {
     cidade: "João Pessoa",
     celular: "(83) 9 9999-9999",
     email: "maria@exemplo.com",
+    sexo: "Feminino",
+    estadoCivil: "Casada",
+    comQuemMora: "Marido",
   };
   f.formacao.nivel = "Médio completo";
   f.formacao.situacao = "CONCLUIDO";
@@ -47,38 +50,38 @@ test("cada passo cobra o que é dele", () => {
   const f = fichaVazia();
   assert.ok(problemasDoPasso(f, 0).some((e) => e.includes("cargo")));
   assert.ok(problemasDoPasso(f, 1).some((e) => e.includes("celular")));
-  assert.ok(problemasDoPasso(f, 3).some((e) => e.includes("primeiro emprego")));
-  assert.ok(problemasDoPasso(f, 4).some((e) => e.includes("indicado")));
-  assert.ok(problemasDoPasso(f, 6).some((e) => e.includes("privacidade")));
+  assert.ok(problemasDoPasso(f, 4).some((e) => e.includes("primeiro emprego")));
+  assert.ok(problemasDoPasso(f, 5).some((e) => e.includes("indicado")));
+  assert.ok(problemasDoPasso(f, 7).some((e) => e.includes("privacidade")));
 });
 
 test("primeiro emprego dispensa a experiência", () => {
   const f = fichaCompleta();
   f.experiencias = [];
   f.primeiroEmprego = true;
-  assert.deepEqual(problemasDoPasso(f, 3), []);
+  assert.deepEqual(problemasDoPasso(f, 4), []);
   assert.deepEqual(fichaParaGravar(f).experiencias, []);
 });
 
 test("indicação pede nome e proximidade só quando foi indicado", () => {
   const f = fichaCompleta();
   f.indicacao.indicado = "SIM";
-  assert.equal(problemasDoPasso(f, 4).length, 2);
+  assert.equal(problemasDoPasso(f, 5).length, 2);
   f.indicacao.nome = "João";
   f.indicacao.proximidade = "amigo";
-  assert.deepEqual(problemasDoPasso(f, 4), []);
+  assert.deepEqual(problemasDoPasso(f, 5), []);
 });
 
 test("redação com espaços não engana o mínimo", () => {
   const f = fichaCompleta();
   f.redacao.qualidades = "curto" + " ".repeat(MINIMO_DA_REDACAO);
-  assert.equal(problemasDoPasso(f, 5).length, 1);
+  assert.equal(problemasDoPasso(f, 6).length, 1);
 });
 
 test("saída antes da entrada é apontada", () => {
   const f = fichaCompleta();
   f.experiencias[0].saida = "2021-01";
-  assert.ok(problemasDoPasso(f, 3).some((e) => e.includes("antes da entrada")));
+  assert.ok(problemasDoPasso(f, 4).some((e) => e.includes("antes da entrada")));
 });
 
 test("lerFicha não confia no que vem: tipos, datas, listas e emoji", () => {
@@ -124,4 +127,24 @@ test("duração legível", () => {
   assert.equal(duracao(40), "40 s");
   assert.equal(duracao(754), "13 min");
   assert.equal(duracao(3900), "1 h 5 min");
+});
+
+test("família, documentos e filhos: a linha em branco não fica, a lida não confia no formato", () => {
+  const f = lerFicha({
+    origem: "PAPEL",
+    pessoal: { sexo: "Masculino", estadoCivil: "Solteiro", comQuemMora: "Pais" },
+    documentos: { rg: "4.769.085", orgao: "SSP", cpf: "125.110.984-58" },
+    familia: { pai: { nome: "Pai", profissao: "Porteiro" }, filhos: [{ nome: "Ana", idade: "5 anos", nascimento: "2021-13-01" }, { nome: "", idade: "", nascimento: "" }] },
+    redes: { quais: "Instagram", nome: "@fulano" },
+  });
+  assert.equal(f.origem, "PAPEL");
+  assert.equal(f.pessoal.sexo, "Masculino");
+  assert.equal(f.documentos.orgao, "SSP");
+  assert.equal(f.familia.pai.profissao, "Porteiro");
+  assert.equal(f.familia.mae.nome, "");
+  assert.equal(f.familia.filhos[0].nascimento, "");
+  assert.equal(f.familia.filhos.length, 2);
+  assert.equal(fichaParaGravar(f).familia.filhos.length, 1);
+  assert.equal(lerFicha({}).origem, "");
+  assert.equal(f.redes.nome, "@fulano");
 });

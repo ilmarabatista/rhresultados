@@ -389,7 +389,7 @@ export default function Sidebar({
   return (
     <>
       {/* Barra superior apenas em telas pequenas */}
-      <div className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:hidden">
+      <div className="no-print sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setAberto(true)}

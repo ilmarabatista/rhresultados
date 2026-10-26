@@ -1309,6 +1309,9 @@ model Candidate {
   stageNotes Json?
   /// Observações finais da ficha do candidato.
   finalNotes String?          @db.Text
+  /// A avaliação automática da pasta pela IA (notas por área, pontos fortes e
+  /// de atenção), com a assinatura do que ela leu: refeita quando a pasta muda.
+  avaliacaoAutomatica Json?
 
   /// Quando ela cobrou pela última vez a ficha ou o teste que não voltou.
   cobradoEm DateTime?
