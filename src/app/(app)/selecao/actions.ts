@@ -12,6 +12,7 @@ import { organizarTranscricao } from "@/lib/ai-entrevista";
 import { nomeDoCurriculo, problemaDoCurriculo } from "@/lib/curriculo";
 import { lerAvaliacao, type Avaliacao } from "@/lib/fluxo-da-vaga";
 import { assinaturaDaPasta, avaliarPasta, dadosDaPasta, rascunharParecer } from "@/lib/ai-parecer";
+import { assinarDossie } from "@/lib/dossie-link";
 
 /**
  * O processo seletivo: modelos de processo, vagas, etapas e candidatos.
@@ -545,6 +546,37 @@ export async function enviarFicha(id: string): Promise<SelecaoState & { token?: 
     refresh(c.companyId);
   }
   return { ok: true, token: c.applicationToken };
+}
+
+// ------------------------------------------------------------------ dossiê
+
+/**
+ * O link do dossiê para mandar ao cliente pelo WhatsApp, com o telefone do
+ * contato da empresa (se houver) e o nome do candidato e da vaga para a
+ * mensagem.
+ */
+export async function linkDoDossie(
+  candidatoId: string,
+): Promise<SelecaoState & { token?: string; telefone?: string | null; nome?: string; vaga?: string; contato?: string | null }> {
+  const session = await requireSession();
+  const c = await prisma.candidate.findUnique({
+    where: { id: candidatoId },
+    select: {
+      name: true,
+      companyId: true,
+      jobOpening: { select: { title: true, company: { select: { contactName: true, contactPhone: true } } } },
+    },
+  });
+  if (!c || !c.jobOpening) return { error: "Candidato não encontrado." };
+  await log(c.companyId, session.userId, "EDITOU", candidatoId, `Mandou o dossiê de ${c.name} para o cliente.`);
+  return {
+    ok: true,
+    token: await assinarDossie(candidatoId),
+    telefone: c.jobOpening.company?.contactPhone ?? null,
+    contato: c.jobOpening.company?.contactName ?? null,
+    nome: c.name,
+    vaga: c.jobOpening.title,
+  };
 }
 
 // -------------------------------------------------------------- entrevista
