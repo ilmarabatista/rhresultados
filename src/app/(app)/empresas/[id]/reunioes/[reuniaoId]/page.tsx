@@ -15,6 +15,8 @@ import { quemPrecisa } from "@/lib/treinamentos-dados";
 import { escreverHoras, lerCategoria, nomeDoTreinamento, ROTULO_DA_CATEGORIA } from "@/lib/treinamentos";
 
 export const dynamic = "force-dynamic";
+// A IA organizando a reunião gravada pode levar uns minutos.
+export const maxDuration = 300;
 export const metadata = { title: "Reunião — RH Resultados" };
 
 /**
@@ -39,6 +41,7 @@ export default async function ReuniaoPage({
         items: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
         participants: { orderBy: { name: "asc" } },
         files: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, size: true } },
+        transcript: { orderBy: { recordedAt: "asc" }, select: { id: true, recordedAt: true, text: true } },
         plano: { select: { titulo: true, serviceId: true, service: { select: { name: true } } } },
         turma: { include: { treinamento: { select: { codigo: true, nome: true, categoria: true } } } },
       },
@@ -48,6 +51,15 @@ export default async function ReuniaoPage({
   if (!r || r.companyId !== id) notFound();
 
   const situacao: SituacaoDaReuniao = lerSituacao(r.status);
+
+  // O telefone de quem veio da equipe, para o convite pelo WhatsApp.
+  const idsDaEquipe = r.participants.map((p) => p.employeeId).filter((v): v is string => Boolean(v));
+  const telefones = new Map(
+    (idsDaEquipe.length
+      ? await prisma.employee.findMany({ where: { id: { in: idsDaEquipe } }, select: { id: true, phone: true } })
+      : []
+    ).map((e) => [e.id, e.phone]),
+  );
 
   // Na turma de treinamento: quem a matriz diz que precisa e ainda não está convocado.
   const turma = r.turma;
@@ -103,7 +115,23 @@ export default async function ReuniaoPage({
             }
           : null,
         apresentacoes: r.files.map((f) => ({ id: f.id, nome: f.name, tamanho: f.size })),
-        participantes: r.participants.map((p) => ({ id: p.id, nome: p.name, presente: p.present })),
+        participantes: r.participants.map((p) => ({
+          id: p.id,
+          nome: p.name,
+          presente: p.present,
+          telefone: p.employeeId ? (telefones.get(p.employeeId) ?? null) : null,
+        })),
+        link: r.meetLink,
+        resumo: r.summary ?? "",
+        transcricao: r.transcript.map((t) => ({
+          id: t.id,
+          hora: t.recordedAt.toLocaleTimeString("pt-BR", {
+            timeZone: "America/Sao_Paulo",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          texto: t.text,
+        })),
         itens: r.items
           .filter((i) => (TIPOS_DE_ITEM as readonly string[]).includes(i.kind))
           .map((i) => ({
