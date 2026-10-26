@@ -76,7 +76,7 @@ export default function AvaliacaoAutomatica({
       titulo="Avaliação automática"
       descricao="Feita pela IA a partir da pasta inteira (ficha, testes, entrevista e descrição do cargo). Serve de apoio: a decisão é da consultoria."
       acao={a ? <Etiqueta tom={ADERENCIA[a.aderencia].tom}>{`${ADERENCIA[a.aderencia].rotulo} · ${a.nota.toLocaleString("pt-BR")}/10`}</Etiqueta> : null}
-      className="break-inside-avoid"
+      className="break-inside-avoid print:hidden"
     >
       {vazia ? (
         <p className="text-mini text-slate-500">A avaliação sai quando o candidato tiver ficha, teste ou entrevista na pasta.</p>

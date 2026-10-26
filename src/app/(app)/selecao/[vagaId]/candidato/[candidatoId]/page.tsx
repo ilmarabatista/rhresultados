@@ -16,7 +16,7 @@ import PaginasDoCurriculo from "@/components/paginas-do-curriculo";
 import ParecerFinal from "@/components/resultado-do-candidato";
 import AvaliacaoAutomatica from "@/components/avaliacao-automatica";
 import { assinaturaDaPasta, dadosDaPasta } from "@/lib/ai-parecer";
-import { BaixarPastaPdf, ImprimirAoAbrir } from "@/components/baixar-pasta-pdf";
+import { BaixarPastaPdf } from "@/components/baixar-pasta-pdf";
 
 export const dynamic = "force-dynamic";
 // Organizar a entrevista chama a IA, que pode levar mais de um minuto.
@@ -50,11 +50,6 @@ const MOVIMENTO: Record<string, string> = {
 const botao =
   "inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-micro text-slate-600 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-50";
 
-/** O nome que o navegador sugere ao salvar o PDF: "Pasta - Maria da Silva - Recepcionista". */
-function nomeDoPdf(candidato: string, vaga: string): string {
-  return `Pasta - ${candidato} - ${vaga}`.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
-}
-
 /**
  * A pasta do candidato dentro da vaga: a ficha que ele preencheu, os testes
  * que fez, a entrevista organizada pelas perguntas da vaga e o resultado final.
@@ -65,11 +60,11 @@ export default async function PastaDoCandidatoPage({
   searchParams,
 }: {
   params: Promise<{ vagaId: string; candidatoId: string }>;
-  searchParams: Promise<{ aba?: string; pdf?: string }>;
+  searchParams: Promise<{ aba?: string }>;
 }) {
   await requireSession();
   const { vagaId, candidatoId } = await params;
-  const { aba: abaPedida, pdf } = await searchParams;
+  const { aba: abaPedida } = await searchParams;
   const [c, dados] = await Promise.all([carregarPastaDoCandidato(vagaId, candidatoId), dadosDaPasta(candidatoId)]);
   if (!c || !c.jobOpening) notFound();
   const pastaVazia = !dados || dados === "vazia";
@@ -103,7 +98,9 @@ export default async function PastaDoCandidatoPage({
       {aba === "tudo" ? <h2 className="text-sm font-semibold text-brand-800">Ficha de solicitação de emprego</h2> : null}
       {c.ficha ? (
         <>
-          <p className="text-micro text-slate-500">Respondida {formatMoment(c.applicationAnsweredAt)}</p>
+          <p className="text-micro text-slate-500">
+            {c.ficha.origem === "PAPEL" ? "Preenchida à mão em" : "Respondida em"} {formatMoment(c.applicationAnsweredAt)}
+          </p>
           <FichaDoCandidato ficha={c.ficha} respondidaEm={c.applicationAnsweredAt} />
         </>
       ) : (
@@ -236,7 +233,7 @@ export default async function PastaDoCandidatoPage({
               ← quadro da vaga
             </Link>
             <PrintButton />
-            <BaixarPastaPdf candidato={c.name} vaga={vaga.title} />
+            <BaixarPastaPdf href={`/selecao/${vaga.id}/candidato/${c.id}/dossie`} candidato={c.name} vaga={vaga.title} />
           </span>
         }
       />
@@ -279,7 +276,6 @@ export default async function PastaDoCandidatoPage({
       {aba === "resultado" ? resultado : null}
       {aba === "tudo" ? (
         <div className="space-y-5">
-          {pdf === "1" ? <ImprimirAoAbrir nomeDoArquivo={nomeDoPdf(c.name, vaga.title)} /> : null}
           {curriculo}
           {ficha}
           {testes}

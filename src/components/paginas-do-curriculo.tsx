@@ -42,7 +42,16 @@ async function desenhar(id: string): Promise<Pagina[]> {
   return paginas;
 }
 
-export default function PaginasDoCurriculo({ arquivos }: { arquivos: Arquivo[] }) {
+export default function PaginasDoCurriculo({
+  arquivos,
+  quebrarAntes = true,
+  className = "space-y-3 break-after-page",
+}: {
+  arquivos: Arquivo[];
+  /** Falso: a primeira página segue na folha corrente (logo abaixo do título). */
+  quebrarAntes?: boolean;
+  className?: string;
+}) {
   const [paginas, setPaginas] = useState<Record<string, Pagina[] | "erro">>({});
   const chave = arquivos.map((a) => a.id).join(",");
 
@@ -67,8 +76,8 @@ export default function PaginasDoCurriculo({ arquivos }: { arquivos: Arquivo[] }
   if (arquivos.length === 0) return null;
   // Cada página do currículo numa folha, e a ficha começa na folha seguinte.
   return (
-    <div className="space-y-3 break-after-page">
-      {arquivos.map((a) => {
+    <div className={className}>
+      {arquivos.map((a, n) => {
         const p = paginas[a.id];
         return (
           <div key={a.id} className="space-y-2">
@@ -85,7 +94,9 @@ export default function PaginasDoCurriculo({ arquivos }: { arquivos: Arquivo[] }
                   width={pg.largura}
                   height={pg.altura}
                   alt={`${a.nome}, página ${i + 1}`}
-                  className="mx-auto block h-auto w-full max-w-3xl break-before-page border border-slate-200 print:max-w-none print:border-0"
+                  className={`mx-auto block h-auto w-full max-w-3xl border border-slate-200 print:max-w-none print:border-0 ${
+                    quebrarAntes || n > 0 || i > 0 ? "break-before-page" : ""
+                  } ${quebrarAntes ? "" : "print:max-h-[240mm] print:w-auto"}`}
                 />
               ))
             )}
