@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { lerFicha } from "./ficha";
 import { lerEntrevista, lerPerguntas } from "./entrevista";
-import { candidatoProvavel } from "./fluxo-da-vaga";
+import { candidatoProvavel, lerAvaliacao } from "./fluxo-da-vaga";
 import { diasDesde, funilDaVaga, pendenciasDoCandidato, type EtapaTipo } from "./selecao";
 import type { CandidatoNaTela, EtapaNaTela, FunilNaTela } from "@/components/selecao-quadro";
 import type { VagaNaLista } from "@/components/selecao-vagas";
@@ -266,6 +266,7 @@ export async function carregarPastaDoCandidato(vagaId: string, candidatoId: stri
       applicationAnsweredAt: true,
       entrevista: true,
       finalNotes: true,
+      avaliacaoAutomatica: true,
       stageNotes: true,
       avisadoEm: true,
       movimentos: { orderBy: { criadoEm: "asc" }, select: { id: true, etapaId: true, etapaNome: true, resultado: true, motivo: true, criadoEm: true } },
@@ -286,6 +287,7 @@ export async function carregarPastaDoCandidato(vagaId: string, candidatoId: stri
     perguntas: lerPerguntas(c.jobOpening.perguntasDaEntrevista),
     curriculos: c.arquivos.map((a) => ({ id: a.id, nome: a.nome, tamanho: a.tamanho, enviadoEm: dataCurta(a.criadoEm) })),
     anotacoes: anotacoesPorEtapa(c.stageNotes, c.jobOpening.etapas, c.movimentos),
+    avaliacao: lerAvaliacao(c.avaliacaoAutomatica),
   };
 }
 
