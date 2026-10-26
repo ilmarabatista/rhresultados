@@ -32,6 +32,7 @@ import type { OpcoesDaReuniao } from "@/lib/reunioes-dados";
 import { SmallSubmitButton } from "./form";
 import MeetingSlides, { type Apresentacao } from "./meeting-slides";
 import TurmaPainel, { type TurmaDaReuniao } from "./turma-painel";
+import MeetingOnline, { type TrechoDaTranscricao } from "./meeting-online";
 import { avisar, confirmar } from "@/components/avisos";
 
 /**
@@ -87,8 +88,14 @@ export type ReuniaoCompleta = {
   apresentacoes: Apresentacao[];
   /** Quando a reunião é uma turma de treinamento. */
   turma: TurmaDaReuniao | null;
-  participantes: { id: string; nome: string; presente: boolean }[];
+  participantes: { id: string; nome: string; presente: boolean; telefone: string | null }[];
   itens: ItemDaAta[];
+  /** O link da videochamada. */
+  link: string | null;
+  /** O resumo escrito pela IA a partir da gravação. */
+  resumo: string;
+  /** A transcrição da gravação, trecho a trecho. */
+  transcricao: TrechoDaTranscricao[];
 };
 
 const escrito = (dia: string) => dia.split("-").reverse().join("/");
@@ -995,6 +1002,8 @@ export default function MeetingRecord({
       </header>
 
       {turma ? <TurmaPainel companyId={companyId} turma={turma} /> : null}
+
+      <MeetingOnline reuniao={reuniao} />
 
       <section className="space-y-1.5">
         <CabecalhoDaParte titulo="Apresentação usada" dica="o slide que você apresentou nesta reunião" />
