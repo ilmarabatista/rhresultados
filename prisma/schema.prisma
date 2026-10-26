@@ -260,6 +260,11 @@ model Meeting {
   /// O compromisso que a reunião tem na agenda, enquanto tem data.
   visitId    String?   @unique
 
+  /// O link da videochamada (Google Meet ou outro), mandado aos participantes.
+  meetLink   String?
+  /// O resumo que a IA escreveu a partir da transcrição, corrigível à mão.
+  summary    String?   @db.Text
+
   /// O produto do catálogo a que a reunião se refere — qualquer um, contratado
   /// ou não. Na reunião de plano, vazio quer dizer o produto do plano.
   serviceId String?
@@ -285,6 +290,8 @@ model Meeting {
   participants MeetingParticipant[]
   /// As apresentações usadas na reunião.
   files        MeetingFile[]
+  /// O que foi falado, transcrito em trechos enquanto a reunião é gravada.
+  transcript   MeetingTranscriptPart[]
 
   @@index([companyId, date])
   @@index([planoId])
@@ -308,6 +315,25 @@ model MeetingFile {
   createdAt DateTime @default(now())
 
   @@index([meetingId])
+}
+
+/// Um trecho da transcrição: uns minutos de gravação, já em texto.
+///
+/// A gravação vai em partes para não perder tudo se a aba fechar no meio, e
+/// porque o servidor publicado não aceita arquivo grande. O áudio não fica
+/// guardado: só o texto.
+model MeetingTranscriptPart {
+  id        String  @id @default(cuid())
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  /// Quando o trecho começou a ser gravado: a ordem da transcrição.
+  recordedAt DateTime
+  text       String   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([meetingId, recordedAt])
 }
 
 /// Um item da ata: o que foi conversado, decidido ou combinado.
