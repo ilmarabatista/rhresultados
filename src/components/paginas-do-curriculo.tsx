@@ -16,10 +16,10 @@ type Arquivo = { id: string; nome: string };
 /** Resolução do desenho: nítido no papel sem pesar demais a página. */
 const ESCALA = 1.6;
 
-async function desenhar(id: string): Promise<Pagina[]> {
+async function desenhar(id: string, link?: string): Promise<Pagina[]> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-  const dados = await fetch(`/api/selecao/curriculo/${id}`).then((r) => {
+  const dados = await fetch(`/api/selecao/curriculo/${id}${link ? `?t=${encodeURIComponent(link)}` : ""}`).then((r) => {
     if (!r.ok) throw new Error(String(r.status));
     return r.arrayBuffer();
   });
@@ -46,11 +46,14 @@ export default function PaginasDoCurriculo({
   arquivos,
   quebrarAntes = true,
   className = "space-y-3 break-after-page",
+  link,
 }: {
   arquivos: Arquivo[];
   /** Falso: a primeira página segue na folha corrente (logo abaixo do título). */
   quebrarAntes?: boolean;
   className?: string;
+  /** O link do dossiê, para abrir os arquivos sem login. */
+  link?: string;
 }) {
   const [paginas, setPaginas] = useState<Record<string, Pagina[] | "erro">>({});
   const chave = arquivos.map((a) => a.id).join(",");
@@ -61,7 +64,7 @@ export default function PaginasDoCurriculo({
     document.body.dataset.curriculos = "carregando";
     (async () => {
       for (const id of chave.split(",")) {
-        const r = await desenhar(id).catch(() => "erro" as const);
+        const r = await desenhar(id, link).catch(() => "erro" as const);
         if (!vivo) return;
         setPaginas((p) => ({ ...p, [id]: r }));
       }
@@ -71,7 +74,7 @@ export default function PaginasDoCurriculo({
       vivo = false;
       delete document.body.dataset.curriculos;
     };
-  }, [chave]);
+  }, [chave, link]);
 
   if (arquivos.length === 0) return null;
   // Cada página do currículo numa folha, e a ficha começa na folha seguinte.

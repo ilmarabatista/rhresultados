@@ -17,6 +17,7 @@ import ParecerFinal from "@/components/resultado-do-candidato";
 import AvaliacaoAutomatica from "@/components/avaliacao-automatica";
 import { assinaturaDaPasta, dadosDaPasta } from "@/lib/ai-parecer";
 import { BaixarPastaPdf } from "@/components/baixar-pasta-pdf";
+import EnviarDossie from "@/components/enviar-dossie";
 
 export const dynamic = "force-dynamic";
 // Organizar a entrevista chama a IA, que pode levar mais de um minuto.
@@ -233,6 +234,7 @@ export default async function PastaDoCandidatoPage({
               ← quadro da vaga
             </Link>
             <PrintButton />
+            <EnviarDossie candidatoId={c.id} />
             <BaixarPastaPdf href={`/selecao/${vaga.id}/candidato/${c.id}/dossie`} candidato={c.name} vaga={vaga.title} />
           </span>
         }
