@@ -29,6 +29,18 @@ export const TETO_DA_TRANSCRICAO = 80_000;
 /** O que a IA escreve quando a pergunta não foi feita ou não teve resposta. */
 export const SEM_RESPOSTA = "Não respondida na transcrição.";
 
+/** A pergunta ficou sem resposta: em branco ou marcada assim pela IA. */
+export function semResposta(resposta: string): boolean {
+  const r = resposta.trim();
+  return !r || r === SEM_RESPOSTA;
+}
+
+/** O número de cada resposta contando só as respondidas (0 nas sem resposta), para a impressão. */
+export function numerarRespondidas(respostas: string[]): number[] {
+  let n = 0;
+  return respostas.map((r) => (semResposta(r) ? 0 : ++n));
+}
+
 function texto(v: unknown, max: number): string {
   return typeof v === "string" ? textoSeguro(v).trim().slice(0, max) : "";
 }

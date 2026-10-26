@@ -14,6 +14,8 @@ import { ResultadoDoDisc, ResultadoDoTesteCadastrado } from "@/components/result
 import CurriculoDoCandidato from "@/components/curriculo-do-candidato";
 import PaginasDoCurriculo from "@/components/paginas-do-curriculo";
 import ParecerFinal from "@/components/resultado-do-candidato";
+import AvaliacaoAutomatica from "@/components/avaliacao-automatica";
+import { assinaturaDaPasta, dadosDaPasta } from "@/lib/ai-parecer";
 import { BaixarPastaPdf, ImprimirAoAbrir } from "@/components/baixar-pasta-pdf";
 
 export const dynamic = "force-dynamic";
@@ -68,8 +70,10 @@ export default async function PastaDoCandidatoPage({
   await requireSession();
   const { vagaId, candidatoId } = await params;
   const { aba: abaPedida, pdf } = await searchParams;
-  const c = await carregarPastaDoCandidato(vagaId, candidatoId);
+  const [c, dados] = await Promise.all([carregarPastaDoCandidato(vagaId, candidatoId), dadosDaPasta(candidatoId)]);
   if (!c || !c.jobOpening) notFound();
+  const pastaVazia = !dados || dados === "vazia";
+  const avaliacaoAtual = Boolean(c.avaliacao && !pastaVazia && c.avaliacao.assinatura === assinaturaDaPasta(dados));
 
   const aba: Aba = abaPedida === "tudo" || ABAS.some((a) => a.valor === abaPedida) ? (abaPedida as Aba) : c.curriculos.length > 0 && !c.ficha ? "curriculo" : "ficha";
   const vaga = c.jobOpening;
@@ -216,6 +220,7 @@ export default async function PastaDoCandidatoPage({
           </dl>
         </Painel>
       ) : null}
+      <AvaliacaoAutomatica candidatoId={c.id} salva={c.avaliacao} atual={avaliacaoAtual} vazia={pastaVazia} />
       <ParecerFinal key={c.finalNotes ?? ""} candidatoId={c.id} salvo={c.finalNotes ?? ""} />
     </section>
   );

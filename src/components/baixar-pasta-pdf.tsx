@@ -32,12 +32,14 @@ export function ImprimirAoAbrir({ nomeDoArquivo }: { nomeDoArquivo: string }) {
   useEffect(() => {
     const titulo = document.title;
     document.title = nomeDoArquivo;
-    // Espera as páginas do currículo (PaginasDoCurriculo) e dá um respiro para
-    // as fontes e os gráficos dos testes; desiste de esperar em 30 segundos.
+    // Espera as páginas do currículo (PaginasDoCurriculo) e a avaliação
+    // automática, se estiver sendo refeita, e dá um respiro para as fontes e os
+    // gráficos dos testes; desiste de esperar em 90 segundos.
     const inicio = Date.now();
     let t: ReturnType<typeof setTimeout>;
     const tentar = () => {
-      if (document.body.dataset.curriculos === "carregando" && Date.now() - inicio < 30_000) {
+      const { curriculos, avaliacao } = document.body.dataset;
+      if ((curriculos === "carregando" || avaliacao === "carregando") && Date.now() - inicio < 90_000) {
         t = setTimeout(tentar, 300);
         return;
       }

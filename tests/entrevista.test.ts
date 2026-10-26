@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SEM_RESPOSTA, lerEntrevista, lerPerguntas, pedidoDaEntrevista, respostasDaIA } from "../src/lib/entrevista";
+import { SEM_RESPOSTA, lerEntrevista, lerPerguntas, numerarRespondidas, pedidoDaEntrevista, respostasDaIA, semResposta } from "../src/lib/entrevista";
 
 test("perguntas: uma por linha, sem numeração, vazias ou repetidas", () => {
   assert.deepEqual(lerPerguntas("1. Fale de você\n\n2) Por que saiu?\n- fale de você\n  • Pretensão?  "), [
@@ -46,4 +46,11 @@ test("lerEntrevista tolera formato errado", () => {
   const e = lerEntrevista({ respostas: [{ pergunta: "A", resposta: 5 }, { resposta: "sem pergunta" }], avaliacao: "boa" });
   assert.deepEqual(e?.respostas, [{ pergunta: "A", resposta: "" }]);
   assert.equal(e?.avaliacao, "boa");
+});
+
+test("impressão: sem resposta some e a numeração conta só as respondidas", () => {
+  assert.equal(semResposta("  "), true);
+  assert.equal(semResposta(SEM_RESPOSTA), true);
+  assert.equal(semResposta("Trabalhei 2 anos."), false);
+  assert.deepEqual(numerarRespondidas(["a", SEM_RESPOSTA, "", "b"]), [1, 0, 0, 2]);
 });

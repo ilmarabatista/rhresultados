@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Sparkles } from "lucide-react";
 import { organizarEntrevista, salvarEntrevista } from "@/app/(app)/selecao/actions";
-import { SEM_RESPOSTA, TETO_DA_TRANSCRICAO, entrevistaVazia, type Entrevista } from "@/lib/entrevista";
+import { SEM_RESPOSTA, TETO_DA_TRANSCRICAO, entrevistaVazia, numerarRespondidas, semResposta, type Entrevista } from "@/lib/entrevista";
 import { avisar } from "./avisos";
 import { FormError, Textarea } from "./form";
 import { Etiqueta, Painel } from "./ui";
@@ -94,6 +94,8 @@ export default function EntrevistaDoCandidato({
     );
   }
 
+  const numeroImpresso = numerarRespondidas(entrevista.respostas.map((r) => r.resposta));
+
   return (
     <div className="space-y-3">
       <Painel
@@ -149,9 +151,12 @@ export default function EntrevistaDoCandidato({
       <Painel titulo="Respostas" descricao="Corrija o que for preciso. O que estiver aqui é o que fica na pasta do candidato.">
         <ol className="space-y-3">
           {entrevista.respostas.map((r, i) => (
-            <li key={i} className="break-inside-avoid">
+            // Na impressão (e no PDF da pasta) a pergunta sem resposta some, e a
+            // numeração conta só as respondidas.
+            <li key={i} className={`break-inside-avoid ${semResposta(r.resposta) ? "print:hidden" : ""}`}>
               <p className="mb-1 flex items-center gap-2 text-mini font-medium text-slate-800">
-                {i + 1}. {r.pergunta}
+                <span className="print:hidden">{i + 1}.</span>
+                <span className="hidden print:inline">{numeroImpresso[i]}.</span> {r.pergunta}
                 {r.resposta === SEM_RESPOSTA ? <Etiqueta tom="atencao">sem resposta</Etiqueta> : null}
               </p>
               <Textarea

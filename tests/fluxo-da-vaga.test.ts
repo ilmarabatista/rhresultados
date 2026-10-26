@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { candidatoProvavel, nomeParaComparar, pedidoDoParecer, testeEmTexto } from "../src/lib/fluxo-da-vaga";
+import { CRITERIOS, avaliacaoDaIA, candidatoProvavel, lerAvaliacao, nomeParaComparar, pedidoDoParecer, testeEmTexto } from "../src/lib/fluxo-da-vaga";
 
 const candidatos = [
   { id: "a", nome: "Victor Souza", situacao: "REPROVADO" },
@@ -45,4 +45,41 @@ test("pedido marca o que não foi feito", () => {
   assert.match(p, /<descricao_do_cargo>não feito<\/descricao_do_cargo>/);
   assert.match(p, /<testes>não feito<\/testes>/);
   assert.match(p, /Triagem: Boa conversa/);
+});
+
+test("avaliação: os quatro critérios na ordem, área não feita fora da conta", () => {
+  const a = avaliacaoDaIA(
+    {
+      criterios: [
+        { nome: "Entrevista", nota: 6, comentario: "Respostas curtas." },
+        { nome: "Formação e experiência", nota: "8,0", comentario: "Já foi vendedor." },
+        { nome: "Perfil comportamental (testes)", nota: null, comentario: "" },
+      ],
+      pontosFortes: ["Experiência em vendas", ""],
+      resumo: "Bom candidato.",
+    },
+    "abc",
+    new Date("2026-10-26T12:00:00Z"),
+  );
+  assert.ok(a);
+  assert.deepEqual(a.criterios.map((c) => c.nome), [...CRITERIOS]);
+  assert.equal(a.criterios[0].nota, 8);
+  assert.equal(a.criterios[1].nota, -1);
+  assert.equal(a.criterios[1].comentario, "Não foi feita.");
+  assert.equal(a.nota, 7); // média de 8 e 6
+  assert.equal(a.aderencia, "ALTA");
+  assert.deepEqual(a.pontosFortes, ["Experiência em vendas"]);
+});
+
+test("avaliação: a aderência sai da nota, não do que a IA disse", () => {
+  const a = avaliacaoDaIA({ nota: 4.2, aderencia: "ALTA" }, "x");
+  assert.equal(a?.aderencia, "BAIXA");
+  assert.equal(avaliacaoDaIA({}, "x"), null);
+});
+
+test("avaliação guardada volta igual, com as áreas não feitas", () => {
+  const a = avaliacaoDaIA({ nota: 6, criterios: [{ nome: "Entrevista", nota: 6 }] }, "assin", new Date("2026-10-26T12:00:00Z"));
+  const lida = lerAvaliacao(JSON.parse(JSON.stringify(a)));
+  assert.deepEqual(lida, a);
+  assert.equal(lerAvaliacao({ nota: 5 }), null);
 });
