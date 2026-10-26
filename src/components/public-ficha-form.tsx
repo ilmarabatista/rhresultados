@@ -14,12 +14,15 @@ import {
   experienciaPreenchida,
   experienciaVazia,
   fichaVazia,
+  filhoPreenchido,
+  filhoVazio,
   idadeEm,
   lerFicha,
   mesAno,
   problemasDoPasso,
   type Experiencia,
   type Ficha,
+  type Filho,
 } from "@/lib/ficha";
 import { Field, FormError, Input, Select, Textarea } from "./form";
 
@@ -159,6 +162,13 @@ export default function PublicFichaForm({
     setFicha((f) => fn(structuredClone(f)));
   }
 
+  function mudarFilho(i: number, campo: keyof Filho, valor: string) {
+    mudar((f) => {
+      f.familia.filhos[i][campo] = valor;
+      return f;
+    });
+  }
+
   function mudarExperiencia(i: number, campo: keyof Experiencia, valor: string) {
     mudar((f) => {
       f.experiencias[i][campo] = valor;
@@ -285,10 +295,85 @@ export default function PublicFichaForm({
                 <Input type="email" autoComplete="email" value={ficha.pessoal.email} onChange={(e) => mudar((f) => ((f.pessoal.email = e.target.value), f))} />
               </Field>
             </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Sexo" hint="Opcional.">
+                <Input value={ficha.pessoal.sexo} onChange={(e) => mudar((f) => ((f.pessoal.sexo = e.target.value), f))} />
+              </Field>
+              <Field label="Estado civil" hint="Opcional.">
+                <Input value={ficha.pessoal.estadoCivil} onChange={(e) => mudar((f) => ((f.pessoal.estadoCivil = e.target.value), f))} />
+              </Field>
+              <Field label="Com quem mora" hint="Opcional.">
+                <Input value={ficha.pessoal.comQuemMora} onChange={(e) => mudar((f) => ((f.pessoal.comQuemMora = e.target.value), f))} />
+              </Field>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Identidade (RG)" hint="Opcional.">
+                <Input value={ficha.documentos.rg} onChange={(e) => mudar((f) => ((f.documentos.rg = e.target.value), f))} />
+              </Field>
+              <Field label="Órgão expedidor" hint="Opcional.">
+                <Input value={ficha.documentos.orgao} onChange={(e) => mudar((f) => ((f.documentos.orgao = e.target.value), f))} />
+              </Field>
+              <Field label="CPF" hint="Opcional.">
+                <Input inputMode="numeric" value={ficha.documentos.cpf} onChange={(e) => mudar((f) => ((f.documentos.cpf = e.target.value), f))} />
+              </Field>
+            </div>
           </>
         ) : null}
 
         {passo === 2 ? (
+          <>
+            <p className="text-xs text-slate-500">Tudo opcional. Preencha o que se aplica a você.</p>
+            {(
+              [
+                ["pai", "Nome do pai"],
+                ["mae", "Nome da mãe"],
+                ["conjuge", "Nome do cônjuge"],
+              ] as const
+            ).map(([quem, rotulo]) => (
+              <div key={quem} className="grid gap-3 sm:grid-cols-2">
+                <Field label={rotulo}>
+                  <Input value={ficha.familia[quem].nome} onChange={(e) => mudar((f) => ((f.familia[quem].nome = e.target.value), f))} />
+                </Field>
+                <Field label="Profissão">
+                  <Input value={ficha.familia[quem].profissao} onChange={(e) => mudar((f) => ((f.familia[quem].profissao = e.target.value), f))} />
+                </Field>
+              </div>
+            ))}
+            <p className="pt-1 text-sm font-medium text-slate-700">Filhos</p>
+            {ficha.familia.filhos.map((x, i) => (
+              <fieldset key={i} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_8rem_10rem_auto]">
+                <Field label="Nome">
+                  <Input value={x.nome} onChange={(e) => mudarFilho(i, "nome", e.target.value)} />
+                </Field>
+                <Field label="Idade">
+                  <Input value={x.idade} onChange={(e) => mudarFilho(i, "idade", e.target.value)} />
+                </Field>
+                <Field label="Data de nascimento">
+                  <Input type="date" value={x.nascimento} onChange={(e) => mudarFilho(i, "nascimento", e.target.value)} />
+                </Field>
+                <button
+                  type="button"
+                  className="self-end pb-2.5 text-slate-400 hover:text-red-600"
+                  aria-label={`Remover filho ${i + 1}`}
+                  onClick={() => mudar((f) => ((f.familia.filhos = f.familia.filhos.filter((_, k) => k !== i)), f))}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </fieldset>
+            ))}
+            {ficha.familia.filhos.length < 10 ? (
+              <button
+                type="button"
+                className={`${botaoSecundario} inline-flex items-center gap-1.5`}
+                onClick={() => mudar((f) => ((f.familia.filhos = [...f.familia.filhos, filhoVazio()]), f))}
+              >
+                <Plus className="h-4 w-4" /> {ficha.familia.filhos.length ? "Adicionar outro filho" : "Adicionar filho"}
+              </button>
+            ) : null}
+          </>
+        ) : null}
+
+        {passo === 3 ? (
           <>
             <Field label="Último nível de formação">
               <Select value={ficha.formacao.nivel} onChange={(e) => mudar((f) => ((f.formacao.nivel = e.target.value), f))}>
@@ -324,7 +409,7 @@ export default function PublicFichaForm({
           </>
         ) : null}
 
-        {passo === 3 ? (
+        {passo === 4 ? (
           <>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
@@ -398,7 +483,7 @@ export default function PublicFichaForm({
           </>
         ) : null}
 
-        {passo === 4 ? (
+        {passo === 5 ? (
           <>
             <div>
               <p className="mb-1.5 text-sm font-medium text-slate-700">
@@ -419,10 +504,18 @@ export default function PublicFichaForm({
                 </Field>
               </div>
             ) : null}
+            <div className="grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
+              <Field label="Redes sociais que usa" hint="Opcional. Ex.: Instagram, Facebook.">
+                <Input value={ficha.redes.quais} onChange={(e) => mudar((f) => ((f.redes.quais = e.target.value), f))} />
+              </Field>
+              <Field label="Seu nome nas redes" hint="Opcional.">
+                <Input value={ficha.redes.nome} onChange={(e) => mudar((f) => ((f.redes.nome = e.target.value), f))} />
+              </Field>
+            </div>
           </>
         ) : null}
 
-        {passo === 5 ? (
+        {passo === 6 ? (
           <>
             <p className="text-sm leading-relaxed text-slate-600">
               Responda com as suas palavras, sem pressa. Não há resposta certa: queremos conhecer você. Mínimo de {MINIMO_DA_REDACAO} caracteres em cada pergunta.
@@ -448,9 +541,9 @@ export default function PublicFichaForm({
           </>
         ) : null}
 
-        {passo === 6 ? <Conferencia ficha={ficha} idade={idade} aoEditar={irPara} /> : null}
+        {passo === 7 ? <Conferencia ficha={ficha} idade={idade} aoEditar={irPara} /> : null}
 
-        {passo === 6 ? (
+        {passo === 7 ? (
           <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
             <p className="font-medium text-slate-800">Aviso de privacidade</p>
             <p>
@@ -517,15 +610,22 @@ function Conferencia({ ficha, idade, aoEditar }: { ficha: Ficha; idade: number |
         [ficha.pessoal.celular, ficha.pessoal.email].filter(Boolean).join(" · "),
       ],
     },
-    { passo: 2, linhas: [[ficha.formacao.nivel, ficha.formacao.curso].filter(Boolean).join(" · ")] },
     {
-      passo: 3,
+      passo: 2,
+      linhas: [
+        [ficha.familia.pai.nome, ficha.familia.mae.nome].filter(Boolean).join(" e "),
+        ficha.familia.filhos.filter(filhoPreenchido).length ? `${ficha.familia.filhos.filter(filhoPreenchido).length} filho(s)` : "",
+      ],
+    },
+    { passo: 3, linhas: [[ficha.formacao.nivel, ficha.formacao.curso].filter(Boolean).join(" · ")] },
+    {
+      passo: 4,
       linhas: ficha.primeiroEmprego
         ? ["Primeiro emprego"]
         : experiencias.map((x) => `${x.cargo} na ${x.empresa} (${mesAno(x.entrada)} a ${x.saida ? mesAno(x.saida) : "hoje"})`),
     },
-    { passo: 4, linhas: [ficha.indicacao.indicado === "SIM" ? `Indicado por ${ficha.indicacao.nome}` : "Sem indicação"] },
-    { passo: 5, linhas: [`Redação: ${ficha.redacao.qualidades.length + ficha.redacao.expectativas.length} caracteres`] },
+    { passo: 5, linhas: [ficha.indicacao.indicado === "SIM" ? `Indicado por ${ficha.indicacao.nome}` : "Sem indicação"] },
+    { passo: 6, linhas: [`Redação: ${ficha.redacao.qualidades.length + ficha.redacao.expectativas.length} caracteres`] },
   ];
 
   return (

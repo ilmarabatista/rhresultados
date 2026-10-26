@@ -1,129 +1,256 @@
-import { PERGUNTAS_DA_REDACAO, SITUACOES_DO_CURSO, dataBr, duracao, idadeEm, mesAno, tempoNaEmpresa, type Ficha } from "@/lib/ficha";
-import { Etiqueta, Painel } from "./ui";
+import {
+  PERGUNTAS_DA_REDACAO,
+  SITUACOES_DO_CURSO,
+  dataBr,
+  duracao,
+  filhoPreenchido,
+  idadeEm,
+  mesAno,
+  tempoNaEmpresa,
+  type Ficha,
+} from "@/lib/ficha";
+import { Etiqueta } from "./ui";
 
 /**
- * A ficha respondida, para ler e imprimir: a mesma ordem do papel, com as
- * contas feitas (idade, tempo em cada empresa) e o que a página mediu na
- * redação.
+ * A ficha de solicitação de emprego, para ler e imprimir: a mesma ordem do
+ * papel, só com o que foi preenchido, e as contas feitas (idade, tempo em
+ * cada empresa). As medidas da redação (tempo, texto colado) são para a
+ * consultoria e ficam fora da impressão.
  */
 
-function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
-  if (valor === "" || valor === null || valor === undefined) return null;
+type Item = { rotulo: string; valor: string; largo?: boolean };
+
+function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 py-0.5 text-mini">
-      <dt className="w-40 shrink-0 text-slate-500">{rotulo}</dt>
-      <dd className="min-w-0 flex-1 whitespace-pre-line text-slate-800">{valor}</dd>
-    </div>
+    <section className="break-inside-avoid overflow-hidden rounded-lg border border-slate-200 bg-white print:rounded-none print:border-slate-300">
+      <h3 className="border-b border-slate-200 bg-brand-50 px-3 py-1.5 text-micro font-semibold uppercase tracking-wider text-brand-800 print:border-slate-300">
+        {titulo}
+      </h3>
+      <div className="px-3 py-2">{children}</div>
+    </section>
   );
 }
 
+/** Rótulo em cima, valor embaixo, em grade: o desenho de um formulário preenchido. */
+function Campos({ itens }: { itens: Item[] }) {
+  const preenchidos = itens.filter((i) => i.valor.trim() !== "");
+  if (preenchidos.length === 0) return null;
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 print:grid-cols-3">
+      {preenchidos.map((i) => (
+        <div key={i.rotulo} className={i.largo ? "col-span-2 sm:col-span-3 print:col-span-3" : ""}>
+          <dt className="text-micro text-slate-500">{i.rotulo}</dt>
+          <dd className="whitespace-pre-line text-mini text-slate-900">{i.valor}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const temAlgo = (itens: Item[]) => itens.some((i) => i.valor.trim() !== "");
+
 export default function FichaDoCandidato({ ficha, respondidaEm }: { ficha: Ficha; respondidaEm: Date | null }) {
   const p = ficha.pessoal;
-  const idade = idadeEm(p.nascimento, respondidaEm ?? new Date());
+  const quando = respondidaEm ?? new Date();
+  const idade = idadeEm(p.nascimento, quando);
   const situacao = SITUACOES_DO_CURSO.find((s) => s.valor === ficha.formacao.situacao)?.rotulo ?? "";
+  const filhos = ficha.familia.filhos.filter(filhoPreenchido);
+  const experiencias = ficha.experiencias;
+  const redacao = (["qualidades", "expectativas"] as const).filter((c) => ficha.redacao[c].trim() !== "");
   const caracteres = ficha.redacao.qualidades.length + ficha.redacao.expectativas.length;
 
+  const vaga: Item[] = [
+    { rotulo: "Cargo pretendido", valor: ficha.vaga.cargo },
+    { rotulo: "Pretensão salarial", valor: ficha.vaga.pretensao },
+    { rotulo: "Pode começar", valor: ficha.vaga.inicio },
+    { rotulo: "Horários", valor: ficha.vaga.horarios },
+    { rotulo: "Disponível para viajar", valor: ficha.vaga.viagens === "SIM" ? "Sim" : ficha.vaga.viagens === "NAO" ? "Não" : "" },
+  ];
+  const pessoais: Item[] = [
+    { rotulo: "Nome", valor: p.nome, largo: true },
+    { rotulo: "Data de nascimento", valor: p.nascimento ? `${dataBr(p.nascimento)}${idade !== null ? ` (${idade} anos)` : ""}` : "" },
+    { rotulo: "Onde nasceu", valor: p.naturalidade },
+    { rotulo: "Sexo", valor: p.sexo },
+    { rotulo: "Estado civil", valor: p.estadoCivil },
+    { rotulo: "Com quem mora", valor: p.comQuemMora },
+    { rotulo: "Endereço", valor: [p.endereco, p.bairro].filter(Boolean).join(", "), largo: true },
+    { rotulo: "Cidade", valor: p.cidade },
+    { rotulo: "CEP", valor: p.cep },
+    { rotulo: "Celular", valor: p.celular },
+    { rotulo: "E-mail", valor: p.email },
+  ];
+  const documentos: Item[] = [
+    { rotulo: "Identidade", valor: ficha.documentos.rg },
+    { rotulo: "Órgão expedidor", valor: ficha.documentos.orgao },
+    { rotulo: "CPF", valor: ficha.documentos.cpf },
+  ];
+  const familia: Item[] = (
+    [
+      ["pai", "Pai"],
+      ["mae", "Mãe"],
+      ["conjuge", "Cônjuge"],
+    ] as const
+  ).flatMap(([quem, rotulo]) => [
+    { rotulo: `Nome ${rotulo === "Mãe" ? "da" : "do"} ${rotulo.toLowerCase()}`, valor: ficha.familia[quem].nome, largo: false },
+    { rotulo: "Profissão", valor: ficha.familia[quem].nome || ficha.familia[quem].profissao ? ficha.familia[quem].profissao || "—" : "" },
+  ]);
+  const formacao: Item[] = [
+    { rotulo: "Último nível", valor: ficha.formacao.nivel },
+    { rotulo: "Curso", valor: ficha.formacao.curso, largo: !ficha.formacao.nivel },
+    { rotulo: "Situação", valor: [situacao, ficha.formacao.conclusao].filter(Boolean).join(" · ") },
+    { rotulo: "Outros cursos realizados", valor: ficha.formacao.outrosCursos, largo: true },
+    { rotulo: "Idiomas", valor: ficha.formacao.idiomas, largo: true },
+  ];
+  const outros: Item[] = [
+    { rotulo: "Trabalho voluntário", valor: ficha.voluntariado, largo: true },
+    { rotulo: "Perfil profissional", valor: ficha.perfilProfissional },
+    { rotulo: "Redes sociais", valor: ficha.redes.quais },
+    { rotulo: "Nome nas redes", valor: ficha.redes.nome },
+  ];
+  const indicacao: Item[] =
+    ficha.indicacao.indicado === "SIM"
+      ? [
+          { rotulo: "Indicado por", valor: ficha.indicacao.nome },
+          { rotulo: "Cargo de quem indicou", valor: ficha.indicacao.cargo },
+          { rotulo: "Grau de proximidade", valor: ficha.indicacao.proximidade },
+        ]
+      : ficha.indicacao.indicado === "NAO"
+        ? [{ rotulo: "Indicado por alguém da empresa", valor: "Não" }]
+        : [];
+
   return (
-    <div className="space-y-3">
-      <Painel titulo="A vaga">
-        <dl>
-          <Linha rotulo="Cargo pretendido" valor={ficha.vaga.cargo} />
-          <Linha rotulo="Pretensão salarial" valor={ficha.vaga.pretensao} />
-          <Linha rotulo="Pode começar" valor={ficha.vaga.inicio} />
-          <Linha rotulo="Horários" valor={ficha.vaga.horarios} />
-          <Linha rotulo="Viaja" valor={ficha.vaga.viagens === "SIM" ? "Sim" : ficha.vaga.viagens === "NAO" ? "Não" : ""} />
-        </dl>
-      </Painel>
+    <div className="space-y-2.5">
+      {temAlgo(vaga) ? (
+        <Bloco titulo="A vaga">
+          <Campos itens={vaga} />
+        </Bloco>
+      ) : null}
 
-      <Painel titulo="Dados pessoais">
-        <dl>
-          <Linha rotulo="Nome" valor={p.nome} />
-          <Linha rotulo="Nascimento" valor={p.nascimento ? `${dataBr(p.nascimento)}${idade !== null ? ` (${idade} anos)` : ""}` : ""} />
-          <Linha rotulo="Onde nasceu" valor={p.naturalidade} />
-          <Linha rotulo="Endereço" valor={[p.endereco, p.bairro].filter(Boolean).join(", ")} />
-          <Linha rotulo="Cidade" valor={[p.cidade, p.cep].filter(Boolean).join(" · CEP ")} />
-          <Linha rotulo="Celular" valor={p.celular} />
-          <Linha rotulo="E-mail" valor={p.email} />
-        </dl>
-      </Painel>
+      <Bloco titulo="Dados pessoais">
+        <Campos itens={pessoais} />
+      </Bloco>
 
-      <Painel titulo="Formação">
-        <dl>
-          <Linha rotulo="Último nível" valor={ficha.formacao.nivel} />
-          <Linha rotulo="Curso" valor={ficha.formacao.curso} />
-          <Linha rotulo="Situação" valor={[situacao, ficha.formacao.conclusao].filter(Boolean).join(" · ")} />
-          <Linha rotulo="Outros cursos" valor={ficha.formacao.outrosCursos} />
-          <Linha rotulo="Idiomas" valor={ficha.formacao.idiomas} />
-        </dl>
-      </Painel>
+      {temAlgo(documentos) ? (
+        <Bloco titulo="Documentos pessoais">
+          <Campos itens={documentos} />
+        </Bloco>
+      ) : null}
 
-      <Painel titulo="Experiência">
-        {ficha.primeiroEmprego ? (
-          <p className="text-mini text-slate-600">Primeiro emprego.</p>
+      {temAlgo(familia) || filhos.length > 0 ? (
+        <Bloco titulo="Dados familiares">
+          <div className="space-y-2.5">
+            {temAlgo(familia) ? (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {familia
+                  .filter((i) => i.valor.trim() !== "")
+                  .map((i, k) => (
+                    <div key={k}>
+                      <dt className="text-micro text-slate-500">{i.rotulo}</dt>
+                      <dd className="text-mini text-slate-900">{i.valor}</dd>
+                    </div>
+                  ))}
+              </dl>
+            ) : null}
+            {filhos.length > 0 ? (
+              <table className="w-full text-left text-mini">
+                <thead>
+                  <tr className="border-b border-slate-200 text-micro text-slate-500">
+                    <th className="py-1 font-normal">Filhos</th>
+                    <th className="py-1 font-normal">Idade</th>
+                    <th className="py-1 font-normal">Data de nascimento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filhos.map((f, i) => {
+                    const anos = f.nascimento ? idadeEm(f.nascimento, quando) : null;
+                    return (
+                      <tr key={i} className="border-b border-slate-100 last:border-0">
+                        <td className="py-1 text-slate-900">{f.nome || "—"}</td>
+                        <td className="py-1 text-slate-900">{f.idade || (anos !== null ? `${anos} anos` : "—")}</td>
+                        <td className="py-1 text-slate-900">{f.nascimento ? dataBr(f.nascimento) : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-mini text-slate-600">Sem filhos informados.</p>
+            )}
+          </div>
+        </Bloco>
+      ) : null}
+
+      {temAlgo(formacao) ? (
+        <Bloco titulo="Situação educacional">
+          <Campos itens={formacao} />
+        </Bloco>
+      ) : null}
+
+      <Bloco titulo="Situação profissional">
+        {ficha.primeiroEmprego || experiencias.length === 0 ? (
+          <p className="text-mini text-slate-700">{ficha.primeiroEmprego ? "Primeiro emprego." : "Nenhuma experiência informada."}</p>
         ) : (
-          <ol className="space-y-2.5">
-            {ficha.experiencias.map((x, i) => (
-              <li key={i} className="break-inside-avoid">
-                <p className="text-mini font-medium text-slate-800">
-                  {x.cargo} · {x.empresa}
-                </p>
-                <p className="text-micro text-slate-500">
-                  {mesAno(x.entrada)} a {x.saida ? mesAno(x.saida) : "hoje"}
-                  {tempoNaEmpresa(x.entrada, x.saida, respondidaEm ?? new Date()) ? ` · ${tempoNaEmpresa(x.entrada, x.saida, respondidaEm ?? new Date())}` : ""}
-                </p>
-                <dl className="mt-0.5">
-                  <Linha rotulo="Salário" valor={x.salario} />
-                  <Linha rotulo="Motivo da saída" valor={x.motivoSaida} />
-                  <Linha rotulo="Referência" valor={x.contato} />
-                </dl>
-              </li>
-            ))}
+          <ol className="divide-y divide-slate-100">
+            {experiencias.map((x, i) => {
+              const tempo = tempoNaEmpresa(x.entrada, x.saida, quando);
+              const periodo = x.entrada ? `${mesAno(x.entrada)} a ${x.saida ? mesAno(x.saida) : "atual"}${tempo ? ` (${tempo})` : ""}` : x.saida ? `até ${mesAno(x.saida)}` : "";
+              return (
+                <li key={i} className="break-inside-avoid py-2 first:pt-0 last:pb-0">
+                  <p className="text-mini font-semibold text-slate-900">
+                    {x.empresa}
+                    {x.cargo ? <span className="font-normal text-slate-700"> · {x.cargo}</span> : null}
+                  </p>
+                  <div className="mt-1">
+                    <Campos
+                      itens={[
+                        { rotulo: "Período", valor: periodo },
+                        { rotulo: "Salário", valor: x.salario },
+                        { rotulo: "Contato", valor: x.contato },
+                        { rotulo: "Motivo da saída", valor: x.motivoSaida, largo: true },
+                      ]}
+                    />
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         )}
-        <dl className="mt-2">
-          <Linha rotulo="Trabalho voluntário" valor={ficha.voluntariado} />
-          <Linha rotulo="Perfil profissional" valor={ficha.perfilProfissional} />
-        </dl>
-      </Painel>
+      </Bloco>
 
-      <Painel titulo="Indicação">
-        {ficha.indicacao.indicado === "SIM" ? (
-          <dl>
-            <Linha rotulo="Indicado por" valor={ficha.indicacao.nome} />
-            <Linha rotulo="Cargo de quem indicou" valor={ficha.indicacao.cargo} />
-            <Linha rotulo="Proximidade" valor={ficha.indicacao.proximidade} />
-          </dl>
-        ) : (
-          <p className="text-mini text-slate-600">Não foi indicado por ninguém da empresa.</p>
-        )}
-      </Painel>
+      {temAlgo(outros) ? (
+        <Bloco titulo="Voluntariado e redes sociais">
+          <Campos itens={outros} />
+        </Bloco>
+      ) : null}
 
-      <Painel
-        titulo="Redação"
-        acao={
-          <span className="flex flex-wrap gap-1">
-            <Etiqueta>{caracteres} caracteres</Etiqueta>
-            {ficha.medidas.segundosNaRedacao > 0 ? <Etiqueta>escreveu em {duracao(ficha.medidas.segundosNaRedacao)}</Etiqueta> : null}
-            {ficha.medidas.colouNaRedacao ? <Etiqueta tom="atencao">colou texto</Etiqueta> : null}
-          </span>
-        }
-      >
-        <div className="space-y-3">
-          {(["qualidades", "expectativas"] as const).map((campo, i) => (
-            <div key={campo} className="break-inside-avoid">
-              <p className="text-mini font-medium text-slate-800">
-                {i + 1}. {PERGUNTAS_DA_REDACAO[campo]}
-              </p>
-              <p className="mt-1 whitespace-pre-line text-mini leading-relaxed text-slate-700">{ficha.redacao[campo]}</p>
+      {indicacao.length > 0 ? (
+        <Bloco titulo="Indicação">
+          <Campos itens={indicacao} />
+        </Bloco>
+      ) : null}
+
+      {redacao.length > 0 ? (
+        <Bloco titulo="Redação">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-1 print:hidden">
+              {ficha.origem === "PAPEL" ? <Etiqueta>escrita à mão, no papel</Etiqueta> : <Etiqueta>{caracteres} caracteres</Etiqueta>}
+              {ficha.medidas.segundosNaRedacao > 0 ? <Etiqueta>escreveu em {duracao(ficha.medidas.segundosNaRedacao)}</Etiqueta> : null}
+              {ficha.medidas.colouNaRedacao ? <Etiqueta tom="atencao">colou texto</Etiqueta> : null}
             </div>
-          ))}
-          {ficha.medidas.colouNaRedacao ? (
-            <p className="text-micro text-slate-500">
-              &ldquo;Colou texto&rdquo; quer dizer que pelo menos um trecho foi colado em vez de digitado. Pode ser só um rascunho feito antes no celular; vale perguntar na entrevista.
-            </p>
-          ) : null}
-        </div>
-      </Painel>
+            {redacao.map((campo) => (
+              <div key={campo} className="break-inside-avoid">
+                <p className="text-micro font-medium text-slate-500">{PERGUNTAS_DA_REDACAO[campo]}</p>
+                <p className="mt-0.5 whitespace-pre-line text-mini leading-relaxed text-slate-900">{ficha.redacao[campo]}</p>
+              </div>
+            ))}
+            {ficha.medidas.colouNaRedacao ? (
+              <p className="text-micro text-slate-500 print:hidden">
+                &ldquo;Colou texto&rdquo; quer dizer que pelo menos um trecho foi colado em vez de digitado. Pode ser só um rascunho feito antes no celular; vale perguntar na entrevista.
+              </p>
+            ) : null}
+          </div>
+        </Bloco>
+      ) : null}
     </div>
   );
 }
