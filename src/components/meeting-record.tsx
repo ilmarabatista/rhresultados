@@ -865,11 +865,26 @@ export default function MeetingRecord({
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => startTransition(async () => avisarSeErro(await encerrarReuniao(reuniao.id, true)))}
+                onClick={() =>
+                  startTransition(async () => {
+                    const r = await encerrarReuniao(reuniao.id, true);
+                    avisarSeErro(r);
+                    // Reunião encerrada: abre o relatório para mandar à gestão.
+                    if (!r.error && !turma) router.push(`/empresas/${companyId}/reunioes/${reuniao.id}/relatorio`);
+                  })
+                }
                 className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700"
               >
                 {turma ? "Encerrar treinamento" : "Encerrar reunião"}
               </button>
+            ) : null}
+            {!turma && (reuniao.situacao === "REALIZADA" || reuniao.situacao === "ARQUIVADA") ? (
+              <Link
+                href={`/empresas/${companyId}/reunioes/${reuniao.id}/relatorio`}
+                className="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700"
+              >
+                Relatório para a gestão
+              </Link>
             ) : null}
             {reuniao.situacao === "REALIZADA" ? (
               <button
