@@ -47,6 +47,8 @@ model Empresa {
   /// Intervalo mínimo para quem trabalha mais de 6h (CLT art. 71).
   intervaloMinimo    Int         @default(60)
   validadeBancoMeses Int         @default(6)
+  /// Banco por semana: o total da semana contra o horário dela, sem tolerância no dia.
+  bancoSemanal       Boolean     @default(false)
   /// O saldo do banco começa a contar deste dia.
   inicio             DateTime
 

@@ -55,6 +55,7 @@ function empresaPublica(e: EmpresaDoPonto) {
     tolerancia: e.tolerancia,
     intervaloMinimo: e.intervaloMinimo,
     validadeBancoMeses: e.validadeBancoMeses,
+    bancoSemanal: e.bancoSemanal,
     inicio: dateToDayKey(e.inicio),
   };
 }
@@ -148,6 +149,8 @@ const regrasSchema = z.object({
   tolerancia: z.number().int().min(0).max(30),
   intervaloMinimo: z.number().int().min(0).max(240),
   validadeBancoMeses: z.number().int().min(1).max(24),
+  /** Opcional: quem não manda (o RH antigo) não mexe nele. */
+  bancoSemanal: z.boolean().optional(),
   inicio: dia,
   ativo: z.boolean(),
 });
@@ -201,6 +204,7 @@ async function escrever(e: EmpresaDoPonto, partes: string[], req: Request): Prom
         tolerancia: d.tolerancia,
         intervaloMinimo: d.intervaloMinimo,
         validadeBancoMeses: d.validadeBancoMeses,
+        ...(d.bancoSemanal === undefined ? {} : { bancoSemanal: d.regime === "BANCO_DE_HORAS" && d.bancoSemanal }),
         inicio: dayKeyToDate(d.inicio),
         ativo: d.ativo,
       },

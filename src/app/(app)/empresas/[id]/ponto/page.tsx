@@ -135,6 +135,7 @@ export default async function PontoPage({
   const mes = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : hoje.slice(0, 7);
   const visao: Visao = VISOES.some(([v]) => v === sp.ver) ? (sp.ver as Visao) : "colaboradores";
   const banco = empresa.regime === "BANCO_DE_HORAS";
+  const semanal = banco && Boolean(empresa.bancoSemanal);
   const ativos = colaboradores.filter((c) => c.ativo);
   const dias = diasDoMes(mes);
   const primeiroDia = dias[0];
@@ -173,7 +174,9 @@ export default async function PontoPage({
             {
               rotulo: "Regime",
               valor: banco ? "Banco de horas" : "Horas extras",
-              detalhe: `${horas(cargaSemanal(empresa.horario))} semanais · tolerância ${empresa.tolerancia} min`,
+              detalhe: semanal
+                ? `por semana: ${horas(cargaSemanal(empresa.horario))} semanais`
+                : `${horas(cargaSemanal(empresa.horario))} semanais · tolerância ${empresa.tolerancia} min`,
             },
             {
               rotulo: "Colaboradores",
@@ -234,6 +237,7 @@ export default async function PontoPage({
             tolerancia: empresa.tolerancia,
             intervaloMinimo: empresa.intervaloMinimo,
             validadeBancoMeses: empresa.validadeBancoMeses,
+            bancoSemanal: Boolean(empresa.bancoSemanal),
             inicio: empresa.inicio,
             ativo: empresa.ativo,
           }}
@@ -525,13 +529,13 @@ export default async function PontoPage({
       return (
         <div className="border-t border-slate-100">
           <MapaDoMes dias={doPeriodo} />
-          <Espelho companyId={id} colaboradorId={escolhido!.id} regime={empresa.regime} dias={doPeriodo} />
+          <Espelho companyId={id} colaboradorId={escolhido!.id} regime={empresa.regime} porSemana={semanal} dias={doPeriodo} />
           <Totais t={totais} saldoBanco={null} />
           <p className="no-print border-t border-slate-100 px-4 py-2 text-micro text-slate-500">
             Na régua: <span className="inline-block h-2 w-2 rounded-sm bg-slate-200" /> horário previsto,{" "}
             <span className="inline-block h-2 w-2 rounded-sm bg-brand-500" /> trabalhado, <span className="inline-block h-2 w-2 rounded-sm bg-emerald-500" /> hora
-            a mais. Passe o mouse no dia para incluir batida ou lançar férias/atestado. Clique numa batida para ver a foto, o local e anular.{" "}
-            <span className="rounded bg-amber-50 px-1 text-amber-800">08:00*</span> é batida incluída pelo RH; riscada é anulada. Nada é apagado.
+            a mais. Passe o mouse no dia para incluir batida ou lançar férias/atestado. Clique numa batida para corrigir o horário, anular ou ver a foto e o local.{" "}
+            <span className="rounded bg-amber-50 px-1 text-amber-800">08:00*</span> é batida incluída ou corrigida pelo RH; riscada é anulada. Nada é apagado.
           </p>
         </div>
       );
@@ -714,7 +718,7 @@ export default async function PontoPage({
             </tbody>
           </table>
           <Totais t={calculo.totais} saldoBanco={saldo?.total ?? null} />
-          <p className="border-t border-slate-100 px-4 py-2 text-micro text-slate-500">* batida incluída pelo RH.</p>
+          <p className="border-t border-slate-100 px-4 py-2 text-micro text-slate-500">* batida incluída ou corrigida pelo RH.</p>
           <div className="hidden grid-cols-2 gap-10 px-6 pb-6 pt-14 text-center text-xs text-slate-600 print:grid">
             <p className="border-t border-slate-400 pt-1">{escolhido.nome}</p>
             <p className="border-t border-slate-400 pt-1">{company!.name}</p>
