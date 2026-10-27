@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { paraCampoDeData } from "@/lib/dates";
-import { lerDados } from "@/lib/mapeamento";
+import { formatFullDate, paraCampoDeData } from "@/lib/dates";
+import { lerDados, lerStatus } from "@/lib/mapeamento";
 import { modeloSugerido } from "@/lib/autoavaliacao";
 import MapeamentoEditor from "@/components/mapeamento-editor";
 import MapeamentoItens from "@/components/mapeamento-itens";
@@ -23,7 +23,7 @@ export default async function MapeamentoPage({
   const [m, modelos] = await Promise.all([
     prisma.mapeamentoDeRotina.findFirst({
       where: { id: mapId, employeeId: pessoaId, companyId: id },
-      include: { employee: { select: { name: true, role: true, cargoId: true } } },
+      include: { employee: { select: { name: true, role: true, cargoId: true, phone: true } } },
     }),
     prisma.modeloDeAutoavaliacao.findMany({
       where: { companyId: id },
@@ -52,6 +52,12 @@ export default async function MapeamentoPage({
           proximaRevisao: paraCampoDeData(m.proximaRevisao),
         }}
         dados={dados}
+        link={{
+          status: lerStatus(m.status),
+          token: m.token,
+          telefone: m.employee.phone,
+          respondidoEm: m.respondidoEm ? formatFullDate(m.respondidoEm) : null,
+        }}
       />
       <MapeamentoItens
         companyId={id}

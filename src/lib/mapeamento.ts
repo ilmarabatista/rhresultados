@@ -322,3 +322,47 @@ export function metasDoMapeamento(d: DadosDoMapeamento): MetaSugerida[] {
     })),
   ].map((m) => ({ ...m, titulo: m.titulo.slice(0, 300) }));
 }
+
+// ------------------------------------------------------------ pelo link
+
+/** Os campos que só o RH vê e escreve: não vão para a pessoa nem voltam dela. */
+export const CAMPOS_DO_RH = ["rhImpressoes", "rhAtencao", "rhProximosPassos"] as const;
+
+export const STATUS_DO_MAPEAMENTO = ["RASCUNHO", "ENVIADO", "RESPONDIDO"] as const;
+export type StatusDoMapeamento = (typeof STATUS_DO_MAPEAMENTO)[number];
+
+export function lerStatus(valor: unknown): StatusDoMapeamento {
+  return (STATUS_DO_MAPEAMENTO as readonly string[]).includes(String(valor)) ? (valor as StatusDoMapeamento) : "RASCUNHO";
+}
+
+export const ROTULO_DO_STATUS: Record<StatusDoMapeamento, string> = {
+  RASCUNHO: "Preenchido pelo RH",
+  ENVIADO: "Link enviado",
+  RESPONDIDO: "Respondido pela pessoa",
+};
+
+/** O que a pessoa recebe no link: tudo menos as observações do RH. */
+export function dadosParaAPessoa(d: DadosDoMapeamento): DadosDoMapeamento {
+  const r = { ...d };
+  for (const c of CAMPOS_DO_RH) r[c] = "";
+  return r;
+}
+
+/** O que a pessoa mandou, por cima do que está gravado, sem tocar nas observações do RH. */
+export function juntarDaPessoa(gravado: DadosDoMapeamento, daPessoa: unknown): DadosDoMapeamento {
+  const novo = lerDados(daPessoa);
+  for (const c of CAMPOS_DO_RH) novo[c] = gravado[c];
+  return novo;
+}
+
+/** Para enviar: pelo menos uma tarefa, que é de onde sai a autoavaliação. */
+export function conferirMapeamento(d: DadosDoMapeamento): string | null {
+  if (!d.resumo.trim()) return "Conte em poucas palavras o que você faz (seção 2).";
+  if (!d.tarefas.length) return "Liste pelo menos uma tarefa (seção 3).";
+  return null;
+}
+
+export function mensagemDoMapeamento(nome: string, link: string): string {
+  const primeiro = nome.trim().split(/\s+/)[0] ?? "";
+  return `Olá, ${primeiro}! Queremos entender melhor a sua rotina de trabalho. Conte pelo link o que você faz no dia a dia, com calma e pelo celular mesmo: ${link}`;
+}
