@@ -654,24 +654,36 @@ export default async function PontoPage({
     const enviado = enviados.find((r) => r.colaboradorId === escolhido.id);
     const quando = (iso: string) =>
       new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+    // No último dia do mês o espelho fica disponível para o colaborador aprovar, com foto.
+    const liberado = hoje >= ultimoDia;
+    const fotoDaAprovacao = (colaboradorId: string) =>
+      `/api/ponto/foto?empresa=${encodeURIComponent(id)}&colaborador=${encodeURIComponent(colaboradorId)}&mes=${mes}`;
+    const aprovaram = ativos.filter((c) => enviados.some((r) => r.colaboradorId === c.id && r.cienteEm));
 
     return (
       <div className="space-y-3">
         {seletorDoColaborador("relatorio", escolhido)}
 
         <div className="no-print flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-          {enviado ? (
+          {enviado?.cienteEm ? (
+            <span className="flex items-center gap-2">
+              {enviado.temFoto ? (
+                <a href={fotoDaAprovacao(escolhido.id)} target="_blank" rel="noreferrer" title="Abrir a foto da aprovação">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- foto trazida do ponto */}
+                  <img src={fotoDaAprovacao(escolhido.id)} alt={`Foto de ${escolhido.nome} ao aprovar`} className="h-10 w-8 rounded object-cover" />
+                </a>
+              ) : null}
+              <Etiqueta tom="bom">aprovado pelo colaborador em {quando(enviado.cienteEm)}</Etiqueta>
+            </span>
+          ) : enviado ? (
             <span>
               Enviado em {quando(enviado.enviadoEm)}
-              {enviado.enviadoPor ? ` por ${enviado.enviadoPor}` : ""} ·{" "}
-              {enviado.cienteEm ? (
-                <Etiqueta tom="bom">conferido pelo colaborador em {quando(enviado.cienteEm)}</Etiqueta>
-              ) : (
-                <Etiqueta tom="atencao">aguardando o colaborador conferir</Etiqueta>
-              )}
+              {enviado.enviadoPor ? ` por ${enviado.enviadoPor}` : ""} · <Etiqueta tom="atencao">aguardando o colaborador aprovar</Etiqueta>
             </span>
+          ) : liberado ? (
+            <Etiqueta tom="atencao">mês fechado, aguardando o colaborador aprovar</Etiqueta>
           ) : (
-            <span>Ainda não enviado ao colaborador.</span>
+            <span>O colaborador recebe este mês para aprovar no dia {ultimoDia.split("-").reverse().slice(0, 2).join("/")}, último dia do mês.</span>
           )}
           <span className="flex-1" />
           <PrintButton />
@@ -724,6 +736,37 @@ export default async function PontoPage({
             <p className="border-t border-slate-400 pt-1">{company!.name}</p>
           </div>
         </section>
+
+        <div className="no-print">
+          <Tabela titulo={`Aprovação do espelho de ${nomeDoMes(mes)}`} direita={`${aprovaram.length} de ${ativos.length} aprovaram`}>
+            <ul className="divide-y divide-slate-100 text-xs">
+              {ativos.map((c) => {
+                const r = enviados.find((x) => x.colaboradorId === c.id);
+                return (
+                  <li key={c.id} className="flex items-center gap-3 px-3 py-1.5">
+                    <Link href={href({ ver: "relatorio", colaborador: c.id })} className="min-w-0 flex-1 truncate text-slate-800 hover:text-brand-700">
+                      {c.nome}
+                    </Link>
+                    {r?.cienteEm ? (
+                      <>
+                        {r.temFoto ? (
+                          <a href={fotoDaAprovacao(c.id)} target="_blank" rel="noreferrer" className="text-brand-700 underline">
+                            foto
+                          </a>
+                        ) : null}
+                        <Etiqueta tom="bom">aprovado em {quando(r.cienteEm)}</Etiqueta>
+                      </>
+                    ) : r || liberado ? (
+                      <Etiqueta tom="atencao">aguardando</Etiqueta>
+                    ) : (
+                      <Etiqueta>mês em andamento</Etiqueta>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Tabela>
+        </div>
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "./prisma";
-import { diasDoMes, cargaSemanal, horarioDaPessoa, type Regime, type TipoOcorrencia, type Totais } from "./calculo";
+import { dateToDayKey, todayKey } from "./dates";
+import { diasDoMes, cargaSemanal, horarioDaPessoa, mesesAte, mesLiberado, type Regime, type TipoOcorrencia, type Totais } from "./calculo";
 import { calcularPessoas, horarioDaEmpresa, pessoasDoPonto, saldosDoBanco, type EmpresaDoPonto } from "./dados";
 
 /**
@@ -71,11 +72,71 @@ export async function montarRelatorio(empresa: EmpresaDoPonto, colaboradorId: st
 export async function enviarRelatorio(empresa: EmpresaDoPonto, colaboradorId: string, mes: string, autor: string | null) {
   const dados = await montarRelatorio(empresa, colaboradorId, mes);
   if (!dados) return null;
-  // Reenviar o mesmo mês troca o retrato e pede a ciência de novo.
+  // Reenviar o mesmo mês troca o retrato e pede a aprovação de novo.
+  await prisma.fotoRelatorio.deleteMany({ where: { relatorio: { colaboradorId, mes } } });
   return prisma.relatorio.upsert({
     where: { colaboradorId_mes: { colaboradorId, mes } },
     create: { colaboradorId, mes, dados, enviadoPor: autor },
     update: { dados, enviadoPor: autor, enviadoEm: new Date(), cienteEm: null },
     select: { id: true, enviadoEm: true },
+  });
+}
+
+// ------------------------------------------------------------ colaborador
+
+/**
+ * Os meses que o colaborador pode abrir: do primeiro mês em que o ponto conta
+ * para ele até o atual, do mais novo para o mais antigo.
+ */
+export async function mesesDoColaborador(colaboradorId: string): Promise<string[]> {
+  const p = await prisma.colaborador.findUnique({
+    where: { id: colaboradorId },
+    select: { createdAt: true, empresa: { select: { inicio: true } } },
+  });
+  if (!p) return [];
+  const inicio = dateToDayKey(p.empresa.inicio);
+  const cadastro = dateToDayKey(p.createdAt);
+  return mesesAte(inicio > cadastro ? inicio : cadastro, todayKey());
+}
+
+/**
+ * Os meses já fechados (ou enviados pelo RH) que o colaborador ainda não
+ * aprovou, do mais antigo para o mais novo.
+ */
+export async function mesesParaAprovar(colaboradorId: string): Promise<string[]> {
+  const hoje = todayKey();
+  const [meses, relatorios] = await Promise.all([
+    mesesDoColaborador(colaboradorId),
+    prisma.relatorio.findMany({ where: { colaboradorId }, select: { mes: true, cienteEm: true } }),
+  ]);
+  const aprovados = new Set(relatorios.filter((r) => r.cienteEm).map((r) => r.mes));
+  const enviados = relatorios.filter((r) => !r.cienteEm).map((r) => r.mes);
+  const pendentes = new Set([...meses.filter((m) => mesLiberado(m, hoje)), ...enviados].filter((m) => !aprovados.has(m)));
+  return [...pendentes].sort();
+}
+
+/**
+ * O colaborador aprova o mês: guarda o espelho como está agora, a hora e a
+ * foto tirada na hora, como comprovante.
+ */
+export async function aprovarMes(colaboradorId: string, mes: string, foto: Buffer) {
+  const p = await prisma.colaborador.findUnique({ where: { id: colaboradorId }, select: { empresa: true } });
+  if (!p) return null;
+  const dados = await montarRelatorio(p.empresa, colaboradorId, mes);
+  if (!dados) return null;
+  const agora = new Date();
+  return prisma.$transaction(async (tx) => {
+    const r = await tx.relatorio.upsert({
+      where: { colaboradorId_mes: { colaboradorId, mes } },
+      create: { colaboradorId, mes, dados, enviadoPor: "Fechamento do mês", enviadoEm: agora, cienteEm: agora },
+      update: { dados, cienteEm: agora },
+      select: { id: true, cienteEm: true },
+    });
+    await tx.fotoRelatorio.upsert({
+      where: { relatorioId: r.id },
+      create: { relatorioId: r.id, dados: new Uint8Array(foto) },
+      update: { dados: new Uint8Array(foto) },
+    });
+    return r;
   });
 }

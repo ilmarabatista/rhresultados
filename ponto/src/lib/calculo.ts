@@ -167,6 +167,21 @@ export function outroMes(mes: string, delta: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/**
+ * O mês fica disponível para o colaborador aprovar no último dia dele (30,
+ * 31, ou 28/29 em fevereiro), sem ninguém precisar enviar.
+ */
+export function mesLiberado(mes: string, hoje: string): boolean {
+  return hoje >= diasDoMes(mes).at(-1)!;
+}
+
+/** Os meses de `desde` até o de `hoje`, do mais novo para o mais antigo, no máximo `limite`. */
+export function mesesAte(desde: string, hoje: string, limite = 12): string[] {
+  const lista: string[] = [];
+  for (let m = hoje.slice(0, 7); m >= desde.slice(0, 7) && lista.length < limite; m = outroMes(m, -1)) lista.push(m);
+  return lista;
+}
+
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",

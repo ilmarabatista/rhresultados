@@ -909,7 +909,7 @@ export function EnviarRelatorio({ companyId, colaboradorId, mes, jaEnviado }: { 
       disabled={pendente}
       className="no-print inline-flex items-center gap-1.5 rounded-md bg-brand-700 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-60"
       onClick={async () => {
-        if (jaEnviado && !(await confirmar("Este mês já foi enviado. Enviar de novo com os ajustes de agora? O colaborador terá de conferir outra vez."))) return;
+        if (jaEnviado && !(await confirmar("Este mês já foi enviado. Enviar de novo com os ajustes de agora? O colaborador terá de aprovar outra vez."))) return;
         iniciar(async () => {
           const r = await enviarRelatorio(companyId, colaboradorId, mes);
           if (r.error) avisar(r.error);

@@ -8,6 +8,8 @@ import {
   horarioEscrito,
   horarioValido,
   lerHorario,
+  mesesAte,
+  mesLiberado,
   porSemanas,
   type RegrasPonto,
 } from "../src/lib/calculo";
@@ -153,4 +155,22 @@ test("banco por semana: semana de 42h dá 2h de crédito, com feriado tirando o 
   assert.equal(semanas[0].totais.trabalhado, 34 * 60);
   assert.equal(semanas[0].totais.saldo, 120);
   assert.equal(semanas[1].inicio, "2026-10-25");
+});
+
+test("o mês libera para aprovar no último dia, inclusive em fevereiro", () => {
+  assert.equal(mesLiberado("2026-10", "2026-10-30"), false);
+  assert.equal(mesLiberado("2026-10", "2026-10-31"), true);
+  assert.equal(mesLiberado("2026-11", "2026-11-30"), true);
+  assert.equal(mesLiberado("2027-02", "2027-02-27"), false);
+  assert.equal(mesLiberado("2027-02", "2027-02-28"), true);
+  assert.equal(mesLiberado("2028-02", "2028-02-28"), false);
+  assert.equal(mesLiberado("2028-02", "2028-02-29"), true);
+  assert.equal(mesLiberado("2026-09", "2026-10-01"), true);
+});
+
+test("meses do colaborador vão do mais novo ao primeiro, com limite", () => {
+  assert.deepEqual(mesesAte("2026-08-15", "2026-10-27"), ["2026-10", "2026-09", "2026-08"]);
+  assert.deepEqual(mesesAte("2026-10-22", "2026-10-27"), ["2026-10"]);
+  assert.deepEqual(mesesAte("2025-12-01", "2026-02-01"), ["2026-02", "2026-01", "2025-12"]);
+  assert.equal(mesesAte("2020-01-01", "2026-10-27", 12).length, 12);
 });

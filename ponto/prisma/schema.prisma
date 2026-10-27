@@ -183,8 +183,10 @@ model Lancamento {
   @@index([colaboradorId, dia])
 }
 
-/// O espelho do mês que o RH enviou ao colaborador. Guarda o retrato do
-/// momento do envio: ajuste feito depois pede um novo envio.
+/// O espelho do mês do colaborador. Nasce quando o RH envia o mês ou quando o
+/// próprio colaborador aprova o mês fechado (no último dia ele já fica
+/// disponível). Guarda o retrato do momento: ajuste feito depois pede um novo
+/// envio, e o colaborador aprova de novo.
 model Relatorio {
   id            String      @id @default(cuid())
   colaboradorId String
@@ -195,10 +197,21 @@ model Relatorio {
   dados       Json
   enviadoPor  String?
   enviadoEm   DateTime  @default(now())
-  /// Quando o colaborador confirmou que viu.
+  /// Quando o colaborador conferiu e aprovou o mês.
   cienteEm    DateTime?
 
+  /// A foto que o colaborador tirou ao aprovar, como comprovante.
+  foto FotoRelatorio?
+
   @@unique([colaboradorId, mes])
+}
+
+/// A foto da aprovação do espelho, guardada à parte para a lista ficar leve.
+model FotoRelatorio {
+  relatorioId String    @id
+  relatorio   Relatorio @relation(fields: [relatorioId], references: [id], onDelete: Cascade)
+  tipo        String    @default("image/jpeg")
+  dados       Bytes
 }
 
 /// Tentativas de login, para travar força bruta (a Vercel roda em várias instâncias).
