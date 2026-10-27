@@ -325,6 +325,14 @@ function IncluirBatida({ companyId, colaboradorId, dia, fechar }: { companyId: s
   );
 }
 
+/** O que o RH lança para um colaborador: o feriado é da empresa toda e fica na aba de ocorrências. */
+const OCORRENCIAS_DA_PESSOA: [TipoOcorrencia, string][] = [
+  ["FERIAS", "Férias"],
+  ["ATESTADO", "Atestado"],
+  ["FOLGA", "Folga"],
+  ["ABONO", "Abono"],
+];
+
 function OcorrenciaDoDia({ companyId, colaboradorId, dia, fechar }: { companyId: string; colaboradorId: string; dia: string; fechar: () => void }) {
   const [state, action] = useActionState<PontoState, FormData>(salvarOcorrencia, {});
   useFechaQuandoOk(state, fechar);
@@ -333,19 +341,91 @@ function OcorrenciaDoDia({ companyId, colaboradorId, dia, fechar }: { companyId:
       <input type="hidden" name="companyId" value={companyId} />
       <input type="hidden" name="colaboradorId" value={colaboradorId} />
       <input type="hidden" name="de" value={dia} />
-      <select name="tipo" className="rounded border border-slate-300 px-1.5 py-1 text-xs" defaultValue="ABONO">
-        <option value="ABONO">Abono</option>
-        <option value="ATESTADO">Atestado</option>
-        <option value="FOLGA">Folga</option>
-        <option value="FERIAS">Férias</option>
+      <select name="tipo" className="rounded border border-slate-300 px-1.5 py-1 text-xs" defaultValue="ATESTADO">
+        {OCORRENCIAS_DA_PESSOA.map(([v, nome]) => (
+          <option key={v} value={v}>
+            {nome}
+          </option>
+        ))}
       </select>
+      <label className="flex items-center gap-1 text-micro text-slate-500">
+        até
+        <input type="date" name="ate" min={dia} className="rounded border border-slate-300 px-1.5 py-1 text-xs" />
+      </label>
       <input name="descricao" placeholder="Observação" className="min-w-[12rem] flex-1 rounded border border-slate-300 px-1.5 py-1 text-xs" />
       <SmallSubmitButton>Lançar</SmallSubmitButton>
       <button type="button" onClick={fechar} className="text-micro text-slate-500">
         cancelar
       </button>
+      <p className="w-full text-micro text-slate-500">Deixe o &quot;até&quot; vazio para um dia só.</p>
       {state.error ? <p className="w-full text-micro text-red-600">{state.error}</p> : null}
     </form>
+  );
+}
+
+/**
+ * O botão do espelho para lançar férias, atestado, folga ou abono de um ou
+ * vários dias do colaborador, sem sair da tela dele.
+ */
+export function LancarOcorrencia({ companyId, colaboradorId, nome, hoje }: { companyId: string; colaboradorId: string; nome: string; hoje: string }) {
+  const [aberto, setAberto] = useState(false);
+  const [state, action] = useActionState<PontoState, FormData>(salvarOcorrencia, {});
+  const [tipo, setTipo] = useState<TipoOcorrencia>("FERIAS");
+  useEffect(() => {
+    if (state.ok) setAberto(false);
+  }, [state]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="no-print inline-flex items-center gap-1 rounded-md bg-brand-700 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-brand-800"
+      >
+        <Plus size={12} /> Férias, atestado, folga…
+      </button>
+      {aberto ? (
+        <Modal titulo={`Lançar para ${nome}`} aoFechar={() => setAberto(false)} largura="lg">
+          <form action={action} className="space-y-3">
+            <input type="hidden" name="companyId" value={companyId} />
+            <input type="hidden" name="colaboradorId" value={colaboradorId} />
+            <input type="hidden" name="tipo" value={tipo} />
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {OCORRENCIAS_DA_PESSOA.map(([v, rotulo]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setTipo(v)}
+                  className={`rounded-lg border px-2 py-2 text-sm transition ${
+                    tipo === v ? "border-brand-500 bg-brand-50 font-semibold text-brand-800" : "border-slate-200 text-slate-600 hover:border-brand-300"
+                  }`}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+            <p className="text-micro text-slate-500">
+              {tipo === "ABONO" || tipo === "ATESTADO"
+                ? "O dia mantém o horário e o que faltar é dado como cumprido."
+                : "O dia deixa de ter horário: não conta falta nem gera débito."}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="De">
+                <Input type="date" name="de" defaultValue={hoje} required />
+              </Field>
+              <Field label="Até" hint="Vazio: um dia só.">
+                <Input type="date" name="ate" />
+              </Field>
+              <Field label="Observação">
+                <Input name="descricao" placeholder={tipo === "ATESTADO" ? "Ex.: CID, médico" : "Opcional"} />
+              </Field>
+            </div>
+            <FormError message={state.error} />
+            <SmallSubmitButton>Lançar</SmallSubmitButton>
+          </form>
+        </Modal>
+      ) : null}
+    </>
   );
 }
 
@@ -368,6 +448,89 @@ function TirarOcorrencia({ companyId, id }: { companyId: string; id: string }) {
 
 const NOME_CURTO_DO_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
+/** A janela de horas da régua: do primeiro horário ou batida do mês ao último, em horas cheias. */
+function janelaDoMes(dias: DiaNoPonto[]): [number, number] {
+  let ini = 8 * 60;
+  let fim = 18 * 60;
+  for (const d of dias) {
+    if (d.foraDoPeriodo) continue;
+    for (const [a, b] of d.horario) {
+      ini = Math.min(ini, a);
+      fim = Math.max(fim, b);
+    }
+    for (const m of d.marcacoes) {
+      if (m.anulada) continue;
+      ini = Math.min(ini, m.minuto);
+      fim = Math.max(fim, m.minuto);
+    }
+  }
+  return [Math.max(0, Math.floor(ini / 60) - 1) * 60, Math.min(48, Math.ceil(fim / 60) + 1) * 60];
+}
+
+/**
+ * O dia desenhado numa régua: o horário previsto em cinza claro, o tempo
+ * trabalhado por cima, em azul dentro do horário e em verde fora dele (extra).
+ * Par aberto (falta a saída) fica em âmbar, até o fim do horário.
+ */
+function Regua({ d, janela }: { d: DiaNoPonto; janela: [number, number] }) {
+  const [ini, fim] = janela;
+  const total = fim - ini;
+  const pos = (m: number) => `${((Math.min(Math.max(m, ini), fim) - ini) / total) * 100}%`;
+  const larg = (a: number, b: number) => `${((Math.min(Math.max(b, ini), fim) - Math.min(Math.max(a, ini), fim)) / total) * 100}%`;
+  const trechos: { a: number; b: number; tipo: "dentro" | "fora" | "aberto" }[] = [];
+  for (const [a, b] of d.pares) {
+    if (b === null) {
+      const ate = d.emAndamento ? a + 30 : Math.max(a + 30, ...d.horario.map((h) => h[1]));
+      trechos.push({ a, b: ate, tipo: "aberto" });
+      continue;
+    }
+    // Corta o par nas bordas do horário, para pintar o extra de outra cor.
+    const cortes = [a, b, ...d.horario.flat().filter((x) => x > a && x < b)].sort((x, y) => x - y);
+    for (let i = 0; i < cortes.length - 1; i++) {
+      const meio = (cortes[i] + cortes[i + 1]) / 2;
+      const dentro = d.horario.some(([h1, h2]) => meio >= h1 && meio < h2);
+      trechos.push({ a: cortes[i], b: cortes[i + 1], tipo: dentro ? "dentro" : "fora" });
+    }
+  }
+  const marcas = [];
+  for (let h = Math.ceil(ini / 60); h * 60 <= fim; h += 2) marcas.push(h * 60);
+
+  return (
+    <div className="relative h-4 w-full min-w-[8rem] overflow-hidden rounded bg-slate-50" aria-hidden>
+      {marcas.map((m) => (
+        <span key={m} className="absolute inset-y-0 w-px bg-slate-200/70" style={{ left: pos(m) }} />
+      ))}
+      {d.horario.map(([a, b]) => (
+        <span key={`h${a}`} className="absolute inset-y-0.5 rounded-sm bg-slate-200" style={{ left: pos(a), width: larg(a, b) }} />
+      ))}
+      {trechos.map((t, i) => (
+        <span
+          key={i}
+          className={`absolute inset-y-1 rounded-sm ${
+            t.tipo === "dentro" ? "bg-brand-500" : t.tipo === "fora" ? "bg-emerald-500" : "bg-amber-400/80"
+          }`}
+          style={{ left: pos(t.a), width: larg(t.a, t.b) }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** A legenda da régua e as horas das pontas, para o cabeçalho da coluna. */
+function CabecalhoDaRegua({ janela }: { janela: [number, number] }) {
+  return (
+    <div className="flex items-center justify-between gap-1 normal-case tracking-normal">
+      <span className="tabular-nums">{relogio(janela[0])}</span>
+      <span className="flex items-center gap-1.5 text-micro">
+        <span className="inline-block h-2 w-2 rounded-sm bg-slate-200" /> horário
+        <span className="inline-block h-2 w-2 rounded-sm bg-brand-500" /> trabalhado
+        <span className="inline-block h-2 w-2 rounded-sm bg-emerald-500" /> extra
+      </span>
+      <span className="tabular-nums">{relogio(janela[1])}</span>
+    </div>
+  );
+}
+
 export function Espelho({
   companyId,
   colaboradorId,
@@ -381,21 +544,23 @@ export function Espelho({
 }) {
   const [aberto, setAberto] = useState<{ dia: string; o: "batida" | "ocorrencia" } | null>(null);
   const fechar = useRef(() => setAberto(null)).current;
+  const janela = janelaDoMes(dias);
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] text-mini">
+      <table className="w-full min-w-[780px] text-mini">
         <thead>
           <tr className="border-b border-slate-200 text-left text-micro uppercase tracking-wider text-slate-500">
             <th className="px-2 py-1.5 font-medium">Dia</th>
-            <th className="px-2 py-1.5 font-medium">Horário</th>
             <th className="px-2 py-1.5 font-medium">Marcações</th>
+            <th className="no-print w-40 px-2 py-1.5 font-medium">
+              <CabecalhoDaRegua janela={janela} />
+            </th>
             <th className="px-2 py-1.5 text-right font-medium">Trabalhado</th>
             <th className="px-2 py-1.5 text-right font-medium">Extra</th>
             <th className="px-2 py-1.5 text-right font-medium">Atraso/falta</th>
             {regime === "BANCO_DE_HORAS" ? <th className="px-2 py-1.5 text-right font-medium">Banco</th> : null}
             <th className="px-2 py-1.5 font-medium">Observações</th>
-            <th className="no-print px-2 py-1.5" />
           </tr>
         </thead>
         <tbody>
@@ -408,7 +573,8 @@ export function Espelho({
             return (
               <tr
                 key={d.dia}
-                className={`border-b border-slate-100 align-top ${d.foraDoPeriodo ? "text-slate-300" : ""} ${
+                id={`dia-${d.dia}`}
+                className={`group scroll-mt-20 border-b border-slate-100 align-top ${d.foraDoPeriodo ? "text-slate-300" : ""} ${
                   temAlerta ? "bg-amber-50/40" : fimDeSemana ? "bg-slate-50/70" : ""
                 }`}
               >
@@ -417,15 +583,27 @@ export function Espelho({
                     {String(dia).padStart(2, "0")}/{NOME_CURTO_DO_MES[mes - 1]}
                   </span>{" "}
                   <span className="text-slate-500">{DIAS_DA_SEMANA[d.semana]}</span>
+                  {d.foraDoPeriodo ? null : (
+                    <span className="block text-micro text-slate-400">{horarioEscrito(d.horario) || "sem expediente"}</span>
+                  )}
                 </td>
-                <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-500">{d.foraDoPeriodo ? "" : horarioEscrito(d.horario) || "—"}</td>
-                <td className="min-w-[13rem] px-2 py-1.5">
+                <td className="min-w-[12rem] px-2 py-1.5">
                   <div className="flex flex-wrap gap-1">
                     {d.marcacoes.map((m) => (
                       <Batida key={m.id} companyId={companyId} m={m} podeMexer={!d.foraDoPeriodo} />
                     ))}
                     {d.marcacoes.length === 0 && !d.foraDoPeriodo ? <span className="text-slate-300">—</span> : null}
                   </div>
+                  {d.foraDoPeriodo || aberto?.dia === d.dia ? null : (
+                    <div className="no-print mt-1 flex gap-1 opacity-50 transition group-hover:opacity-100">
+                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "batida" })} title="Completar horário faltante">
+                        <Plus size={11} /> batida
+                      </button>
+                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "ocorrencia" })} title="Férias, atestado, folga, abono">
+                        <Plus size={11} /> férias/atestado
+                      </button>
+                    </div>
+                  )}
                   {aberto?.dia === d.dia && aberto.o === "batida" ? (
                     <IncluirBatida companyId={companyId} colaboradorId={colaboradorId} dia={d.dia} fechar={fechar} />
                   ) : null}
@@ -433,6 +611,7 @@ export function Espelho({
                     <OcorrenciaDoDia companyId={companyId} colaboradorId={colaboradorId} dia={d.dia} fechar={fechar} />
                   ) : null}
                 </td>
+                <td className="no-print px-2 py-2">{d.foraDoPeriodo ? null : <Regua d={d} janela={janela} />}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-slate-700">
                   {d.foraDoPeriodo || (!d.trabalhado && !d.marcacoes.length) ? "" : horas(d.trabalhado)}
                 </td>
@@ -466,18 +645,6 @@ export function Espelho({
                       </Etiqueta>
                     ))}
                   </div>
-                </td>
-                <td className="no-print whitespace-nowrap px-2 py-1.5 text-right">
-                  {d.foraDoPeriodo ? null : (
-                    <div className="flex justify-end gap-1">
-                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "batida" })} title="Completar horário faltante">
-                        <Plus size={11} /> batida
-                      </button>
-                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "ocorrencia" })} title="Abono, atestado, folga, férias">
-                        <Plus size={11} /> ocorrência
-                      </button>
-                    </div>
-                  )}
                 </td>
               </tr>
             );
