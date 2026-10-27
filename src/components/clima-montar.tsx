@@ -18,6 +18,7 @@ import { NOME_DO_TIPO, TIPOS, type PerguntaDePerfil, type StatusDaPesquisa, type
 import { Field, FormError, FormOk, Input, Select, SubmitButton, Textarea } from "./form";
 import { Etiqueta, Painel } from "./ui";
 import { avisarSeErro, confirmar } from "./avisos";
+import { linkPublico } from "@/lib/link-publico";
 
 /**
  * Montar o ciclo: a configuração, o perfil e as perguntas. A situação e o link
@@ -64,8 +65,7 @@ export function ClimaSituacao({ pesquisa }: { pesquisa: PesquisaParaMontar }) {
   const router = useRouter();
   const [pendente, start] = useTransition();
   const [copiado, setCopiado] = useState(false);
-  const [link, setLink] = useState(`/pesquisa/${pesquisa.token}`);
-  useEffect(() => setLink(`${window.location.origin}/pesquisa/${pesquisa.token}`), [pesquisa.token]);
+  const link = linkPublico(`/pesquisa/${pesquisa.token}`);
 
   function mudar(para: StatusDaPesquisa) {
     start(async () => {

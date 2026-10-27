@@ -180,8 +180,6 @@ export default function PdiAutoavaliacao({
   const respondida = autoavaliacoes.find((a) => a.status === "RESPONDIDO");
   const [aberto, setAberto] = useState<string | null>(respondida && !respondida.avaliacaoId ? respondida.id : null);
   const [gerando, setGerando] = useState(autoavaliacoes.length === 0);
-  const [origem, setOrigem] = useState("");
-  useEffect(() => setOrigem(window.location.origin), []);
 
   const fazer = (acao: () => Promise<AutoavaliacaoState>, depois?: (r: AutoavaliacaoState) => void) =>
     startTransition(async () => {
@@ -275,7 +273,7 @@ export default function PdiAutoavaliacao({
                       ) : (
                         <>
                           <a
-                            href={linkDoWhatsApp(telefone, mensagemDoLink(nome, `${origem}/autoavaliacao/${a.token}`))}
+                            href={linkDoWhatsApp(telefone, mensagemDoLink(nome, linkDaAutoavaliacao(a.token)))}
                             target="_blank"
                             rel="noreferrer"
                             className={botaoClaro}

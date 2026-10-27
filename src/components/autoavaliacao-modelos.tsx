@@ -13,6 +13,7 @@ import {
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
 import { Etiqueta, Tabela, Vazio } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
+import { linkPublico } from "@/lib/link-publico";
 
 /** Os modelos de autoavaliação da empresa: um por função. */
 
@@ -43,7 +44,7 @@ const botaoClaro =
   "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs text-slate-700 transition hover:bg-slate-50 disabled:opacity-60";
 
 export function linkDaAutoavaliacao(token: string) {
-  return `${window.location.origin}/autoavaliacao/${token}`;
+  return linkPublico(`/autoavaliacao/${token}`);
 }
 
 export async function copiarLink(token: string) {
