@@ -496,7 +496,7 @@ function Regua({ d, janela }: { d: DiaNoPonto; janela: [number, number] }) {
   for (let h = Math.ceil(ini / 60); h * 60 <= fim; h += 2) marcas.push(h * 60);
 
   return (
-    <div className="relative h-4 w-full min-w-[8rem] overflow-hidden rounded bg-slate-50" aria-hidden>
+    <div className="relative h-4 w-full min-w-[7rem] overflow-hidden rounded bg-slate-50" aria-hidden>
       {marcas.map((m) => (
         <span key={m} className="absolute inset-y-0 w-px bg-slate-200/70" style={{ left: pos(m) }} />
       ))}
@@ -516,16 +516,12 @@ function Regua({ d, janela }: { d: DiaNoPonto; janela: [number, number] }) {
   );
 }
 
-/** A legenda da régua e as horas das pontas, para o cabeçalho da coluna. */
+/** As horas das pontas da régua, para o cabeçalho da coluna. */
 function CabecalhoDaRegua({ janela }: { janela: [number, number] }) {
   return (
     <div className="flex items-center justify-between gap-1 normal-case tracking-normal">
       <span className="tabular-nums">{relogio(janela[0])}</span>
-      <span className="flex items-center gap-1.5 text-micro">
-        <span className="inline-block h-2 w-2 rounded-sm bg-slate-200" /> horário
-        <span className="inline-block h-2 w-2 rounded-sm bg-brand-500" /> trabalhado
-        <span className="inline-block h-2 w-2 rounded-sm bg-emerald-500" /> extra
-      </span>
+      <span>régua do dia</span>
       <span className="tabular-nums">{relogio(janela[1])}</span>
     </div>
   );
@@ -553,14 +549,14 @@ export function Espelho({
           <tr className="border-b border-slate-200 text-left text-micro uppercase tracking-wider text-slate-500">
             <th className="px-2 py-1.5 font-medium">Dia</th>
             <th className="px-2 py-1.5 font-medium">Marcações</th>
-            <th className="no-print w-40 px-2 py-1.5 font-medium">
+            <th className="no-print w-36 px-2 py-1.5 font-medium">
               <CabecalhoDaRegua janela={janela} />
             </th>
-            <th className="px-2 py-1.5 text-right font-medium">Trabalhado</th>
+            <th className="px-2 py-1.5 text-right font-medium">Trab.</th>
             <th className="px-2 py-1.5 text-right font-medium">Extra</th>
-            <th className="px-2 py-1.5 text-right font-medium">Atraso/falta</th>
+            <th className="px-2 py-1.5 text-right font-medium">Atraso</th>
             {regime === "BANCO_DE_HORAS" ? <th className="px-2 py-1.5 text-right font-medium">Banco</th> : null}
-            <th className="px-2 py-1.5 font-medium">Observações</th>
+            <th className="px-2 py-1.5 font-medium">Obs.</th>
           </tr>
         </thead>
         <tbody>
@@ -587,23 +583,23 @@ export function Espelho({
                     <span className="block text-micro text-slate-400">{horarioEscrito(d.horario) || "sem expediente"}</span>
                   )}
                 </td>
-                <td className="min-w-[12rem] px-2 py-1.5">
+                <td className="min-w-[11rem] px-2 py-1.5">
                   <div className="flex flex-wrap gap-1">
                     {d.marcacoes.map((m) => (
                       <Batida key={m.id} companyId={companyId} m={m} podeMexer={!d.foraDoPeriodo} />
                     ))}
                     {d.marcacoes.length === 0 && !d.foraDoPeriodo ? <span className="text-slate-300">—</span> : null}
+                    {d.foraDoPeriodo || aberto?.dia === d.dia ? null : (
+                      <span className="no-print inline-flex gap-1 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
+                        <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "batida" })} title="Completar horário faltante">
+                          <Plus size={11} /> batida
+                        </button>
+                        <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "ocorrencia" })} title="Férias, atestado, folga, abono">
+                          <Plus size={11} /> férias/atestado
+                        </button>
+                      </span>
+                    )}
                   </div>
-                  {d.foraDoPeriodo || aberto?.dia === d.dia ? null : (
-                    <div className="no-print mt-1 flex gap-1 opacity-50 transition group-hover:opacity-100">
-                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "batida" })} title="Completar horário faltante">
-                        <Plus size={11} /> batida
-                      </button>
-                      <button type="button" className={botaoLeve} onClick={() => setAberto({ dia: d.dia, o: "ocorrencia" })} title="Férias, atestado, folga, abono">
-                        <Plus size={11} /> férias/atestado
-                      </button>
-                    </div>
-                  )}
                   {aberto?.dia === d.dia && aberto.o === "batida" ? (
                     <IncluirBatida companyId={companyId} colaboradorId={colaboradorId} dia={d.dia} fechar={fechar} />
                   ) : null}

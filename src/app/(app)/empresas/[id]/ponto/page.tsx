@@ -528,8 +528,10 @@ export default async function PontoPage({
           <Espelho companyId={id} colaboradorId={escolhido!.id} regime={empresa.regime} dias={doPeriodo} />
           <Totais t={totais} saldoBanco={null} />
           <p className="no-print border-t border-slate-100 px-4 py-2 text-micro text-slate-500">
-            Clique numa batida para ver a foto, o local e anular. <span className="rounded bg-amber-50 px-1 text-amber-800">08:00*</span> é batida
-            incluída pelo RH; riscada é anulada. Nada é apagado. Use + batida e + ocorrência para ajustar o dia.
+            Na régua: <span className="inline-block h-2 w-2 rounded-sm bg-slate-200" /> horário previsto,{" "}
+            <span className="inline-block h-2 w-2 rounded-sm bg-brand-500" /> trabalhado, <span className="inline-block h-2 w-2 rounded-sm bg-emerald-500" /> hora
+            a mais. Passe o mouse no dia para incluir batida ou lançar férias/atestado. Clique numa batida para ver a foto, o local e anular.{" "}
+            <span className="rounded bg-amber-50 px-1 text-amber-800">08:00*</span> é batida incluída pelo RH; riscada é anulada. Nada é apagado.
           </p>
         </div>
       );
