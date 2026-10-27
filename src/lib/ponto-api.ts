@@ -87,6 +87,8 @@ export type EmpresaNoPonto = {
   tolerancia: number;
   intervaloMinimo: number;
   validadeBancoMeses: number;
+  /** Banco por semana; ausente enquanto o ponto não tiver a opção. */
+  bancoSemanal?: boolean;
   inicio: string;
 };
 

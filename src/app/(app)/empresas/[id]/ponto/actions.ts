@@ -81,6 +81,7 @@ export async function salvarRegras(_prev: PontoState, formData: FormData): Promi
     tolerancia: d.tolerancia,
     intervaloMinimo: d.intervaloMinimo,
     validadeBancoMeses: d.validadeBancoMeses,
+    bancoSemanal: d.regime === "BANCO_DE_HORAS" && formData.get("bancoSemanal") === "on",
     inicio: d.inicio,
     ativo: formData.get("ativo") === "on",
   });
@@ -178,6 +179,50 @@ export async function anularMarcacao(companyId: string, id: string, motivo: stri
   if (erro) return { error: erro };
   await log(companyId, session.userId, "ATUALIZOU", id, `Anulou uma batida: ${texto}`);
   refresh(companyId);
+  return { ok: true };
+}
+
+/**
+ * Corrige o horário de uma batida. Nada é apagado: a original fica anulada,
+ * riscada, e a nova entra como incluída pelo RH (com o asterisco), dizendo
+ * qual era o horário antes.
+ */
+export async function editarMarcacao(
+  companyId: string,
+  original: { id: string; colaboradorId: string; dia: string; era: string },
+  hora: string,
+  diaSeguinte: boolean,
+  motivo: string,
+): Promise<PontoState> {
+  const session = await requireSession();
+  const minuto = lerHora(hora);
+  if (minuto === null) return { error: "Informe a hora certa, como 08:00." };
+  const texto = motivo.trim();
+  if (texto.length < 3) return { error: "Diga por que a batida está sendo corrigida." };
+  if (!diaValido(original.dia)) return { error: "Dia inválido." };
+
+  const erro = await escreverNoPonto(companyId, "/marcacoes", "POST", {
+    colaboradorId: original.colaboradorId,
+    dia: original.dia,
+    minutos: minuto + (diaSeguinte ? 1440 : 0),
+    motivo: `${texto} (era ${original.era})`,
+    autor: session.name,
+  });
+  if (erro) return { error: erro };
+  const erroAoAnular = await escreverNoPonto(companyId, `/marcacoes/${encodeURIComponent(original.id)}/anular`, "POST", {
+    motivo: `Corrigida para ${hora}: ${texto}`,
+    autor: session.name,
+  });
+  refresh(companyId);
+  if (erroAoAnular) return { error: `A batida das ${hora} entrou, mas a das ${original.era} não foi anulada: ${erroAoAnular}` };
+
+  await log(
+    companyId,
+    session.userId,
+    "ATUALIZOU",
+    original.colaboradorId,
+    `Corrigiu a batida de ${original.dia.split("-").reverse().join("/")}: ${original.era} → ${hora} (${texto})`,
+  );
   return { ok: true };
 }
 

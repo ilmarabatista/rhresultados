@@ -28,6 +28,12 @@ export type RegrasPonto = {
   horario: Horario;
   tolerancia: number;
   intervaloMinimo: number;
+  /**
+   * Banco por semana: a conta é o total da semana contra o horário dela (40h
+   * no padrão). O dia não tem tolerância, para que um dia a mais e outro a
+   * menos se acertem na semana, e o saldo do dia é trabalhado − previsto.
+   */
+  porSemana?: boolean;
 };
 
 /** 08:00 às 12:00 e 13:00 às 17:00, de segunda a sexta: 40h semanais. */
@@ -274,7 +280,8 @@ export function calcularDia(entrada: DiaParaCalcular, regras: RegrasPonto): DiaC
 
   // Com marcação ímpar o dia fica sem conta até o RH completar a batida.
   // Dentro da tolerância não conta nada; passou dela, conta tudo (Súmula 366 do TST).
-  if (emAndamento || batidas.length % 2 === 1 || extraBruto + faltaBruta <= regras.tolerancia) {
+  const tolerancia = regras.porSemana ? 0 : regras.tolerancia;
+  if (emAndamento || batidas.length % 2 === 1 || extraBruto + faltaBruta <= tolerancia) {
     extraBruto = 0;
     faltaBruta = 0;
   }
@@ -349,6 +356,27 @@ export function totalizar(dias: DiaCalculado[]): Totais {
     t.alertas += d.alertas.length;
   }
   return t;
+}
+
+export type Semana<D extends DiaCalculado = DiaCalculado> = {
+  /** O domingo que abre a semana. */
+  inicio: string;
+  dias: D[];
+  totais: Totais;
+};
+
+/** Os dias agrupados em semanas de domingo a sábado, na ordem em que vieram. */
+export function porSemanas<D extends DiaCalculado>(dias: D[]): Semana<D>[] {
+  const semanas: Semana<D>[] = [];
+  for (const d of dias) {
+    const [a, m, dd] = d.dia.split("-").map(Number);
+    const domingo = new Date(Date.UTC(a, m - 1, dd - d.semana)).toISOString().slice(0, 10);
+    const atual = semanas.at(-1);
+    if (atual && atual.inicio === domingo) atual.dias.push(d);
+    else semanas.push({ inicio: domingo, dias: [d], totais: totalizar([]) });
+  }
+  for (const s of semanas) s.totais = totalizar(s.dias);
+  return semanas;
 }
 
 /**
