@@ -93,6 +93,7 @@ function regrasDe(empresa: EmpresaDoPonto, pessoa: PessoaDoPonto): RegrasPonto {
     horario: horarioDaPessoa(horarioDaEmpresa(empresa), pessoa.horario),
     tolerancia: empresa.tolerancia,
     intervaloMinimo: empresa.intervaloMinimo,
+    porSemana: empresa.regime === "BANCO_DE_HORAS" && empresa.bancoSemanal,
   };
 }
 
