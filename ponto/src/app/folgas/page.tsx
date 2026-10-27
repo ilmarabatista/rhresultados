@@ -27,7 +27,7 @@ export default async function FolgasPage() {
         links={[
           { href: "/", rotulo: "Registrar" },
           { href: "/pedidos", rotulo: "Atestado e correção" },
-          { href: "/relatorios", rotulo: "Relatórios" },
+          { href: "/meu-ponto", rotulo: "Meu ponto" },
           { href: "/trocar-senha", rotulo: "Senha" },
         ]}
       />

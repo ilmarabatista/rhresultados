@@ -81,6 +81,11 @@ export async function fotoDaBatida(companyId: string, marcacaoId: string): Promi
   return chamar(companyId, `/marcacoes/${encodeURIComponent(marcacaoId)}/foto`);
 }
 
+/** A foto que o colaborador tirou ao aprovar o espelho do mês. */
+export async function fotoDaAprovacao(companyId: string, colaboradorId: string, mes: string): Promise<Response> {
+  return chamar(companyId, `/relatorios/${encodeURIComponent(colaboradorId)}/${encodeURIComponent(mes)}/foto`);
+}
+
 // ------------------------------------------------------------------- tipos
 
 export type EmpresaNoPonto = {
@@ -142,7 +147,15 @@ export type OcorrenciaNoPonto = {
 };
 
 export type LancamentoNoPonto = { id: string; dia: string; minutos: number; descricao: string; criadoPor: string | null };
-export type RelatorioNoPonto = { colaboradorId: string; enviadoEm: string; enviadoPor: string | null; cienteEm: string | null };
+export type RelatorioNoPonto = {
+  colaboradorId: string;
+  enviadoEm: string;
+  enviadoPor: string | null;
+  /** Quando o colaborador conferiu e aprovou o mês. */
+  cienteEm: string | null;
+  /** Aprovou com foto; ausente enquanto o ponto não tiver a aprovação com foto. */
+  temFoto?: boolean;
+};
 
 /** O que o colaborador pediu pelo aplicativo: atestado ou correção de batida. */
 export type PedidoNoPonto = {

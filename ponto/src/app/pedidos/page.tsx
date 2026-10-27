@@ -28,7 +28,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
         links={[
           { href: "/", rotulo: "Registrar" },
           { href: "/folgas", rotulo: "Folgas" },
-          { href: "/relatorios", rotulo: "Relatórios" },
+          { href: "/meu-ponto", rotulo: "Meu ponto" },
           { href: "/trocar-senha", rotulo: "Senha" },
         ]}
       />

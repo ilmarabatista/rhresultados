@@ -125,14 +125,26 @@ const LEITURAS: Record<string, Rota> = {
     });
   },
 
-  relatorios: async (e, _p, req) => {
+  relatorios: async (e, partes, req) => {
+    // relatorios/<colaborador>/<mes>/foto: a foto que o colaborador tirou ao aprovar.
+    if (partes.length) {
+      const [colaboradorId, m, oque] = partes;
+      if (oque !== "foto" || !colaboradorId || !mes.safeParse(m).success) return erro("Caminho desconhecido.", 404);
+      const foto = await prisma.fotoRelatorio.findFirst({
+        where: { relatorio: { colaboradorId, mes: m, colaborador: { empresaId: e.id } } },
+      });
+      if (!foto) return erro("Sem foto.", 404);
+      return new Response(new Uint8Array(foto.dados), {
+        headers: { "Content-Type": foto.tipo, "Cache-Control": "private, max-age=3600" },
+      });
+    }
     const m = mes.safeParse(new URL(req.url).searchParams.get("mes"));
     if (!m.success) return erro("Mês inválido.");
     const lista = await prisma.relatorio.findMany({
       where: { mes: m.data, colaborador: { empresaId: e.id } },
-      select: { colaboradorId: true, enviadoEm: true, enviadoPor: true, cienteEm: true },
+      select: { colaboradorId: true, enviadoEm: true, enviadoPor: true, cienteEm: true, foto: { select: { relatorioId: true } } },
     });
-    return NextResponse.json({ relatorios: lista });
+    return NextResponse.json({ relatorios: lista.map(({ foto, ...r }) => ({ ...r, temFoto: Boolean(foto) })) });
   },
 
   pedidos: async (e, partes, req) => {
