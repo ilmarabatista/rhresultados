@@ -79,6 +79,7 @@ export default async function AutoavaliacoesPage({ params }: { params: Promise<{
         titulo: a.titulo,
         status: a.status,
         enviadoEm: formatFullDate(a.enviadoEm),
+        deHoje: dateToDayKey(a.enviadoEm) === hoje,
         respondidoEm: a.respondidoEm ? formatFullDate(a.respondidoEm) : null,
         prazo: a.prazo ? formatFullDate(a.prazo) : null,
         atrasado: a.status === "ENVIADO" && a.prazo != null && dateToDayKey(a.prazo) < hoje,

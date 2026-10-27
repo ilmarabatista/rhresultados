@@ -5,6 +5,7 @@ import { MessageCircle } from "lucide-react";
 import { linkDoDossie } from "@/app/(app)/selecao/actions";
 import { linkDoWhatsapp, primeiroNome } from "@/lib/selecao";
 import { avisar } from "./avisos";
+import { linkPublico } from "@/lib/link-publico";
 
 /**
  * Manda o dossiê ao cliente pelo WhatsApp: gera o link (abre sem login, vale
@@ -31,7 +32,7 @@ export default function EnviarDossie({ candidatoId, className }: { candidatoId: 
             avisar(r.error ?? "Não foi possível gerar o link do dossiê.");
             return;
           }
-          const link = `${window.location.origin}/dossie/${r.token}`;
+          const link = linkPublico(`/dossie/${r.token}`);
           const recado =
             `Olá${r.contato ? `, ${primeiroNome(r.contato)}` : ""}! Segue o dossiê do candidato ${r.nome} para a vaga de ${r.vaga}: ${link} . ` +
             "Pelo link dá para ler e baixar em PDF. Ele fica disponível por 30 dias.";

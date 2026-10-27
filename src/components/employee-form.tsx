@@ -8,6 +8,7 @@ import {
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { linkDoWhatsApp, mensagemDoLink, telefoneDoWhatsApp } from "@/lib/autoavaliacao";
 import { copiarLink } from "./autoavaliacao-modelos";
+import { linkPublico } from "@/lib/link-publico";
 
 export type ColaboradorDados = {
   id: string;
@@ -256,7 +257,7 @@ function LinkPronto({
   telefone: string | null;
   onClose: () => void;
 }) {
-  const link = `${window.location.origin}/autoavaliacao/${token}`;
+  const link = linkPublico(`/autoavaliacao/${token}`);
   const temCelular = Boolean(telefoneDoWhatsApp(telefone));
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">

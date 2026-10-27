@@ -5,10 +5,11 @@ import { FileText, PenLine } from "lucide-react";
 import { enviarFicha } from "@/app/(app)/selecao/actions";
 import { linkDoWhatsapp, primeiroNome } from "@/lib/selecao";
 import { avisar } from "./avisos";
+import { linkPublico } from "@/lib/link-publico";
 
-/** O link público da ficha, montado no navegador com o endereço de onde o sistema está aberto. */
+/** O link público da ficha, sempre no endereço oficial (ver link-publico.ts). */
 export function linkDaFicha(token: string) {
-  return `${window.location.origin}/ficha/${token}`;
+  return linkPublico(`/ficha/${token}`);
 }
 
 export function recadoDaFicha(nome: string, vaga: string, token: string) {
