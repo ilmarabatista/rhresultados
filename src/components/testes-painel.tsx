@@ -6,6 +6,7 @@ import { enviarTeste, excluirEnvio, type TestesState } from "@/app/(app)/testes/
 import { Painel } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
 import { confirmar } from "@/components/avisos";
+import { linkPublico } from "@/lib/link-publico";
 
 /**
  * As peças da aba Testes que rodam no navegador: o envio (que devolve o link
@@ -13,7 +14,7 @@ import { confirmar } from "@/components/avisos";
  */
 
 function linkDe(token: string) {
-  return `${window.location.origin}/teste/${token}`;
+  return linkPublico(`/teste/${token}`);
 }
 
 function whatsappDe(telefone: string | null, texto: string) {

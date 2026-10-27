@@ -4,6 +4,7 @@ import { Copy } from "lucide-react";
 import { linkDoWhatsApp } from "@/lib/autoavaliacao";
 import { mensagemDoMapeamento } from "@/lib/mapeamento";
 import { avisar } from "@/components/avisos";
+import { linkPublico } from "@/lib/link-publico";
 
 /** Os botões do link do mapeamento: mandar no WhatsApp da pessoa e copiar. */
 
@@ -11,7 +12,7 @@ const botaoClaro =
   "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700 transition hover:bg-slate-50";
 
 export function linkDoMapeamentoNaTela(token: string) {
-  return `${window.location.origin}/mapeamento/${token}`;
+  return linkPublico(`/mapeamento/${token}`);
 }
 
 export default function BotoesDoLink({ token, nome, telefone }: { token: string; nome: string; telefone: string | null }) {

@@ -31,6 +31,9 @@ import CargoCompetencias, { type Competencia } from "./cargo-competencias";
 import { Field, FormError, FormOk, Input, Select, SubmitButton, Textarea } from "./form";
 import { Etiqueta, Vazio } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
+import { linkPublico } from "@/lib/link-publico";
+import { lembreteDoLink } from "@/lib/cobranca";
+import CobrarTodos from "./cobrar-todos";
 
 /**
  * A aba Cargos: a lista à esquerda e, à direita, o cargo escolhido em quatro
@@ -100,7 +103,7 @@ const botaoClaro =
   "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50 disabled:opacity-60";
 
 function linkDoQuestionario(token: string) {
-  return `${window.location.origin}/questionario/${token}`;
+  return linkPublico(`/questionario/${token}`);
 }
 
 async function copiar(texto: string) {
@@ -333,6 +336,16 @@ function Questionarios({ cargo, detalhe }: { cargo: CargoNaLista; detalhe: Detal
   return (
     <div className="space-y-3.5">
       <NovoQuestionario cargo={cargo} />
+      <CobrarTodos
+        pessoas={detalhe.questionarios
+          .filter((q) => q.status !== "RESPONDIDO")
+          .map((q) => ({
+            id: q.id,
+            nome: q.pessoa,
+            telefone: null,
+            mensagem: lembreteDoLink(q.pessoa, `o questionário do cargo ${cargo.nome}`, linkDoQuestionario(q.token)),
+          }))}
+      />
       {detalhe.questionarios.length === 0 ? (
         <Vazio>Nenhum questionário mandado ainda.</Vazio>
       ) : (
