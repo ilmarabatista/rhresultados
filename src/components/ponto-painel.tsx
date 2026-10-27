@@ -4,12 +4,14 @@ import { Fragment, useActionState, useEffect, useRef, useState, useTransition } 
 import { Camera, MapPin, Plus, RotateCcw, Send, Trash2, X } from "lucide-react";
 import {
   anularMarcacao,
+  aprovarPedido,
   editarMarcacao,
   enviarRelatorio,
   excluirLancamento,
   excluirOcorrencia,
   incluirMarcacao,
   lancarNoBanco,
+  recusarPedido,
   restaurarMarcacao,
   salvarColaborador,
   salvarOcorrencia,
@@ -919,5 +921,66 @@ export function EnviarRelatorio({ companyId, colaboradorId, mes, jaEnviado }: { 
     >
       <Send size={12} /> {pendente ? "Enviando…" : jaEnviado ? "Reenviar ao colaborador" : "Enviar ao colaborador"}
     </button>
+  );
+}
+
+// ----------------------------------------------------------------- pedidos
+
+/** Aprovar ou recusar o que o colaborador pediu pelo aplicativo do ponto. */
+export function DecidirPedido({ companyId, id, resumo }: { companyId: string; id: string; resumo: string }) {
+  const [pendente, iniciar] = useTransition();
+  const [recusando, setRecusando] = useState(false);
+  const [resposta, setResposta] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+
+  if (recusando) {
+    return (
+      <form
+        className="w-full space-y-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setErro(null);
+          iniciar(async () => {
+            const r = await recusarPedido(companyId, id, resumo, resposta);
+            if (r.error) setErro(r.error);
+          });
+        }}
+      >
+        <Input
+          value={resposta}
+          onChange={(e) => setResposta(e.target.value)}
+          placeholder="Por que está recusando? O colaborador vai ler."
+          required
+          minLength={3}
+          maxLength={300}
+          autoFocus
+        />
+        {erro ? <p className="text-xs text-red-600">{erro}</p> : null}
+        <div className="flex gap-2">
+          <button type="submit" disabled={pendente} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">
+            {pendente ? "Recusando…" : "Recusar"}
+          </button>
+          <button type="button" className={botaoLeve} onClick={() => setRecusando(false)}>
+            Voltar
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        disabled={pendente}
+        className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60"
+        onClick={() => iniciar(async () => avisarSeErro(await aprovarPedido(companyId, id, resumo)))}
+      >
+        {pendente ? "Aprovando…" : "Aprovar"}
+      </button>
+      <button type="button" disabled={pendente} className={botaoLeve} onClick={() => setRecusando(true)}>
+        Recusar
+      </button>
+    </div>
   );
 }
