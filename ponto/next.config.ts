@@ -32,9 +32,9 @@ const nextConfig: NextConfig = {
   // O ponto mora numa pasta do repositório do RH: a raiz dele é esta pasta.
   outputFileTracingRoot: process.cwd(),
   experimental: {
-    // A foto da batida vai junto com o formulário; ela é reduzida no celular
-    // antes de sair, mas fica uma folga.
-    serverActions: { bodySizeLimit: "1mb" },
+    // A foto da batida e o atestado (foto ou PDF de até 3,5 MB) vão junto
+    // com o formulário. A Vercel recusa corpo acima de 4,5 MB.
+    serverActions: { bodySizeLimit: "4mb" },
   },
   async headers() {
     return [{ source: "/:path*", headers: SEGURANCA }];

@@ -26,6 +26,7 @@ export default async function FolgasPage() {
         nome={s.nome}
         links={[
           { href: "/", rotulo: "Registrar" },
+          { href: "/pedidos", rotulo: "Atestado e correção" },
           { href: "/relatorios", rotulo: "Relatórios" },
           { href: "/trocar-senha", rotulo: "Senha" },
         ]}

@@ -9,6 +9,7 @@ import {
   horarioValido,
   lerHorario,
   porSemanas,
+  resumoDoPedido,
   type RegrasPonto,
 } from "../src/lib/ponto";
 
@@ -153,4 +154,23 @@ test("banco por semana: semana de 42h dá 2h de crédito, com feriado tirando o 
   assert.equal(semanas[0].totais.trabalhado, 34 * 60);
   assert.equal(semanas[0].totais.saldo, 120);
   assert.equal(semanas[1].inicio, "2026-10-25");
+});
+
+test("o pedido do colaborador numa frase", () => {
+  const base = { marcacaoId: null, minutos: null, era: null, ate: null };
+  assert.equal(resumoDoPedido({ ...base, tipo: "ATESTADO", dia: "2026-10-20" }), "Atestado em 20/10/2026");
+  assert.equal(resumoDoPedido({ ...base, tipo: "ATESTADO", dia: "2026-10-20", ate: "2026-10-22" }), "Atestado de 20/10/2026 a 22/10/2026");
+  assert.equal(resumoDoPedido({ ...base, tipo: "CORRECAO", dia: "2026-10-20", minutos: 1020 }), "Incluir batida às 17:00 em 20/10/2026");
+  assert.equal(
+    resumoDoPedido({ ...base, tipo: "CORRECAO", dia: "2026-10-20", marcacaoId: "m", era: "08:17", minutos: 480 }),
+    "Corrigir a batida de 20/10/2026: 08:17 → 08:00",
+  );
+  assert.equal(
+    resumoDoPedido({ ...base, tipo: "CORRECAO", dia: "2026-10-20", marcacaoId: "m", era: "12:01" }),
+    "Tirar a batida das 12:01 de 20/10/2026 (bateu a mais)",
+  );
+  assert.equal(
+    resumoDoPedido({ ...base, tipo: "CORRECAO", dia: "2026-10-20", minutos: 1440 + 30 }),
+    "Incluir batida às 00:30 (dia seguinte) em 20/10/2026",
+  );
 });

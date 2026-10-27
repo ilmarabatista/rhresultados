@@ -517,3 +517,22 @@ export function horarioValido(valor: unknown): valor is Horario {
 export function soDigitos(texto: string | null | undefined): string {
   return (texto ?? "").replace(/\D/g, "");
 }
+
+/** O que o colaborador pediu, numa frase, para o RH decidir. */
+export function resumoDoPedido(p: {
+  tipo: "ATESTADO" | "CORRECAO";
+  dia: string;
+  ate: string | null;
+  marcacaoId: string | null;
+  minutos: number | null;
+  era: string | null;
+}): string {
+  const data = (d: string) => d.split("-").reverse().join("/");
+  if (p.tipo === "ATESTADO") {
+    return p.ate && p.ate !== p.dia ? `Atestado de ${data(p.dia)} a ${data(p.ate)}` : `Atestado em ${data(p.dia)}`;
+  }
+  const novo = p.minutos === null ? null : `${relogio(p.minutos)}${p.minutos >= 1440 ? " (dia seguinte)" : ""}`;
+  if (!p.marcacaoId) return `Incluir batida às ${novo} em ${data(p.dia)}`;
+  if (novo === null) return `Tirar a batida das ${p.era} de ${data(p.dia)} (bateu a mais)`;
+  return `Corrigir a batida de ${data(p.dia)}: ${p.era} → ${novo}`;
+}

@@ -71,6 +71,11 @@ export async function escreverNoPonto(
   }
 }
 
+/** A foto ou o PDF do atestado que o colaborador mandou. */
+export async function anexoDoPedido(companyId: string, pedidoId: string): Promise<Response> {
+  return chamar(companyId, `/pedidos/${encodeURIComponent(pedidoId)}/anexo`);
+}
+
 /** A foto de uma batida, para o RH ver no espelho. */
 export async function fotoDaBatida(companyId: string, marcacaoId: string): Promise<Response> {
   return chamar(companyId, `/marcacoes/${encodeURIComponent(marcacaoId)}/foto`);
@@ -139,10 +144,33 @@ export type OcorrenciaNoPonto = {
 export type LancamentoNoPonto = { id: string; dia: string; minutos: number; descricao: string; criadoPor: string | null };
 export type RelatorioNoPonto = { colaboradorId: string; enviadoEm: string; enviadoPor: string | null; cienteEm: string | null };
 
-/** A empresa no ponto e os colaboradores dela; null quando o ponto dela ainda não foi criado. */
+/** O que o colaborador pediu pelo aplicativo: atestado ou correção de batida. */
+export type PedidoNoPonto = {
+  id: string;
+  tipo: "ATESTADO" | "CORRECAO";
+  situacao: "PENDENTE" | "APROVADO" | "RECUSADO";
+  colaboradorId: string;
+  colaborador: string;
+  dia: string;
+  ate: string | null;
+  marcacaoId: string | null;
+  minutos: number | null;
+  era: string | null;
+  motivo: string | null;
+  anexo: { nome: string; tipo: string } | null;
+  criadoEm: string;
+  decididoEm: string | null;
+  decididoPor: string | null;
+  resposta: string | null;
+};
+
+/**
+ * A empresa no ponto e os colaboradores dela; null quando o ponto dela ainda
+ * não foi criado. `pedidosPendentes` falta enquanto o ponto não tiver pedidos.
+ */
 export async function empresaNoPonto(companyId: string) {
   try {
-    return await lerDoPonto<{ empresa: EmpresaNoPonto; colaboradores: ColaboradorNoPonto[] }>(companyId, "");
+    return await lerDoPonto<{ empresa: EmpresaNoPonto; colaboradores: ColaboradorNoPonto[]; pedidosPendentes?: number }>(companyId, "");
   } catch (e) {
     if (e instanceof ErroDoPonto && e.status === 404) return null;
     throw e;
@@ -174,4 +202,8 @@ export async function lancamentosNoPonto(companyId: string, colaboradorId: strin
 
 export async function relatoriosNoPonto(companyId: string, mes: string) {
   return (await lerDoPonto<{ relatorios: RelatorioNoPonto[] }>(companyId, `/relatorios?mes=${mes}`)).relatorios;
+}
+
+export async function pedidosNoPonto(companyId: string) {
+  return lerDoPonto<{ pendentes: PedidoNoPonto[]; decididos: PedidoNoPonto[] }>(companyId, "/pedidos");
 }

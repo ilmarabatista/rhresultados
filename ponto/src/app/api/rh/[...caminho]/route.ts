@@ -15,6 +15,7 @@ import {
   type EmpresaDoPonto,
 } from "@/lib/dados";
 import { enviarRelatorio } from "@/lib/relatorio";
+import { anexoDoPedido, aprovarPedido, pedidosDaEmpresa, recusarPedido } from "@/lib/pedidos";
 
 /**
  * Momento 2 da integração: o RH Resultados lê e ajusta o ponto de cada
@@ -63,7 +64,12 @@ function empresaPublica(e: EmpresaDoPonto) {
 // ----------------------------------------------------------------- leitura
 
 const LEITURAS: Record<string, Rota> = {
-  "": async (e) => NextResponse.json({ empresa: empresaPublica(e), colaboradores: await pessoasDoPonto(e.id) }),
+  "": async (e) =>
+    NextResponse.json({
+      empresa: empresaPublica(e),
+      colaboradores: await pessoasDoPonto(e.id),
+      pedidosPendentes: await prisma.pedido.count({ where: { empresaId: e.id, situacao: "PENDENTE" } }),
+    }),
 
   calculo: async (e, _p, req) => {
     const q = new URL(req.url).searchParams;
@@ -129,6 +135,31 @@ const LEITURAS: Record<string, Rota> = {
     return NextResponse.json({ relatorios: lista });
   },
 
+  pedidos: async (e, partes, req) => {
+    const [id, oque] = partes;
+    if (!id) {
+      const q = new URL(req.url).searchParams;
+      const decididos = Number(q.get("decididos") ?? 30);
+      return NextResponse.json(
+        await pedidosDaEmpresa(e.id, {
+          colaboradorId: q.get("colaborador") ?? undefined,
+          decididos: Number.isInteger(decididos) && decididos >= 0 && decididos <= 200 ? decididos : 30,
+        }),
+      );
+    }
+    // pedidos/<id>/anexo
+    if (oque !== "anexo") return erro("Caminho desconhecido.", 404);
+    const anexo = await anexoDoPedido(e.id, id);
+    if (!anexo) return erro("Sem anexo.", 404);
+    return new Response(new Uint8Array(anexo.dados), {
+      headers: {
+        "Content-Type": anexo.tipo,
+        "Content-Disposition": `inline; filename="${encodeURIComponent(anexo.nome)}"`,
+        "Cache-Control": "private, max-age=86400",
+      },
+    });
+  },
+
   marcacoes: async (e, partes) => {
     // marcacoes/<id>/foto
     const [id, oque] = partes;
@@ -188,6 +219,9 @@ const lancamentoSchema = z.object({
 });
 
 const relatorioSchema = z.object({ colaboradorId: z.string().min(1), mes, autor });
+
+const aprovarSchema = z.object({ autor });
+const recusarSchema = z.object({ resposta: z.string().trim().min(3, "Diga ao colaborador por que o pedido foi recusado.").max(300), autor });
 
 async function escrever(e: EmpresaDoPonto, partes: string[], req: Request): Promise<Response> {
   const [recurso, id, acao] = partes;
@@ -322,6 +356,20 @@ async function escrever(e: EmpresaDoPonto, partes: string[], req: Request): Prom
     if (d instanceof Response) return d;
     const r = await enviarRelatorio(e, d.colaboradorId, d.mes, d.autor);
     return r ? ok({ enviadoEm: r.enviadoEm }) : erro("Colaborador não encontrado.", 404);
+  }
+
+  if (metodo === "POST" && recurso === "pedidos" && id && acao === "aprovar") {
+    const d = await corpo(req, aprovarSchema);
+    if (d instanceof Response) return d;
+    const falha = await aprovarPedido(e.id, id, d.autor);
+    return falha ? erro(falha, falha === "Pedido não encontrado." ? 404 : 409) : ok();
+  }
+
+  if (metodo === "POST" && recurso === "pedidos" && id && acao === "recusar") {
+    const d = await corpo(req, recusarSchema);
+    if (d instanceof Response) return d;
+    const falha = await recusarPedido(e.id, id, d.autor, d.resposta);
+    return falha ? erro(falha, falha === "Pedido não encontrado." ? 404 : 409) : ok();
   }
 
   return erro("Caminho desconhecido.", 404);

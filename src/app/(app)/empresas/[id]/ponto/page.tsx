@@ -14,6 +14,7 @@ import {
   nomeDoMes,
   outroMes,
   relogio,
+  resumoDoPedido,
   saldoEscrito,
   totalizar,
   type Totais as TotaisDoPonto,
@@ -25,6 +26,7 @@ import {
   ErroDoPonto,
   lancamentosNoPonto,
   ocorrenciasNoPonto,
+  pedidosNoPonto,
   pontoConfigurado,
   presentesNoPonto,
   relatoriosNoPonto,
@@ -32,12 +34,14 @@ import {
   type ColaboradorNoPonto,
   type CalculoNoPonto,
   type DiaNoPonto,
+  type PedidoNoPonto,
   type SaldoNoPonto,
 } from "@/lib/ponto-api";
 import { Aviso, Etiqueta, Filtros, Numeros, Painel, Tabela, TituloDaSecao, Vazio } from "@/components/ui";
 import PrintButton from "@/components/print-button";
 import {
   ConfigForm,
+  DecidirPedido,
   EnviarRelatorio,
   Espelho,
   ExcluirLancamento,
@@ -61,6 +65,7 @@ export const metadata = { title: "Ponto — RH Resultados" };
 
 const VISOES = [
   ["colaboradores", "Colaboradores"],
+  ["pedidos", "Pedidos"],
   ["horarios", "Horários"],
   ["relatorio", "Relatório"],
   ["ocorrencias", "Feriados e ocorrências"],
@@ -131,6 +136,7 @@ export default async function PontoPage({
   }
 
   const { empresa, colaboradores } = dados;
+  const pedidosPendentes = dados.pedidosPendentes ?? 0;
   const hoje = todayKey();
   const mes = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : hoje.slice(0, 7);
   const visao: Visao = VISOES.some(([v]) => v === sp.ver) ? (sp.ver as Visao) : "colaboradores";
@@ -216,12 +222,33 @@ export default async function PontoPage({
         </div>
       ) : null}
 
+      {pedidosPendentes && visao !== "pedidos" ? (
+        <div className="no-print">
+          <Aviso rotulo="Pedidos dos colaboradores">
+            {pedidosPendentes === 1 ? "Um pedido espera" : `${pedidosPendentes} pedidos esperam`} a sua aprovação (atestado ou correção de
+            batida).{" "}
+            <Link className="font-medium underline" href={href({ ver: "pedidos" })}>
+              Ver os pedidos
+            </Link>
+          </Aviso>
+        </div>
+      ) : null}
+
       <div className="no-print">
-        <Filtros itens={VISOES.map(([v, rotulo]) => ({ rotulo, href: href({ ver: v }), ativo: v === visao }))} />
+        <Filtros
+          itens={VISOES.map(([v, rotulo]) => ({
+            rotulo,
+            href: href({ ver: v }),
+            ativo: v === visao,
+            contagem: v === "pedidos" && pedidosPendentes ? pedidosPendentes : undefined,
+          }))}
+        />
       </div>
 
       {visao === "colaboradores" ? (
         <Colaboradores />
+      ) : visao === "pedidos" ? (
+        <Pedidos />
       ) : visao === "horarios" ? (
         <Horarios />
       ) : visao === "relatorio" ? (
@@ -724,6 +751,112 @@ export default async function PontoPage({
             <p className="border-t border-slate-400 pt-1">{company!.name}</p>
           </div>
         </section>
+      </div>
+    );
+  }
+
+  // ------------------------------------------------------------- pedidos
+
+  async function Pedidos() {
+    let lidos: Awaited<ReturnType<typeof pedidosNoPonto>>;
+    try {
+      lidos = await pedidosNoPonto(id);
+    } catch (e) {
+      return (
+        <Aviso tom="ruim" rotulo="Pedidos indisponíveis">
+          {e instanceof ErroDoPonto && e.status === 404
+            ? "O sistema de ponto ainda não tem os pedidos dos colaboradores. Eles aparecem aqui depois que a nova versão do ponto for publicada."
+            : e instanceof ErroDoPonto
+              ? e.message
+              : "Não foi possível falar com o sistema de ponto."}
+        </Aviso>
+      );
+    }
+    const { pendentes, decididos } = lidos;
+    const quando = (iso: string) =>
+      new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }).format(
+        new Date(iso),
+      );
+    const anexo = (p: PedidoNoPonto) => `/api/ponto/anexo?empresa=${encodeURIComponent(id)}&id=${encodeURIComponent(p.id)}`;
+    const linkDoDia = (p: PedidoNoPonto) => href({ ver: "horarios", colaborador: p.colaboradorId, mes: p.dia.slice(0, 7), periodo: undefined });
+
+    return (
+      <div className="space-y-3">
+        <Painel
+          titulo={pendentes.length ? `Esperando aprovação (${pendentes.length})` : "Esperando aprovação"}
+          descricao="O colaborador pede pelo aplicativo do ponto. Nada muda até você aprovar: atestado vira atestado nos dias, e a correção entra com asterisco, com a batida antiga riscada."
+        >
+          {pendentes.length === 0 ? (
+            <p className="text-sm text-slate-500">Nenhum pedido esperando.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {pendentes.map((p) => {
+                const resumo = resumoDoPedido(p);
+                return (
+                  <li key={p.id} className="flex flex-wrap items-start gap-3 py-3 first:pt-0 last:pb-0">
+                    {p.anexo?.tipo.startsWith("image/") ? (
+                      <a href={anexo(p)} target="_blank" rel="noreferrer" className="shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- o atestado vem do ponto pelo próprio RH */}
+                        <img src={anexo(p)} alt="Atestado" className="h-20 w-16 rounded border border-slate-200 object-cover" />
+                      </a>
+                    ) : null}
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-sm">
+                        <b className="text-slate-800">{p.colaborador}</b>
+                        <span className="ml-2">
+                          <Etiqueta tom={p.tipo === "ATESTADO" ? "azul" : "atencao"}>{p.tipo === "ATESTADO" ? "Atestado" : "Correção"}</Etiqueta>
+                        </span>
+                      </p>
+                      <p className="text-sm text-slate-700">{resumo}</p>
+                      {p.motivo ? <p className="text-xs text-slate-600">“{p.motivo}”</p> : null}
+                      <p className="flex flex-wrap gap-x-3 text-micro text-slate-500">
+                        <span>Pedido em {quando(p.criadoEm)}</span>
+                        {p.anexo ? (
+                          <a href={anexo(p)} target="_blank" rel="noreferrer" className="text-brand-700 underline">
+                            Abrir o {p.anexo.tipo === "application/pdf" ? "PDF" : "atestado"}
+                          </a>
+                        ) : null}
+                        <Link href={linkDoDia(p)} className="text-brand-700 underline">
+                          Ver o ponto do dia
+                        </Link>
+                      </p>
+                    </div>
+                    <div className="w-full sm:w-auto sm:max-w-xs">
+                      <DecidirPedido companyId={id} id={p.id} resumo={`${p.colaborador}: ${resumo}`} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Painel>
+
+        <Tabela titulo="Já decididos" direita={`últimos ${decididos.length}`}>
+          {decididos.length === 0 ? (
+            <p className="px-3 py-4 text-sm text-slate-500">Nada decidido ainda.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 text-xs">
+              {decididos.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-1.5">
+                  <Etiqueta tom={p.situacao === "APROVADO" ? "bom" : "ruim"}>{p.situacao === "APROVADO" ? "Aprovado" : "Recusado"}</Etiqueta>
+                  <span className="font-medium text-slate-700">{p.colaborador}</span>
+                  <span className="flex-1 text-slate-600">
+                    {resumoDoPedido(p)}
+                    {p.resposta ? <span className="text-slate-500"> · {p.resposta}</span> : null}
+                  </span>
+                  {p.anexo ? (
+                    <a href={anexo(p)} target="_blank" rel="noreferrer" className="text-brand-700 underline">
+                      anexo
+                    </a>
+                  ) : null}
+                  <span className="text-slate-500">
+                    {p.decididoPor ?? ""} {p.decididoEm ? quando(p.decididoEm) : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Tabela>
       </div>
     );
   }
