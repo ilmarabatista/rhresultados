@@ -31,6 +31,7 @@ import CargoCompetencias, { type Competencia } from "./cargo-competencias";
 import { Field, FormError, FormOk, Input, Select, SubmitButton, Textarea } from "./form";
 import { Etiqueta, Vazio } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
+import { mesmoCargo } from "@/lib/treinamentos";
 import { linkPublico } from "@/lib/link-publico";
 import { lembreteDoLink } from "@/lib/cobranca";
 import CobrarTodos from "./cobrar-todos";
@@ -568,13 +569,23 @@ function Pessoas({ companyId, detalhe }: { companyId: string; detalhe: Detalhe }
 
 // ------------------------------------------------------------------- a tela
 
-function Cabecalho({ cargo, companyId }: { cargo: CargoNaLista; companyId: string }) {
+function Cabecalho({ cargo, companyId, outros }: { cargo: CargoNaLista; companyId: string; outros: string[] }) {
   const router = useRouter();
   const [nome, setNome] = useState(cargo.nome);
   const [pending, startTransition] = useTransition();
 
-  const renomear = () => {
+  const renomear = async () => {
     if (nome.trim() === cargo.nome) return;
+    const outro = outros.find((o) => mesmoCargo(o, nome));
+    if (
+      outro &&
+      !(await confirmar(
+        `Já existe o cargo ${outro}. Juntar os dois? Tudo deste cargo (pessoas, questionários, competências e descrição) passa para ${outro}, e este some da lista.`,
+      ))
+    ) {
+      setNome(cargo.nome);
+      return;
+    }
     startTransition(async () => {
       const r = await renomearCargo(cargo.id, nome);
       if (r.error) {
@@ -591,7 +602,10 @@ function Cabecalho({ cargo, companyId }: { cargo: CargoNaLista; companyId: strin
         onChange={(e) => setNome(e.target.value)}
         onBlur={renomear}
         onKeyDown={(e) => {
-          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key !== "Enter") return;
+          // Sem isso, o mesmo Enter aperta o Cancelar da pergunta de juntar cargos.
+          e.preventDefault();
+          (e.target as HTMLInputElement).blur();
         }}
         aria-label="Nome do cargo"
         className="min-w-0 flex-1 rounded-md border border-transparent px-1 py-0.5 text-base font-semibold text-slate-900 outline-none hover:border-slate-200 focus:border-brand-500"
@@ -735,7 +749,7 @@ export default function CargosTela({
 
       {cargo && detalhe ? (
         <div key={cargo.id} className="min-w-0 space-y-3">
-          <Cabecalho cargo={cargo} companyId={companyId} />
+          <Cabecalho cargo={cargo} companyId={companyId} outros={cargos.filter((c) => c.id !== cargo.id).map((c) => c.nome)} />
           <nav className="flex flex-wrap gap-1 border-b border-slate-200">
             {ABAS.map((a) => (
               <Link
