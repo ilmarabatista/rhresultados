@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
@@ -63,9 +64,35 @@ export async function criarCargo(companyId: string, nome: string, nivel?: string
   return { ok: true, id: cargo.id };
 }
 
+/** Os campos da descrição que passam para o cargo que fica, quando ele não tem. */
+const CAMPOS_DA_DESCRICAO = [
+  "missao",
+  "responsabilidades",
+  "requisitos",
+  "nivel",
+  "setor",
+  "cbo",
+  "superior",
+  "subordinados",
+  "especificacao",
+  "perguntasDaEntrevista",
+  "aprovadaEm",
+] as const;
+
+function temDescricao(c: Record<(typeof CAMPOS_DA_DESCRICAO)[number], unknown>): boolean {
+  return Boolean(
+    (typeof c.missao === "string" && c.missao.trim()) ||
+      (typeof c.responsabilidades === "string" && c.responsabilidades.trim()) ||
+      (Array.isArray(c.perguntasDaEntrevista) && c.perguntasDaEntrevista.length) ||
+      c.aprovadaEm,
+  );
+}
+
 /**
  * Renomeia o cargo. Se o nome novo é de outro cargo da lista, os dois viram um
- * só: as pessoas e as marcas da matriz passam para o que fica.
+ * só, e nada do que sai se perde: pessoas, matriz, questionários, competências,
+ * avaliações, vagas e a descrição (quando o que fica não tem uma) passam para o
+ * que fica. Se os dois têm descrição, não junta: ela escolhe qual manter.
  */
 export async function renomearCargo(cargoId: string, nome: string): Promise<TreinoState> {
   const session = await requireSession();
@@ -83,13 +110,54 @@ export async function renomearCargo(cargoId: string, nome: string): Promise<Trei
   const destino = outros.find((c) => mesmoCargo(c.nome, limpo));
 
   if (destino) {
-    const marcas = await prisma.treinamentoDoCargo.findMany({ where: { cargoId }, select: { treinamentoId: true } });
+    const selecao = Object.fromEntries(CAMPOS_DA_DESCRICAO.map((k) => [k, true])) as Record<(typeof CAMPOS_DA_DESCRICAO)[number], true>;
+    const [sai, fica, marcas, competenciasQueSaem, competenciasQueFicam] = await Promise.all([
+      prisma.cargo.findUniqueOrThrow({ where: { id: cargoId }, select: selecao }),
+      prisma.cargo.findUniqueOrThrow({ where: { id: destino.id }, select: selecao }),
+      prisma.treinamentoDoCargo.findMany({ where: { cargoId }, select: { treinamentoId: true } }),
+      prisma.competenciaDoCargo.findMany({ where: { cargoId }, select: { id: true, nome: true, _count: { select: { notas: true } } } }),
+      prisma.competenciaDoCargo.findMany({ where: { cargoId: destino.id }, select: { nome: true } }),
+    ]);
+    if (temDescricao(sai) && temDescricao(fica)) {
+      return {
+        error: `Já existe o cargo ${destino.nome}, e os dois têm descrição. Para não perder nenhuma, exclua o que não serve ou dê outro nome a este.`,
+      };
+    }
+
+    // A descrição vai inteira, para não misturar partes de duas descrições.
+    const descricao = temDescricao(sai) ? sai : null;
+    const nomesQueFicam = new Set(competenciasQueFicam.map((c) => c.nome.trim().toLowerCase()));
+    // Competência repetida e sem nota dada some; o resto passa para o que fica.
+    const repetidasSemNota = competenciasQueSaem
+      .filter((c) => nomesQueFicam.has(c.nome.trim().toLowerCase()) && c._count.notas === 0)
+      .map((c) => c.id);
+    const novo = { cargoId: destino.id };
+
     await prisma.$transaction([
       prisma.employee.updateMany({ where: { cargoId }, data: { cargoId: destino.id, role: destino.nome } }),
       prisma.treinamentoDoCargo.createMany({
         data: marcas.map((m) => ({ treinamentoId: m.treinamentoId, cargoId: destino.id })),
         skipDuplicates: true,
       }),
+      prisma.questionarioDeCargo.updateMany({ where: { cargoId }, data: novo }),
+      prisma.competenciaDoCargo.deleteMany({ where: { id: { in: repetidasSemNota } } }),
+      prisma.competenciaDoCargo.updateMany({ where: { cargoId }, data: novo }),
+      prisma.avaliacaoDeCompetencias.updateMany({ where: { cargoId }, data: novo }),
+      prisma.modeloDeAutoavaliacao.updateMany({ where: { cargoId }, data: novo }),
+      prisma.jobOpening.updateMany({ where: { cargoId }, data: novo }),
+      ...(descricao
+        ? [
+            prisma.cargo.update({
+              where: { id: destino.id },
+              data: {
+                ...descricao,
+                nivel: descricao.nivel ?? fica.nivel,
+                especificacao: descricao.especificacao ?? Prisma.DbNull,
+                perguntasDaEntrevista: descricao.perguntasDaEntrevista ?? Prisma.DbNull,
+              },
+            }),
+          ]
+        : []),
       prisma.cargo.delete({ where: { id: cargoId } }),
     ]);
     await log(cargo.companyId, session.userId, "ATUALIZOU", destino.id, `Juntou o cargo ${cargo.nome} com ${destino.nome}.`);
