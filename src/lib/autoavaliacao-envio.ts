@@ -38,9 +38,9 @@ export async function gerarLinkDaFuncao(
 ): Promise<{ token: string; titulo: string } | null> {
   const pessoa = await prisma.employee.findUnique({
     where: { id: employeeId },
-    select: { companyId: true, cargoId: true, role: true, status: true, _count: { select: { autoavaliacoes: true } } },
+    select: { companyId: true, cargoId: true, role: true, status: true, prestador: true, _count: { select: { autoavaliacoes: true } } },
   });
-  if (!pessoa || pessoa.status === "DESLIGADO" || pessoa._count.autoavaliacoes > 0 || foraDoPdi(pessoa.role)) return null;
+  if (!pessoa || pessoa.status === "DESLIGADO" || pessoa._count.autoavaliacoes > 0 || foraDoPdi(pessoa.role, pessoa.prestador)) return null;
   const modelos = await prisma.modeloDeAutoavaliacao.findMany({
     where: { companyId: pessoa.companyId, perguntas: { some: {} } },
     select: { id: true, nome: true, cargoId: true },

@@ -24,6 +24,7 @@ export type ColaboradorDados = {
   hiredAt: string;
   terminatedAt: string;
   status: string;
+  prestador: boolean;
   notes: string | null;
 };
 
@@ -210,6 +211,22 @@ export default function EmployeeForm({
                 defaultValue={colaborador?.terminatedAt ?? ""}
               />
             </Field>
+
+            <label className="flex items-start gap-2 text-sm text-slate-700 sm:col-span-6">
+              <input
+                type="checkbox"
+                name="prestador"
+                defaultChecked={colaborador?.prestador ?? false}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              />
+              <span>
+                Prestador de serviço
+                <span className="block text-xs text-slate-500">
+                  Não é funcionário: fica na aba Prestadores e fora do PDI e da autoavaliação. Dentistas e protéticos
+                  já saem pelo cargo.
+                </span>
+              </span>
+            </label>
 
             <Field
               label="Observações gerais"

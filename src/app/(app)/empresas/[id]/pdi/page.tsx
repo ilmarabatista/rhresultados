@@ -11,6 +11,7 @@ import {
 } from "@/lib/pdi";
 import { Aviso, Etiqueta, Numeros, Tabela, Vazio } from "@/components/ui";
 import PdiAbas from "@/components/pdi-abas";
+import BotaoPrestador from "@/components/botao-prestador";
 import { foraDoPdi } from "@/lib/prestadores";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export default async function PdiPage({
         id: true,
         name: true,
         role: true,
+        prestador: true,
         cargo: { select: { _count: { select: { competencias: true } } } },
         avaliacoes: {
           orderBy: { data: "desc" },
@@ -77,7 +79,7 @@ export default async function PdiPage({
   ]);
 
   // Dentistas e laboratório não têm PDI.
-  const linhas = pessoas.filter((p) => !foraDoPdi(p.role)).map((p) => {
+  const linhas = pessoas.filter((p) => !foraDoPdi(p.role, p.prestador)).map((p) => {
     const avaliacao = p.avaliacoes[0] ?? null;
     const plano = p.plans[0] ?? null;
     const resumo = avaliacao ? resumoDaAvaliacao(avaliacao.notas) : null;
@@ -161,7 +163,7 @@ export default async function PdiPage({
             <Vazio>Ninguém na equipe ainda. Cadastre as pessoas na aba Equipe.</Vazio>
           ) : (
             <Tabela titulo="Equipe" direita={`${linhas.length} pessoas`} minLargura={860}>
-              <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_5rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-micro font-medium uppercase tracking-wider text-slate-500">
+              <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_10rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-micro font-medium uppercase tracking-wider text-slate-500">
                 <span>Pessoa</span>
                 <span>Avaliação</span>
                 <span>Gaps</span>
@@ -172,7 +174,7 @@ export default async function PdiPage({
               {linhas.map((l) => (
                 <div
                   key={l.id}
-                  className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_5rem] items-center gap-3 border-b border-slate-100 px-3 py-1.5 text-corpo last:border-b-0 even:bg-slate-50/60 hover:bg-brand-50/40"
+                  className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_10rem] items-center gap-3 border-b border-slate-100 px-3 py-1.5 text-corpo last:border-b-0 even:bg-slate-50/60 hover:bg-brand-50/40"
                 >
                   <div className="min-w-0">
                     <Link href={`/empresas/${id}/pdi/${l.id}`} className="block truncate font-medium text-slate-800 hover:text-brand-700">
@@ -236,12 +238,20 @@ export default async function PdiPage({
                       <span className="text-slate-300">—</span>
                     )}
                   </div>
-                  <Link
-                    href={`/empresas/${id}/pdi/${l.id}`}
-                    className="justify-self-end rounded-md border border-slate-200 px-2 py-0.5 text-micro text-brand-700 transition hover:border-brand-300"
-                  >
-                    {l.plano || l.avaliadaEm ? "Abrir" : "Começar"}
-                  </Link>
+                  <div className="flex items-center justify-self-end gap-1.5">
+                    <BotaoPrestador
+                      employeeId={l.id}
+                      nome={l.nome}
+                      prestador={false}
+                      className="rounded-md border border-slate-200 px-2 py-0.5 text-micro text-slate-500 transition hover:border-slate-300 disabled:opacity-60"
+                    />
+                    <Link
+                      href={`/empresas/${id}/pdi/${l.id}`}
+                      className="rounded-md border border-slate-200 px-2 py-0.5 text-micro text-brand-700 transition hover:border-brand-300"
+                    >
+                      {l.plano || l.avaliadaEm ? "Abrir" : "Começar"}
+                    </Link>
+                  </div>
                 </div>
               ))}
             </Tabela>

@@ -55,6 +55,7 @@ const employeeSchema = z.object({
   hiredAt: optDate,
   terminatedAt: optDate,
   status: z.enum(["ATIVO", "AFASTADO", "DESLIGADO"]).default("ATIVO"),
+  prestador: z.boolean(),
   notes: opt,
 });
 
@@ -79,6 +80,7 @@ export async function saveEmployee(
     hiredAt: formData.get("hiredAt"),
     terminatedAt: formData.get("terminatedAt"),
     status: formData.get("status") || "ATIVO",
+    prestador: formData.get("prestador") === "on",
     notes: formData.get("notes"),
   });
 
@@ -178,6 +180,24 @@ export async function definirAtivo(employeeId: string, ativo: boolean) {
     ativo ? `Reativou ${pessoa.name}.` : `Desativou ${pessoa.name}.`,
   );
 
+  refresh(pessoa.companyId);
+}
+
+/** Marca ou desmarca a pessoa como prestador de serviço (fora do PDI e da autoavaliação). */
+export async function marcarPrestador(employeeId: string, prestador: boolean) {
+  const session = await requireSession();
+  const pessoa = await prisma.employee.findUnique({ where: { id: employeeId }, select: { companyId: true, name: true } });
+  if (!pessoa) return;
+  await prisma.employee.update({ where: { id: employeeId }, data: { prestador } });
+  await log(
+    pessoa.companyId,
+    session.userId,
+    "ATUALIZOU",
+    employeeId,
+    prestador
+      ? `Marcou ${pessoa.name} como prestador de serviço (fora do PDI e da autoavaliação).`
+      : `Voltou ${pessoa.name} para o PDI e a autoavaliação.`,
+  );
   refresh(pessoa.companyId);
 }
 

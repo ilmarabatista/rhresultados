@@ -193,9 +193,9 @@ export async function enviarAutoavaliacao(_prev: AutoavaliacaoState, formData: F
   if (!modeloId) return { error: "Escolha o modelo de autoavaliação." };
   if (prazoCru && !diaValido(prazoCru)) return { error: "Data de prazo inválida." };
 
-  const pessoa = await prisma.employee.findUnique({ where: { id: employeeId }, select: { companyId: true, name: true, role: true } });
+  const pessoa = await prisma.employee.findUnique({ where: { id: employeeId }, select: { companyId: true, name: true, role: true, prestador: true } });
   if (!pessoa) return { error: "Pessoa não encontrada." };
-  if (foraDoPdi(pessoa.role)) return { error: "Dentistas e laboratório não fazem autoavaliação." };
+  if (foraDoPdi(pessoa.role, pessoa.prestador)) return { error: "Prestadores de serviço não fazem autoavaliação." };
   const modelo = await prisma.modeloDeAutoavaliacao.findFirst({
     where: { id: modeloId, companyId: pessoa.companyId },
     include: { perguntas: true },
@@ -245,14 +245,14 @@ export async function gerarLinks(
         status: { not: "DESLIGADO" },
         autoavaliacoes: { none: {} },
       },
-      select: { id: true, role: true },
+      select: { id: true, role: true, prestador: true },
     }),
     prisma.modeloDeAutoavaliacao.findMany({
       where: { companyId, id: { in: validos.map((p) => p.modeloId) } },
       include: { perguntas: true },
     }),
   ]);
-  const semLink = new Set(pessoas.filter((p) => !foraDoPdi(p.role)).map((p) => p.id));
+  const semLink = new Set(pessoas.filter((p) => !foraDoPdi(p.role, p.prestador)).map((p) => p.id));
   const porId = new Map(modelos.filter((m) => m.perguntas.length > 0).map((m) => [m.id, m]));
 
   const dados = validos.flatMap((p) => {

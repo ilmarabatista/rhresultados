@@ -16,6 +16,7 @@ import { avisar } from "@/components/avisos";
 import { linkPublico } from "@/lib/link-publico";
 import { lembreteDoLink } from "@/lib/cobranca";
 import CobrarTodos from "./cobrar-todos";
+import BotaoPrestador from "./botao-prestador";
 
 /**
  * O controle de envio e de respostas: toda a equipe numa lista, com a
@@ -313,6 +314,7 @@ export default function AutoavaliacaoEnvios({
                       Abrir o PDI →
                     </Link>
                   )}
+                  <BotaoPrestador employeeId={p.id} nome={p.nome} prestador={false} />
                 </div>
               </div>
             );

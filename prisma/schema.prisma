@@ -421,6 +421,10 @@ model Employee {
   terminatedAt DateTime?
 
   status EmployeeStatus @default(ATIVO)
+  /// Prestador de serviço, não funcionário: fica na aba Prestadores da Equipe
+  /// e fora do PDI e da autoavaliação. Dentistas e protéticos já saem pelo
+  /// cargo (src/lib/prestadores.ts); isto marca os outros, um a um.
+  prestador Boolean @default(false)
   /// Observações gerais e permanentes sobre a pessoa.
   notes  String?        @db.Text
 

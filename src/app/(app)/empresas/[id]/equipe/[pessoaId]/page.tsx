@@ -219,6 +219,7 @@ export default async function ColaboradorPage({
           hiredAt: paraCampoDeData(pessoa.hiredAt),
           terminatedAt: paraCampoDeData(pessoa.terminatedAt),
           status: pessoa.status,
+          prestador: pessoa.prestador,
           notes: pessoa.notes,
           admissao: pessoa.hiredAt ? formatFullDate(pessoa.hiredAt) : null,
         }}

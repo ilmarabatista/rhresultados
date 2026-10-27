@@ -42,6 +42,7 @@ export default async function AutoavaliacoesPage({ params }: { params: Promise<{
         role: true,
         cargoId: true,
         phone: true,
+        prestador: true,
         cargo: { select: { nome: true } },
         // Só a mais recente: é ela que diz em que pé a pessoa está.
         autoavaliacoes: {
@@ -67,7 +68,7 @@ export default async function AutoavaliacoesPage({ params }: { params: Promise<{
 
   const comPerguntas = modelos.filter((m) => m._count.perguntas > 0);
   // Dentistas e laboratório não fazem autoavaliação.
-  const pessoas: PessoaNoEnvio[] = equipe.filter((p) => !foraDoPdi(p.cargo?.nome ?? p.role)).map((p) => {
+  const pessoas: PessoaNoEnvio[] = equipe.filter((p) => !foraDoPdi(p.cargo?.nome ?? p.role, p.prestador)).map((p) => {
     const a = p.autoavaliacoes[0];
     let envio: PessoaNoEnvio["envio"] = null;
     if (a) {

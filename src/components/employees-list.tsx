@@ -13,6 +13,7 @@ export type ColaboradorItem = {
   setor: string | null;
   unidade: string | null;
   status: string;
+  prestador: boolean;
   planos: number;
   advertencias: number;
   faltas: number;
@@ -49,17 +50,18 @@ export default function EmployeesList({
 }) {
   const [novo, setNovo] = useState(false);
   const [busca, setBusca] = useState("");
-  const [aba, setAba] = useState<"equipe" | "dentistas" | "laboratorio" | "desativados">("equipe");
+  const [aba, setAba] = useState<"equipe" | "dentistas" | "laboratorio" | "prestadores" | "desativados">("equipe");
 
-  // Dentistas (prestadores) e protéticos (laboratório) aparecem em abas à parte,
+  // Dentistas, protéticos (laboratório) e prestadores aparecem em abas à parte,
   // e quem foi desativado sai de todas e fica só na aba Desativados.
   const abaDe = (c: ColaboradorItem) =>
-    c.status === "DESLIGADO" ? "desativados" : (grupoDoCargo(c.cargo) ?? "equipe");
+    c.status === "DESLIGADO" ? "desativados" : (grupoDoCargo(c.cargo, c.prestador) ?? "equipe");
   const daAba = colaboradores.filter((c) => abaDe(c) === aba);
   const abas = [
     { slug: "equipe", rotulo: "Colaboradores" },
     { slug: "dentistas", rotulo: "Dentistas" },
     { slug: "laboratorio", rotulo: "Laboratório" },
+    { slug: "prestadores", rotulo: "Prestadores" },
     { slug: "desativados", rotulo: "Desativados" },
   ] as const;
   const total = (slug: string) => colaboradores.filter((c) => abaDe(c) === slug).length;
@@ -145,7 +147,7 @@ export default function EmployeesList({
             </p>
           ) : aba !== "equipe" ? (
             <p className="mb-3 text-xs text-slate-500">
-              {aba === "dentistas" ? "Prestadores de serviço" : "Protéticos do laboratório"}: ficam fora do PDI e da
+              {aba === "dentistas" ? "Dentistas" : aba === "laboratorio" ? "Protéticos do laboratório" : "Prestadores de serviço"}: ficam fora do PDI e da
               autoavaliação.
             </p>
           ) : null}
