@@ -31,6 +31,7 @@ export default async function InicioPage() {
         nome={s.nome}
         links={[
           { href: "/folgas", rotulo: "Folgas" },
+          { href: "/pedidos", rotulo: "Atestado e correção" },
           { href: "/relatorios", rotulo: pendentes ? `Relatórios (${pendentes})` : "Relatórios" },
           { href: "/trocar-senha", rotulo: "Senha" },
         ]}
@@ -53,7 +54,7 @@ export default async function InicioPage() {
                 <li key={b.id} className="flex items-center justify-between py-2">
                   <span className="text-sm text-slate-600">{proximaBatida(i)}</span>
                   <span className="flex items-center gap-2">
-                    {b.origem === "MANUAL" ? <Etiqueta tom="atencao">incluída pelo RH</Etiqueta> : null}
+                    {b.origem === "MANUAL" ? <Etiqueta tom="atencao">corrigida *</Etiqueta> : null}
                     <span className="text-lg font-semibold tabular-nums text-slate-900">
                       {relogio(b.minuto)}
                       {b.minuto >= 1440 ? <sup className="text-xs">+1</sup> : null}
@@ -72,6 +73,10 @@ export default async function InicioPage() {
             <p className="text-sm text-slate-600">O ponto da sua empresa está desativado. Fale com o RH.</p>
           )}
         </Cartao>
+
+        <Link href="/pedidos" className="block rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm hover:border-marca-400">
+          Esqueceu de bater, bateu errado ou tem atestado? <span className="font-medium text-marca-700">Peça ao RH por aqui.</span>
+        </Link>
 
         {pendentes ? (
           <Link href="/relatorios" className="block rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

@@ -361,3 +361,33 @@ export async function enviarRelatorio(companyId: string, colaboradorId: string, 
   refresh(companyId);
   return { ok: true, mensagem: "Relatório enviado. O colaborador vê no aplicativo do ponto." };
 }
+
+// ------------------------------------------------------------------ pedidos
+
+/**
+ * Aprova o que o colaborador pediu pelo aplicativo. Quem faz o ajuste é o
+ * ponto: atestado vira ATESTADO nos dias; correção entra como batida do RH
+ * (asterisco) e a errada fica anulada, riscada.
+ */
+export async function aprovarPedido(companyId: string, id: string, resumo: string): Promise<PontoState> {
+  const session = await requireSession();
+  const erro = await escreverNoPonto(companyId, `/pedidos/${encodeURIComponent(id)}/aprovar`, "POST", { autor: session.name });
+  if (erro) return { error: erro };
+  await log(companyId, session.userId, "ATUALIZOU", id, `Aprovou pedido do colaborador no ponto: ${resumo}`);
+  refresh(companyId);
+  return { ok: true };
+}
+
+export async function recusarPedido(companyId: string, id: string, resumo: string, resposta: string): Promise<PontoState> {
+  const session = await requireSession();
+  const texto = resposta.trim();
+  if (texto.length < 3) return { error: "Diga ao colaborador por que o pedido foi recusado." };
+  const erro = await escreverNoPonto(companyId, `/pedidos/${encodeURIComponent(id)}/recusar`, "POST", {
+    resposta: texto,
+    autor: session.name,
+  });
+  if (erro) return { error: erro };
+  await log(companyId, session.userId, "ATUALIZOU", id, `Recusou pedido do colaborador no ponto: ${resumo} (${texto})`);
+  refresh(companyId);
+  return { ok: true };
+}

@@ -59,6 +59,7 @@ model Empresa {
   marcacoes     Marcacao[]
   ocorrencias   Ocorrencia[]
   lancamentos   Lancamento[]
+  pedidos       Pedido[]
 }
 
 model Colaborador {
@@ -86,6 +87,7 @@ model Colaborador {
   ocorrencias Ocorrencia[]
   lancamentos Lancamento[]
   relatorios  Relatorio[]
+  pedidos     Pedido[]
 
   @@index([empresaId])
 }
@@ -199,6 +201,63 @@ model Relatorio {
   cienteEm    DateTime?
 
   @@unique([colaboradorId, mes])
+}
+
+enum TipoPedido {
+  /// Justifica falta com atestado: aprovado, os dias viram ATESTADO.
+  ATESTADO
+  /// Corrige uma batida: aprovado, entra como MANUAL e a original é anulada.
+  CORRECAO
+}
+
+enum SituacaoPedido {
+  PENDENTE
+  APROVADO
+  RECUSADO
+}
+
+/// O que o colaborador pede pelo aplicativo. Nada muda no ponto até o RH aprovar.
+model Pedido {
+  id            String      @id @default(cuid())
+  empresaId     String
+  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  colaboradorId String
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+
+  tipo     TipoPedido
+  situacao SituacaoPedido @default(PENDENTE)
+  /// Atestado: o primeiro dia. Correção: a jornada da batida.
+  dia      DateTime
+  /// Atestado: o último dia (igual ao primeiro quando é um dia só).
+  ate      DateTime?
+  /// Correção: a batida que está errada. Vazio é uma batida que faltou.
+  marcacaoId String?
+  /// Correção: o horário certo, em minutos desde a meia-noite do dia (1440+ é
+  /// o dia seguinte). Vazio, com a batida escolhida, é uma batida a mais.
+  minutos    Int?
+  /// O horário da batida errada quando o pedido foi feito, "HH:MM".
+  era        String?
+  motivo     String?
+
+  decididoEm  DateTime?
+  decididoPor String?
+  /// O que o RH respondeu ao recusar.
+  resposta    String?
+  createdAt   DateTime  @default(now())
+
+  anexo AnexoPedido?
+
+  @@index([empresaId, situacao])
+  @@index([colaboradorId, createdAt])
+}
+
+/// A foto ou o PDF do atestado, à parte para a lista de pedidos ficar leve.
+model AnexoPedido {
+  pedidoId String @id
+  pedido   Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  nome     String
+  tipo     String
+  dados    Bytes
 }
 
 /// Tentativas de login, para travar força bruta (a Vercel roda em várias instâncias).
