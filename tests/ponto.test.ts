@@ -8,6 +8,7 @@ import {
   horarioEscrito,
   horarioValido,
   lerHorario,
+  porSemanas,
   type RegrasPonto,
 } from "../src/lib/ponto";
 
@@ -118,4 +119,38 @@ test("horarioEscrito e horarioValido", () => {
   assert.ok(horarioValido(HORARIO_PADRAO));
   assert.ok(!horarioValido([[]]));
   assert.ok(!horarioValido([[], [[720, 480]], [], [], [], [], []]));
+});
+
+test("banco por semana: sem tolerância no dia, o que sobra num dia cobre o que falta no outro", () => {
+  const semanal: RegrasPonto = { ...regras, porSemana: true };
+  // Segunda 8 min a mais, terça 8 min a menos: no dia a dia a tolerância some com os dois.
+  const seg = calcularDia({ dia: SEG, batidas: [h("08:00"), h("12:00"), h("13:00"), h("17:08")] }, semanal);
+  const ter = calcularDia({ dia: "2026-10-20", batidas: [h("08:08"), h("12:00"), h("13:00"), h("17:00")] }, semanal);
+  assert.equal(seg.saldo, 8);
+  assert.equal(ter.saldo, -8);
+  assert.equal(calcularDia({ dia: SEG, batidas: [h("08:00"), h("12:00"), h("13:00"), h("17:08")] }, regras).saldo, 0);
+});
+
+test("banco por semana: semana de 42h dá 2h de crédito, com feriado tirando o dia da meta", () => {
+  const semanal: RegrasPonto = { ...regras, porSemana: true };
+  const dias = calcularDias(
+    [
+      { dia: "2026-10-18", batidas: [] },
+      { dia: SEG, batidas: [h("08:00"), h("12:00"), h("13:00"), h("18:00")] },
+      { dia: "2026-10-20", batidas: [h("08:00"), h("12:00"), h("13:00"), h("18:00")] },
+      { dia: "2026-10-21", batidas: [], ocorrencia: "FERIADO" },
+      { dia: "2026-10-22", batidas: [h("08:00"), h("12:00"), h("13:00"), h("17:00")] },
+      { dia: "2026-10-23", batidas: [h("08:00"), h("12:00"), h("13:00"), h("17:00")] },
+      { dia: "2026-10-24", batidas: [] },
+      { dia: "2026-10-25", batidas: [h("08:00"), h("12:00")] },
+    ],
+    semanal,
+  );
+  const semanas = porSemanas(dias);
+  assert.equal(semanas.length, 2);
+  assert.equal(semanas[0].inicio, "2026-10-18");
+  assert.equal(semanas[0].totais.previsto, 32 * 60);
+  assert.equal(semanas[0].totais.trabalhado, 34 * 60);
+  assert.equal(semanas[0].totais.saldo, 120);
+  assert.equal(semanas[1].inicio, "2026-10-25");
 });

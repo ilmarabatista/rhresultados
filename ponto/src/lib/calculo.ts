@@ -28,6 +28,12 @@ export type RegrasPonto = {
   horario: Horario;
   tolerancia: number;
   intervaloMinimo: number;
+  /**
+   * Banco por semana: a conta é o total da semana contra o horário dela (40h
+   * no padrão). O dia não tem tolerância, para que um dia a mais e outro a
+   * menos se acertem na semana, e o saldo do dia é trabalhado − previsto.
+   */
+  porSemana?: boolean;
 };
 
 /** 08:00 às 12:00 e 13:00 às 17:00, de segunda a sexta: 40h semanais. */
@@ -161,6 +167,21 @@ export function outroMes(mes: string, delta: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/**
+ * O mês fica disponível para o colaborador aprovar no último dia dele (30,
+ * 31, ou 28/29 em fevereiro), sem ninguém precisar enviar.
+ */
+export function mesLiberado(mes: string, hoje: string): boolean {
+  return hoje >= diasDoMes(mes).at(-1)!;
+}
+
+/** Os meses de `desde` até o de `hoje`, do mais novo para o mais antigo, no máximo `limite`. */
+export function mesesAte(desde: string, hoje: string, limite = 12): string[] {
+  const lista: string[] = [];
+  for (let m = hoje.slice(0, 7); m >= desde.slice(0, 7) && lista.length < limite; m = outroMes(m, -1)) lista.push(m);
+  return lista;
+}
+
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
@@ -274,7 +295,8 @@ export function calcularDia(entrada: DiaParaCalcular, regras: RegrasPonto): DiaC
 
   // Com marcação ímpar o dia fica sem conta até o RH completar a batida.
   // Dentro da tolerância não conta nada; passou dela, conta tudo (Súmula 366 do TST).
-  if (emAndamento || batidas.length % 2 === 1 || extraBruto + faltaBruta <= regras.tolerancia) {
+  const tolerancia = regras.porSemana ? 0 : regras.tolerancia;
+  if (emAndamento || batidas.length % 2 === 1 || extraBruto + faltaBruta <= tolerancia) {
     extraBruto = 0;
     faltaBruta = 0;
   }
@@ -349,6 +371,27 @@ export function totalizar(dias: DiaCalculado[]): Totais {
     t.alertas += d.alertas.length;
   }
   return t;
+}
+
+export type Semana<D extends DiaCalculado = DiaCalculado> = {
+  /** O domingo que abre a semana. */
+  inicio: string;
+  dias: D[];
+  totais: Totais;
+};
+
+/** Os dias agrupados em semanas de domingo a sábado, na ordem em que vieram. */
+export function porSemanas<D extends DiaCalculado>(dias: D[]): Semana<D>[] {
+  const semanas: Semana<D>[] = [];
+  for (const d of dias) {
+    const [a, m, dd] = d.dia.split("-").map(Number);
+    const domingo = new Date(Date.UTC(a, m - 1, dd - d.semana)).toISOString().slice(0, 10);
+    const atual = semanas.at(-1);
+    if (atual && atual.inicio === domingo) atual.dias.push(d);
+    else semanas.push({ inicio: domingo, dias: [d], totais: totalizar([]) });
+  }
+  for (const s of semanas) s.totais = totalizar(s.dias);
+  return semanas;
 }
 
 /**

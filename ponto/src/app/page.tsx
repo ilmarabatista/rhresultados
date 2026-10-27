@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { sessaoAtual } from "@/lib/sessao";
-import { prisma } from "@/lib/prisma";
 import { jornadaAtual } from "@/lib/batidas";
 import { proximaBatida, relogio } from "@/lib/calculo";
 import { todayKey } from "@/lib/dates";
+import { nomeDoMes } from "@/lib/calculo";
+import { mesesParaAprovar } from "@/lib/relatorio";
 import { Registrar } from "@/components/registrar";
 import { Cartao, Etiqueta, Topo } from "@/components/ui";
 
@@ -18,7 +19,7 @@ export default async function InicioPage() {
   if (s.trocarSenha) redirect("/trocar-senha");
 
   const { dia, batidas } = await jornadaAtual(s.id);
-  const pendentes = await prisma.relatorio.count({ where: { colaboradorId: s.id, cienteEm: null } });
+  const pendentes = await mesesParaAprovar(s.id);
   const proxima = proximaBatida(batidas.length);
   const dataEscrita = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
     new Date(`${dia}T00:00:00Z`),
@@ -31,7 +32,7 @@ export default async function InicioPage() {
         nome={s.nome}
         links={[
           { href: "/folgas", rotulo: "Folgas" },
-          { href: "/relatorios", rotulo: pendentes ? `Relatórios (${pendentes})` : "Relatórios" },
+          { href: "/meu-ponto", rotulo: pendentes.length ? `Meu ponto (${pendentes.length})` : "Meu ponto" },
           { href: "/trocar-senha", rotulo: "Senha" },
         ]}
       />
@@ -73,11 +74,21 @@ export default async function InicioPage() {
           )}
         </Cartao>
 
-        {pendentes ? (
-          <Link href="/relatorios" className="block rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            O RH enviou {pendentes === 1 ? "um relatório de ponto" : `${pendentes} relatórios de ponto`} para você conferir.
+        {pendentes.length ? (
+          <Link href={`/meu-ponto?mes=${pendentes[0]}`} className="block rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {pendentes.length === 1 ? (
+              <>
+                O espelho de <b>{nomeDoMes(pendentes[0])}</b> está pronto. Confira e aprove.
+              </>
+            ) : (
+              <>Você tem {pendentes.length} meses de ponto para conferir e aprovar.</>
+            )}
           </Link>
-        ) : null}
+        ) : (
+          <Link href="/meu-ponto" className="block text-center text-sm text-marca-700 underline">
+            Ver meu espelho de ponto e banco de horas
+          </Link>
+        )}
       </main>
     </>
   );
