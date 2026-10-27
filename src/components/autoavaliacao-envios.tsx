@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, MessageCircle } from "lucide-react";
@@ -13,6 +13,9 @@ import { linkDoWhatsApp, mensagemDoLink, telefoneDoWhatsApp } from "@/lib/autoav
 import { Etiqueta, Tabela, Vazio } from "./ui";
 import { copiarLink } from "./autoavaliacao-modelos";
 import { avisar } from "@/components/avisos";
+import { linkPublico } from "@/lib/link-publico";
+import { lembreteDoLink } from "@/lib/cobranca";
+import CobrarTodos from "./cobrar-todos";
 
 /**
  * O controle de envio e de respostas: toda a equipe numa lista, com a
@@ -33,6 +36,8 @@ export type PessoaNoEnvio = {
     titulo: string;
     status: string;
     enviadoEm: string;
+    /** Link gerado hoje: ainda é de mandar, não de cobrar. */
+    deHoje: boolean;
     respondidoEm: string | null;
     prazo: string | null;
     atrasado: boolean;
@@ -83,12 +88,10 @@ export default function AutoavaliacaoEnvios({
     Object.fromEntries(pessoas.map((p) => [p.id, p.sugerido])),
   );
   const [prazo, setPrazo] = useState("");
-  const [origem, setOrigem] = useState("");
   // A fila do "Enviar todos": o WhatsApp não manda em massa, então cada clique
   // abre a conversa da próxima pessoa, já com a mensagem e o link.
   const [fila, setFila] = useState<string[] | null>(null);
   const [mandados, setMandados] = useState<Set<string>>(() => new Set());
-  useEffect(() => setOrigem(window.location.origin), []);
 
   const contagem = useMemo(() => {
     const c: Record<string, number> = { TODOS: pessoas.length, SEM_LINK: 0, AGUARDANDO: 0, RESPONDIDA: 0, NO_PDI: 0 };
@@ -121,9 +124,10 @@ export default function AutoavaliacaoEnvios({
     });
 
   const whatsapp = (p: PessoaNoEnvio) =>
-    p.envio && origem ? linkDoWhatsApp(p.telefone, mensagemDoLink(p.nome, `${origem}/autoavaliacao/${p.envio.token}`)) : "#";
+    p.envio ? linkDoWhatsApp(p.telefone, mensagemDoLink(p.nome, linkPublico(`/autoavaliacao/${p.envio.token}`))) : "#";
 
-  const aguardando = pessoas.filter((p) => situacao(p) === "AGUARDANDO");
+  const aguardando = pessoas.filter((p) => situacao(p) === "AGUARDANDO" && p.envio!.deHoje);
+  const paraCobrar = pessoas.filter((p) => situacao(p) === "AGUARDANDO" && !p.envio!.deHoje);
   const naFila = fila ? fila.map((id) => pessoas.find((p) => p.id === id)).filter((p): p is PessoaNoEnvio => Boolean(p)) : [];
   const proximo = naFila.find((p) => !mandados.has(p.id));
   const feitos = naFila.filter((p) => mandados.has(p.id)).length;
@@ -188,10 +192,10 @@ export default function AutoavaliacaoEnvios({
           {!fila ? (
             <>
               <span className="text-slate-700">
-                {aguardando.length} link(s) aguardando resposta. Mande para todos em sequência: cada clique abre o WhatsApp da
+                {aguardando.length} link(s) gerado(s) hoje. Mande para todos em sequência: cada clique abre o WhatsApp da
                 próxima pessoa, com a mensagem pronta. É só apertar enviar lá e voltar aqui.
               </span>
-              <button type="button" className={`${botaoWhats} ml-auto`} onClick={comecarFila} disabled={!origem}>
+              <button type="button" className={`${botaoWhats} ml-auto`} onClick={comecarFila}>
                 <MessageCircle size={13} /> Enviar todos pelo WhatsApp ({aguardando.filter((p) => !mandados.has(p.id)).length})
               </button>
             </>
@@ -219,6 +223,16 @@ export default function AutoavaliacaoEnvios({
         </div>
       ) : null}
 
+      <CobrarTodos
+        pessoas={paraCobrar.map((p) => ({
+          id: p.id,
+          nome: p.nome,
+          telefone: p.telefone,
+          mensagem: lembreteDoLink(p.nome, "a sua autoavaliação", linkPublico(`/autoavaliacao/${p.envio!.token}`)),
+        }))}
+        aoCobrar={(id) => setMandados((atual) => new Set(atual).add(id))}
+      />
+
       {visiveis.length === 0 ? (
         <Vazio>Ninguém nesta situação.</Vazio>
       ) : (
@@ -242,7 +256,7 @@ export default function AutoavaliacaoEnvios({
                     {p.envio?.prazo ? ` · prazo ${p.envio.prazo}` : ""}
                     {p.envio?.respondidoEm ? ` · respondida em ${p.envio.respondidoEm}` : ""}
                     {s === "AGUARDANDO" && p.envio && p.envio.marcados > 0 ? ` · ${p.envio.marcados}/${p.envio.itens} marcados` : ""}
-                    {s === "AGUARDANDO" && mandados.has(p.id) ? " · WhatsApp aberto agora" : ""}
+                    {s === "AGUARDANDO" && mandados.has(p.id) ? (p.envio!.deHoje ? " · WhatsApp aberto agora" : " · cobrado agora") : ""}
                   </span>
                 </div>
 

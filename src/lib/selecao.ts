@@ -130,6 +130,13 @@ export function recadoDeCobranca(nome: string, oQue: string, link: string | null
   return link ? `${inicio} Segue o link: ${link}` : inicio;
 }
 
+/** A cobrança de tudo o que o candidato ainda deve responder, com os links. */
+export function recadoDeCobrancaDosLinks(nome: string, itens: { oQue: string; link: string }[]): string {
+  if (itens.length === 1) return recadoDeCobranca(nome, itens[0].oQue, itens[0].link);
+  const lista = itens.map((i) => `- ${i.oQue}: ${i.link}`).join("\n");
+  return `Olá, ${primeiroNome(nome)}! Tudo bem? Estamos aguardando estas respostas para seguir com o seu processo:\n${lista}`;
+}
+
 export function recadoDeReprovacao(nome: string, vaga: string, empresa: string | null): string {
   const onde = empresa ? ` na ${empresa}` : "";
   return (

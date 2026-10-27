@@ -25,6 +25,7 @@ import {
   linkDoWhatsapp,
   recadoDeAprovacao,
   recadoDeCobranca,
+  recadoDeCobrancaDosLinks,
   recadoDeReprovacao,
   rotuloDoTipo,
   type EtapaTipo,
@@ -33,8 +34,10 @@ import {
 import { Etiqueta, Painel, Vazio } from "./ui";
 import { Field, FormError, Input, Select, SubmitButton } from "./form";
 import { avisar } from "@/components/avisos";
-import EnviarFicha, { PreencherFicha } from "./enviar-ficha";
+import EnviarFicha, { PreencherFicha, linkDaFicha } from "./enviar-ficha";
+import CobrarTodos from "./cobrar-todos";
 import CurriculoDoCandidato, { type CurriculoNaTela } from "./curriculo-do-candidato";
+import { linkPublico } from "@/lib/link-publico";
 
 /**
  * O quadro da vaga: uma coluna por etapa, com quem está em cada uma.
@@ -61,6 +64,8 @@ export type CandidatoNaTela = {
   /** Os testes mandados a ele pelo quadro, com o resultado quando voltou. */
   testes: { id: string; token: string; nome: string; respondido: boolean }[];
   ficha: "NAO_ENVIADA" | "ENVIADA" | "RESPONDIDA";
+  /** O token da ficha enviada e ainda sem resposta, para a cobrança. */
+  fichaToken: string | null;
   entrevistaRegistrada: boolean;
   curriculos: CurriculoNaTela[];
 };
@@ -86,9 +91,9 @@ const TOM_DA_PENDENCIA: Record<Pendencia, "atencao" | "ruim"> = {
   SEM_RETORNO: "ruim",
 };
 
-/** O link público do teste, montado no navegador com o endereço de onde o sistema está aberto. */
+/** O link público do teste, sempre no endereço oficial (ver link-publico.ts). */
 function linkDoTeste(token: string) {
-  return `${window.location.origin}/teste/${token}`;
+  return linkPublico(`/teste/${token}`);
 }
 
 /**
@@ -594,6 +599,16 @@ export default function SelecaoQuadro({
   const andando = candidatos.filter((c) => c.situacao === "EM_ANDAMENTO");
   const encerrados = candidatos.filter((c) => c.situacao !== "EM_ANDAMENTO");
   const semRetorno = encerrados.filter((c) => !c.avisado).length;
+  // Quem tem ficha ou teste mandado e ainda sem resposta.
+  const devendo = andando
+    .map((c) => {
+      const itens = [
+        ...(c.fichaToken ? [{ oQue: "a ficha de solicitação de emprego preenchida", link: linkDaFicha(c.fichaToken) }] : []),
+        ...c.testes.filter((t) => !t.respondido).map((t) => ({ oQue: `a resposta do teste "${t.nome}"`, link: linkDoTeste(t.token) })),
+      ];
+      return { c, itens };
+    })
+    .filter((d) => d.itens.length > 0);
 
   return (
     <div className="space-y-3">
@@ -606,6 +621,16 @@ export default function SelecaoQuadro({
           </button>
         ) : null}
       </div>
+
+      <CobrarTodos
+        pessoas={devendo.map(({ c, itens }) => ({
+          id: c.id,
+          nome: c.nome,
+          telefone: c.telefone,
+          mensagem: recadoDeCobrancaDosLinks(c.nome, itens),
+        }))}
+        aoCobrar={(id) => void marcarCobrado(id)}
+      />
 
       {etapas.length === 0 ? (
         <Vazio>
