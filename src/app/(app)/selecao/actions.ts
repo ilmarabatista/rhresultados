@@ -10,9 +10,9 @@ import { MODELO_SUGERIDO, tipoValido, type EtapaTipo } from "@/lib/selecao";
 import { lerEntrevista, lerPerguntas, TETO_DA_TRANSCRICAO, type Entrevista } from "@/lib/entrevista";
 import { organizarTranscricao } from "@/lib/ai-entrevista";
 import { nomeDoCurriculo, problemaDoCurriculo } from "@/lib/curriculo";
-import { lerFicha } from "@/lib/ficha";
-import { testeEmTexto } from "@/lib/fluxo-da-vaga";
-import { rascunharParecer } from "@/lib/ai-parecer";
+import { lerAvaliacao, type Avaliacao } from "@/lib/fluxo-da-vaga";
+import { assinaturaDaPasta, avaliarPasta, dadosDaPasta, rascunharParecer } from "@/lib/ai-parecer";
+import { assinarDossie } from "@/lib/dossie-link";
 
 /**
  * O processo seletivo: modelos de processo, vagas, etapas e candidatos.
@@ -548,6 +548,37 @@ export async function enviarFicha(id: string): Promise<SelecaoState & { token?: 
   return { ok: true, token: c.applicationToken };
 }
 
+// ------------------------------------------------------------------ dossiê
+
+/**
+ * O link do dossiê para mandar ao cliente pelo WhatsApp, com o telefone do
+ * contato da empresa (se houver) e o nome do candidato e da vaga para a
+ * mensagem.
+ */
+export async function linkDoDossie(
+  candidatoId: string,
+): Promise<SelecaoState & { token?: string; telefone?: string | null; nome?: string; vaga?: string; contato?: string | null }> {
+  const session = await requireSession();
+  const c = await prisma.candidate.findUnique({
+    where: { id: candidatoId },
+    select: {
+      name: true,
+      companyId: true,
+      jobOpening: { select: { title: true, company: { select: { contactName: true, contactPhone: true } } } },
+    },
+  });
+  if (!c || !c.jobOpening) return { error: "Candidato não encontrado." };
+  await log(c.companyId, session.userId, "EDITOU", candidatoId, `Mandou o dossiê de ${c.name} para o cliente.`);
+  return {
+    ok: true,
+    token: await assinarDossie(candidatoId),
+    telefone: c.jobOpening.company?.contactPhone ?? null,
+    contato: c.jobOpening.company?.contactName ?? null,
+    nome: c.name,
+    vaga: c.jobOpening.title,
+  };
+}
+
 // -------------------------------------------------------------- entrevista
 
 /** O roteiro de perguntas da vaga, uma por linha. */
@@ -633,56 +664,40 @@ export async function salvarEntrevista(candidatoId: string, entrevista: Entrevis
  */
 export async function sugerirParecer(candidatoId: string): Promise<SelecaoState & { parecer?: string }> {
   await requireSession();
-  const c = await prisma.candidate.findUnique({
-    where: { id: candidatoId },
-    select: {
-      applicationAnswers: true,
-      applicationAnsweredAt: true,
-      entrevista: true,
-      stageNotes: true,
-      jobOpening: {
-        select: {
-          title: true,
-          etapas: { select: { id: true, nome: true } },
-          cargo: { select: { missao: true, responsabilidades: true, requisitos: true, competencias: { orderBy: { ordem: "asc" }, select: { nome: true } } } },
-        },
-      },
-      testes: { where: { status: "RESPONDIDO" }, orderBy: { respondidoEm: "asc" }, select: { nomeDoTeste: true, resultado: true } },
-    },
-  });
-  if (!c || !c.jobOpening) return { error: "Candidato não encontrado." };
-
-  const ficha = c.applicationAnsweredAt ? lerFicha(c.applicationAnswers) : null;
-  const entrevista = lerEntrevista(c.entrevista);
-  if (!ficha && c.testes.length === 0 && !entrevista) {
-    return { error: "A pasta ainda está vazia: sem ficha, testes ou entrevista não há o que resumir." };
-  }
-  const notas = c.stageNotes && typeof c.stageNotes === "object" && !Array.isArray(c.stageNotes) ? (c.stageNotes as Record<string, unknown>) : {};
-  const nomes = new Map(c.jobOpening.etapas.map((e) => [e.id, e.nome]));
-  const cargo = c.jobOpening.cargo;
-
+  const dados = await dadosDaPasta(candidatoId);
+  if (!dados) return { error: "Candidato não encontrado." };
+  if (dados === "vazia") return { error: "A pasta ainda está vazia: sem ficha, testes ou entrevista não há o que resumir." };
   try {
-    const parecer = await rascunharParecer({
-      vaga: c.jobOpening.title,
-      cargo: cargo
-        ? {
-            missao: cargo.missao ?? "",
-            responsabilidades: cargo.responsabilidades ?? "",
-            requisitos: cargo.requisitos ?? "",
-            competencias: cargo.competencias.map((k) => k.nome),
-          }
-        : null,
-      ficha,
-      testes: c.testes.map((t) => testeEmTexto(t.nomeDoTeste, t.resultado)),
-      entrevista,
-      anotacoes: Object.entries(notas)
-        .filter((par): par is [string, string] => typeof par[1] === "string" && par[1].trim() !== "")
-        .map(([id, texto]) => ({ etapa: nomes.get(id) ?? "Etapa", texto })),
-    });
+    const parecer = await rascunharParecer(dados);
     if (!parecer) return { error: "A IA não devolveu texto. Tente de novo em instantes." };
     return { ok: true, parecer };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Não foi possível sugerir o parecer." };
+  }
+}
+
+/**
+ * A avaliação automática do candidato. Se a guardada ainda é da pasta como
+ * está agora, volta ela mesma; senão a IA avalia de novo e grava.
+ */
+export async function avaliarCandidato(candidatoId: string, refazer = false): Promise<SelecaoState & { avaliacao?: Avaliacao }> {
+  await requireSession();
+  const [dados, c] = await Promise.all([
+    dadosDaPasta(candidatoId),
+    prisma.candidate.findUnique({ where: { id: candidatoId }, select: { companyId: true, avaliacaoAutomatica: true } }),
+  ]);
+  if (!dados || !c) return { error: "Candidato não encontrado." };
+  if (dados === "vazia") return { error: "A pasta ainda está vazia: a avaliação sai quando houver ficha, teste ou entrevista." };
+  const guardada = lerAvaliacao(c.avaliacaoAutomatica);
+  if (!refazer && guardada && guardada.assinatura === assinaturaDaPasta(dados)) return { ok: true, avaliacao: guardada };
+  try {
+    const avaliacao = await avaliarPasta(dados);
+    if (!avaliacao) return { error: "A IA não devolveu uma avaliação legível. Tente de novo em instantes." };
+    await prisma.candidate.update({ where: { id: candidatoId }, data: { avaliacaoAutomatica: avaliacao } });
+    refresh(c.companyId);
+    return { ok: true, avaliacao };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Não foi possível avaliar o candidato." };
   }
 }
 

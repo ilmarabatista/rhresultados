@@ -3,15 +3,15 @@ import { textoSeguro } from "./texto-seguro";
 /**
  * A ficha de solicitação de emprego, preenchida pelo candidato no link.
  *
- * O desenho parte do papel que a consultoria usava, com três mudanças de
- * propósito:
+ * O desenho segue o papel que a consultoria usa: dados pessoais, documentos,
+ * família e filhos, formação, experiência, redes sociais, indicação e
+ * redação. Os dados de família e documentos são opcionais no link (a
+ * consultoria pediu que estivessem na ficha, como no papel). Igreja, ONG e
+ * sindicato viraram "trabalho voluntário", e as experiências não têm número
+ * fixo.
  *
- * 1. Saíram os dados que não podem pesar na escolha (sexo, estado civil,
- *    família, filhos) e os que só servem na admissão (RG, CPF). Guardar isso
- *    de quem não foi contratado é risco sem ganho (Lei 9.029/95 e LGPD).
- * 2. Igreja, ONG e sindicato viraram "trabalho voluntário": religião e
- *    sindicato são dado sensível, e o que interessa é a experiência.
- * 3. As listas não têm tamanho fixo: quantas experiências a pessoa tiver.
+ * A ficha de papel passada para o sistema leva origem "PAPEL" e a data em que
+ * foi preenchida à mão.
  *
  * Tudo aqui é puro, para valer igual no navegador (o rascunho) e no servidor
  * (a conferência antes de gravar).
@@ -55,8 +55,20 @@ export type Experiencia = {
   contato: string;
 };
 
+export type Parente = { nome: string; profissao: string };
+
+export type Filho = {
+  nome: string;
+  /** Como a pessoa escreveu ("5 anos"), quando não deu a data. */
+  idade: string;
+  /** "2019-03-21" */
+  nascimento: string;
+};
+
 export type Ficha = {
   versao: 1;
+  /** "PAPEL" quando foi passada da ficha preenchida à mão. */
+  origem: "" | "PAPEL";
   vaga: { cargo: string; pretensao: string; inicio: string; horarios: string; viagens: "" | "SIM" | "NAO" };
   pessoal: {
     nome: string;
@@ -69,12 +81,19 @@ export type Ficha = {
     cidade: string;
     celular: string;
     email: string;
+    sexo: string;
+    estadoCivil: string;
+    comQuemMora: string;
   };
+  documentos: { rg: string; orgao: string; cpf: string };
+  familia: { pai: Parente; mae: Parente; conjuge: Parente; filhos: Filho[] };
   formacao: { nivel: string; curso: string; situacao: string; conclusao: string; outrosCursos: string; idiomas: string };
   primeiroEmprego: boolean;
   experiencias: Experiencia[];
   voluntariado: string;
   perfilProfissional: string;
+  /** Redes sociais: quais usa e o nome que usa nelas. */
+  redes: { quais: string; nome: string };
   indicacao: { indicado: "" | "SIM" | "NAO"; nome: string; cargo: string; proximidade: string };
   redacao: { qualidades: string; expectativas: string };
   /** O que a página mediu enquanto a pessoa escrevia a redação. */
@@ -86,16 +105,39 @@ export function experienciaVazia(): Experiencia {
   return { empresa: "", cargo: "", entrada: "", saida: "", salario: "", motivoSaida: "", contato: "" };
 }
 
+export function filhoVazio(): Filho {
+  return { nome: "", idade: "", nascimento: "" };
+}
+
+const parenteVazio = (): Parente => ({ nome: "", profissao: "" });
+
 export function fichaVazia(cargo = ""): Ficha {
   return {
     versao: 1,
+    origem: "",
     vaga: { cargo, pretensao: "", inicio: "", horarios: "", viagens: "" },
-    pessoal: { nome: "", nascimento: "", naturalidade: "", endereco: "", bairro: "", cep: "", cidade: "", celular: "", email: "" },
+    pessoal: {
+      nome: "",
+      nascimento: "",
+      naturalidade: "",
+      endereco: "",
+      bairro: "",
+      cep: "",
+      cidade: "",
+      celular: "",
+      email: "",
+      sexo: "",
+      estadoCivil: "",
+      comQuemMora: "",
+    },
+    documentos: { rg: "", orgao: "", cpf: "" },
+    familia: { pai: parenteVazio(), mae: parenteVazio(), conjuge: parenteVazio(), filhos: [] },
     formacao: { nivel: "", curso: "", situacao: "", conclusao: "", outrosCursos: "", idiomas: "" },
     primeiroEmprego: false,
     experiencias: [experienciaVazia()],
     voluntariado: "",
     perfilProfissional: "",
+    redes: { quais: "", nome: "" },
     indicacao: { indicado: "", nome: "", cargo: "", proximidade: "" },
     redacao: { qualidades: "", expectativas: "" },
     medidas: { segundosNaRedacao: 0, colouNaRedacao: false },
@@ -140,6 +182,17 @@ export function lerFicha(cru: unknown): Ficha {
   const ind = objeto(o.indicacao);
   const red = objeto(o.redacao);
   const med = objeto(o.medidas);
+  const doc = objeto(o.documentos);
+  const fam = objeto(o.familia);
+  const redes = objeto(o.redes);
+  const parente = (v: unknown): Parente => {
+    const x = objeto(v);
+    return { nome: curto(x.nome), profissao: curto(x.profissao) };
+  };
+  const filhos = (Array.isArray(fam.filhos) ? fam.filhos : []).slice(0, 10).map((x) => {
+    const f = objeto(x);
+    return { nome: curto(f.nome), idade: curto(f.idade, 20), nascimento: data(f.nascimento) };
+  });
 
   const experiencias = (Array.isArray(o.experiencias) ? o.experiencias : []).slice(0, 15).map((x) => {
     const e = objeto(x);
@@ -158,6 +211,7 @@ export function lerFicha(cru: unknown): Ficha {
 
   return {
     versao: 1,
+    origem: o.origem === "PAPEL" ? "PAPEL" : "",
     vaga: {
       cargo: curto(vaga.cargo),
       pretensao: curto(vaga.pretensao, 40),
@@ -175,7 +229,12 @@ export function lerFicha(cru: unknown): Ficha {
       cidade: curto(p.cidade),
       celular: curto(p.celular, 30),
       email: curto(p.email),
+      sexo: curto(p.sexo, 40),
+      estadoCivil: curto(p.estadoCivil, 40),
+      comQuemMora: curto(p.comQuemMora),
     },
+    documentos: { rg: curto(doc.rg, 30), orgao: curto(doc.orgao, 30), cpf: curto(doc.cpf, 20) },
+    familia: { pai: parente(fam.pai), mae: parente(fam.mae), conjuge: parente(fam.conjuge), filhos },
     formacao: {
       nivel: umDe(f.nivel, NIVEIS_DE_FORMACAO),
       curso: curto(f.curso),
@@ -188,6 +247,7 @@ export function lerFicha(cru: unknown): Ficha {
     experiencias,
     voluntariado: longo(o.voluntariado, 1_000),
     perfilProfissional: curto(o.perfilProfissional, 300),
+    redes: { quais: curto(redes.quais), nome: curto(redes.nome) },
     indicacao: {
       indicado: umDe(ind.indicado, ["SIM", "NAO"] as const),
       nome: curto(ind.nome),
@@ -211,7 +271,7 @@ export function experienciaPreenchida(e: Experiencia): boolean {
 }
 
 /** Os passos da ficha, na ordem em que aparecem. */
-export const PASSOS = ["A vaga", "Sobre você", "Formação", "Experiência", "Indicação", "Redação", "Conferir e enviar"] as const;
+export const PASSOS = ["A vaga", "Sobre você", "Família", "Formação", "Experiência", "Indicação", "Redação", "Conferir e enviar"] as const;
 
 /**
  * O que falta em cada passo. Lista vazia: o passo está bom.
@@ -240,11 +300,11 @@ export function problemasDoPasso(ficha: Ficha, passo: number): string[] {
     falta(p.celular.replace(/\D/g, "").length < 10, "Informe o celular com DDD.");
     falta(p.email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email), "Confira o e-mail.");
   }
-  if (passo === 2) {
+  if (passo === 3) {
     falta(!ficha.formacao.nivel, "Escolha o seu último nível de formação.");
     falta(!ficha.formacao.situacao, "Diga se concluiu, se está cursando ou se parou.");
   }
-  if (passo === 3 && !ficha.primeiroEmprego) {
+  if (passo === 4 && !ficha.primeiroEmprego) {
     const preenchidas = ficha.experiencias.filter(experienciaPreenchida);
     falta(preenchidas.length === 0, "Conte a sua última experiência, ou marque que este é o seu primeiro emprego.");
     preenchidas.forEach((e, i) => {
@@ -255,17 +315,17 @@ export function problemasDoPasso(ficha: Ficha, passo: number): string[] {
       falta(Boolean(e.entrada && e.saida && e.saida < e.entrada), `A saída vem antes da entrada${n}.`);
     });
   }
-  if (passo === 4) {
+  if (passo === 5) {
     const ind = ficha.indicacao;
     falta(!ind.indicado, "Responda se foi indicado por alguém.");
     falta(ind.indicado === "SIM" && !ind.nome, "Diga o nome de quem indicou.");
     falta(ind.indicado === "SIM" && !ind.proximidade, "Diga o grau de proximidade com quem indicou.");
   }
-  if (passo === 5) {
+  if (passo === 6) {
     falta(ficha.redacao.qualidades.trim().length < MINIMO_DA_REDACAO, `Escreva pelo menos ${MINIMO_DA_REDACAO} caracteres na primeira pergunta.`);
     falta(ficha.redacao.expectativas.trim().length < MINIMO_DA_REDACAO, `Escreva pelo menos ${MINIMO_DA_REDACAO} caracteres na segunda pergunta.`);
   }
-  if (passo === 6) {
+  if (passo === 7) {
     falta(!ficha.aceite, "Para enviar, confirme que leu o aviso de privacidade.");
   }
   return erros;
@@ -276,11 +336,17 @@ export function problemasDaFicha(ficha: Ficha): string[] {
   return PASSOS.flatMap((_, i) => problemasDoPasso(ficha, i));
 }
 
-/** A ficha como vai para o banco: sem as experiências deixadas em branco. */
+/** O filho que a pessoa começou a preencher (a linha vazia é ignorada). */
+export function filhoPreenchido(f: Filho): boolean {
+  return Object.values(f).some((v) => v.trim() !== "");
+}
+
+/** A ficha como vai para o banco: sem as experiências e os filhos deixados em branco. */
 export function fichaParaGravar(ficha: Ficha): Ficha {
   return {
     ...ficha,
     experiencias: ficha.primeiroEmprego ? [] : ficha.experiencias.filter(experienciaPreenchida),
+    familia: { ...ficha.familia, filhos: ficha.familia.filhos.filter(filhoPreenchido) },
   };
 }
 

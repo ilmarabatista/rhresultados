@@ -10,6 +10,8 @@ import { textoSeguro } from "@/lib/texto-seguro";
 import { codigoDaReuniao, TIPOS_DE_ITEM, type TipoDeItem } from "@/lib/reunioes";
 import { TAMANHO_MAXIMO, TAMANHO_MAXIMO_TEXTO, tipoDaApresentacao } from "@/lib/apresentacao";
 import { acertarAgenda } from "@/lib/reuniao-agenda";
+import { juntarTranscricao, lerLinkDaChamada } from "@/lib/reuniao-gravada";
+import { organizarReuniao } from "@/lib/ai-reuniao";
 
 /**
  * As reuniões da empresa.
@@ -222,7 +224,16 @@ export async function mandarParaReuniao(visitId: string): Promise<ReuniaoState> 
 
 // -------------------------------------------------------------- mudar
 
-export type CampoDaReuniao = "titulo" | "produto" | "setor" | "tipo" | "local" | "pauta" | "unidade";
+export type CampoDaReuniao =
+  | "titulo"
+  | "produto"
+  | "setor"
+  | "tipo"
+  | "local"
+  | "pauta"
+  | "unidade"
+  | "link"
+  | "resumo";
 
 /** Muda um campo da reunião, direto na tela: cada um é gravado ao sair dele. */
 export async function mudarCampoDaReuniao(
@@ -266,6 +277,15 @@ export async function mudarCampoDaReuniao(
       break;
     case "unidade":
       data = { branchId: await unidadeDaEmpresa(r.companyId, valor) };
+      break;
+    case "link": {
+      const link = lerLinkDaChamada(valor);
+      if (link === "invalido") return { error: "Cole o link da videochamada, como https://meet.google.com/abc-defg-hij." };
+      data = { meetLink: link };
+      break;
+    }
+    case "resumo":
+      data = { summary: textoSeguro(valor).trimEnd() || null };
       break;
     default:
       return { error: "Campo inválido." };
@@ -696,5 +716,117 @@ export async function excluirItem(itemId: string): Promise<ReuniaoState> {
   await prisma.meetingItem.delete({ where: { id: itemId } });
 
   refresh(item.meeting.companyId);
+  return { ok: true };
+}
+
+// ------------------------------------------------- gravação e transcrição
+
+/**
+ * Organiza a reunião gravada: a IA lê a transcrição e escreve o resumo e a
+ * ata. O que ela tira vai somado ao que já estava na ata, para ser conferido
+ * e corrigido como qualquer item escrito à mão.
+ */
+export async function organizarComIA(
+  reuniaoId: string,
+): Promise<ReuniaoState & { itens?: number }> {
+  const session = await requireSession();
+
+  const r = await prisma.meeting.findUnique({
+    where: { id: reuniaoId },
+    select: {
+      companyId: true,
+      title: true,
+      number: true,
+      date: true,
+      agenda: true,
+      participants: { select: { name: true }, orderBy: { name: "asc" } },
+      transcript: { orderBy: { recordedAt: "asc" }, select: { recordedAt: true, text: true } },
+    },
+  });
+  if (!r) return { error: "Reunião não encontrada." };
+
+  const transcricao = juntarTranscricao(
+    r.transcript.map((t) => ({
+      hora: t.recordedAt.toLocaleTimeString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      texto: t.text,
+    })),
+  );
+  if (transcricao.length < 40) return { error: "Ainda não há transcrição suficiente para organizar." };
+
+  let ata;
+  try {
+    ata = await organizarReuniao({
+      titulo: r.title,
+      dia: r.date ? r.date.toISOString().slice(0, 10) : null,
+      participantes: r.participants.map((p) => p.name),
+      pauta: r.agenda ?? "",
+      transcricao,
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "A IA não conseguiu organizar a reunião." };
+  }
+
+  const ordens = await prisma.meetingItem.groupBy({
+    by: ["kind"],
+    where: { meetingId: reuniaoId },
+    _max: { order: true },
+  });
+  const proxima = (tipo: TipoDeItem) => (ordens.find((o) => o.kind === tipo)?._max.order ?? -1) + 1;
+
+  const itens: Prisma.MeetingItemCreateManyInput[] = [
+    ...ata.conversado.map((texto, i) => ({
+      meetingId: reuniaoId,
+      kind: "CONVERSADO",
+      text: texto,
+      order: proxima("CONVERSADO") + i,
+    })),
+    ...ata.decidido.map((d, i) => ({
+      meetingId: reuniaoId,
+      kind: "DECIDIDO",
+      text: d.texto,
+      reason: d.porque || null,
+      validFrom: r.date,
+      order: proxima("DECIDIDO") + i,
+    })),
+    ...ata.combinado.map((c, i) => ({
+      meetingId: reuniaoId,
+      kind: "COMBINADO",
+      text: c.texto,
+      responsible: c.responsavel || null,
+      dueDate: c.prazo ? dayKeyToDate(c.prazo) : null,
+      order: proxima("COMBINADO") + i,
+    })),
+  ];
+
+  await prisma.$transaction([
+    ...(ata.resumo ? [prisma.meeting.update({ where: { id: reuniaoId }, data: { summary: ata.resumo } })] : []),
+    prisma.meetingItem.createMany({ data: itens }),
+  ]);
+
+  await registrar(
+    r.companyId,
+    session.userId,
+    "ATUALIZOU",
+    reuniaoId,
+    `A IA organizou a gravação da reunião ${codigoDaReuniao(r.number)} "${r.title}": ${itens.length} itens na ata.`,
+  );
+
+  refresh(r.companyId);
+  return { ok: true, itens: itens.length };
+}
+
+/** Apaga a transcrição inteira da reunião (o resumo e a ata ficam). */
+export async function apagarTranscricao(reuniaoId: string): Promise<ReuniaoState> {
+  await requireSession();
+
+  const r = await carregar(reuniaoId);
+  if (!r) return { error: "Reunião não encontrada." };
+
+  await prisma.meetingTranscriptPart.deleteMany({ where: { meetingId: reuniaoId } });
+  refresh(r.companyId);
   return { ok: true };
 }

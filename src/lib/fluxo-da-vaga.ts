@@ -128,3 +128,108 @@ export function pedidoDoParecer(d: DadosDoParecer): string {
     bloco("anotacoes_da_consultora", d.anotacoes.map((a) => `${a.etapa}: ${a.texto}`)),
   ].join("\n\n");
 }
+
+// ------------------------------------------------------- avaliação automática
+
+export type CriterioDaAvaliacao = { nome: string; nota: number; comentario: string };
+
+/**
+ * A avaliação automática do candidato, feita pela IA a partir da pasta e
+ * guardada com a assinatura do que ela leu: quando a pasta muda, é refeita.
+ */
+export type Avaliacao = {
+  aderencia: "ALTA" | "MEDIA" | "BAIXA";
+  /** De 0 a 10: o quanto o candidato combina com o cargo, olhando a pasta toda. */
+  nota: number;
+  criterios: CriterioDaAvaliacao[];
+  pontosFortes: string[];
+  pontosDeAtencao: string[];
+  resumo: string;
+  geradaEm: string;
+  assinatura: string;
+};
+
+export const ADERENCIA: Record<Avaliacao["aderencia"], { rotulo: string; tom: "bom" | "atencao" | "ruim" }> = {
+  ALTA: { rotulo: "Aderência alta", tom: "bom" },
+  MEDIA: { rotulo: "Aderência média", tom: "atencao" },
+  BAIXA: { rotulo: "Aderência baixa", tom: "ruim" },
+};
+
+/** As áreas que a avaliação sempre nota, nesta ordem. */
+export const CRITERIOS = ["Formação e experiência", "Perfil comportamental (testes)", "Entrevista", "Ficha e redação"] as const;
+
+export const SYSTEM_DA_AVALIACAO = [
+  "Você avalia um candidato a uma vaga para uma consultora de RH, a partir da pasta dele.",
+  "Recebe a descrição do cargo, a ficha de solicitação de emprego, o resultado dos testes, a entrevista e as anotações da consultora.",
+  "Dê uma nota de 0 a 10 para o quanto o candidato combina com o cargo em cada área:",
+  ...CRITERIOS.map((c) => `- ${c}`),
+  "Regras:",
+  "- Use só o que está nos dados. Não invente fatos.",
+  "- Se uma área não foi feita (por exemplo, sem testes), dê nota null e diga no comentário que ela não foi feita.",
+  "- Sem descrição do cargo, compare com o que o nome da vaga costuma pedir e diga isso no resumo.",
+  "- Não use idade, gênero, estado civil, religião, aparência ou saúde.",
+  "- Comentários curtos (uma ou duas frases), em português do Brasil, sem emoji e sem markdown.",
+  "- aderencia: ALTA (nota geral 7 ou mais), MEDIA (5 a 6,9) ou BAIXA (abaixo de 5).",
+  "",
+  "Responda SOMENTE com um JSON neste formato:",
+  '{"nota": 7.5, "aderencia": "ALTA", "criterios": [{"nome": "Formação e experiência", "nota": 8, "comentario": "..."}], "pontosFortes": ["..."], "pontosDeAtencao": ["..."], "resumo": "..."}',
+].join("\n");
+
+function notaValida(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.replace(",", ".")) : NaN;
+  // Negativo é como a avaliação guardada marca a área não feita.
+  return Number.isFinite(n) && n >= 0 ? Math.round(Math.min(10, n) * 10) / 10 : null;
+}
+
+function textos(v: unknown, max: number): string[] {
+  return (Array.isArray(v) ? v : [])
+    .filter((x): x is string => typeof x === "string" && x.trim() !== "")
+    .map((x) => x.trim().slice(0, 300))
+    .slice(0, max);
+}
+
+function aderenciaDa(nota: number): Avaliacao["aderencia"] {
+  return nota >= 7 ? "ALTA" : nota >= 5 ? "MEDIA" : "BAIXA";
+}
+
+/**
+ * Lê o que a IA devolveu. Os critérios são sempre os quatro, na mesma ordem;
+ * área sem nota (não feita) fica de fora da conta da nota geral. A aderência
+ * sai da nota, para nunca discordar dela.
+ */
+export function avaliacaoDaIA(lido: unknown, assinatura: string, agora = new Date()): Avaliacao | null {
+  const o = (lido && typeof lido === "object" ? lido : {}) as Record<string, unknown>;
+  const crus = Array.isArray(o.criterios) ? o.criterios : [];
+  const criterios: CriterioDaAvaliacao[] = [];
+  for (const nome of CRITERIOS) {
+    const achado = crus.find((c) => c && typeof c === "object" && String((c as Record<string, unknown>).nome ?? "").toLowerCase().startsWith(nome.slice(0, 6).toLowerCase())) as
+      | Record<string, unknown>
+      | undefined;
+    const nota = notaValida(achado?.nota);
+    const comentario = typeof achado?.comentario === "string" ? achado.comentario.trim().slice(0, 500) : "";
+    criterios.push({ nome, nota: nota ?? -1, comentario: comentario || (nota === null ? "Não foi feita." : "") });
+  }
+  const comNota = criterios.filter((c) => c.nota >= 0);
+  const media = comNota.length ? comNota.reduce((s, c) => s + c.nota, 0) / comNota.length : null;
+  const nota = notaValida(o.nota) ?? (media === null ? null : notaValida(media));
+  if (nota === null) return null;
+  return {
+    nota,
+    aderencia: aderenciaDa(nota),
+    criterios,
+    pontosFortes: textos(o.pontosFortes, 6),
+    pontosDeAtencao: textos(o.pontosDeAtencao, 6),
+    resumo: typeof o.resumo === "string" ? o.resumo.trim().slice(0, 1500) : "",
+    geradaEm: agora.toISOString(),
+    assinatura,
+  };
+}
+
+/** A avaliação guardada no banco, ou null se não houver (ou estiver ilegível). */
+export function lerAvaliacao(cru: unknown): Avaliacao | null {
+  if (!cru || typeof cru !== "object" || Array.isArray(cru)) return null;
+  const o = cru as Record<string, unknown>;
+  if (typeof o.assinatura !== "string" || typeof o.geradaEm !== "string") return null;
+  const lida = avaliacaoDaIA(o, o.assinatura, new Date(o.geradaEm));
+  return lida ? { ...lida, geradaEm: o.geradaEm } : null;
+}
