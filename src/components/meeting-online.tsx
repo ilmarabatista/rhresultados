@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, MonitorSpeaker, Sparkles, Square, Trash2, Video } from "lucide-react";
+import { Mic, Monitor, MonitorSpeaker, Sparkles, Square, Trash2, Video } from "lucide-react";
 import {
   apagarTranscricao,
   mudarCampoDaReuniao,
@@ -14,11 +14,14 @@ import { avisar, confirmar } from "@/components/avisos";
 import type { ReuniaoCompleta } from "./meeting-record";
 
 /**
- * A reunião online: o link do Meet, o convite pelo WhatsApp e a gravação.
+ * A reunião online: o link do Meet (ou da chamada do WhatsApp), o convite
+ * pelo WhatsApp e a gravação.
  *
  * A gravação é feita aqui mesmo, no navegador de quem conduz: o microfone
  * dela e, na reunião pelo Meet, o som da aba do Meet (que traz a voz dos
- * outros). O som é mandado em trechos de dois minutos, e cada trecho volta
+ * outros). Na chamada pelo WhatsApp do computador, que é um programa à parte
+ * e não uma aba, grava o som do computador inteiro (só no Windows o Chrome
+ * oferece esse som). O som é mandado em trechos de dois minutos, e cada trecho volta
  * como texto. Assim a transcrição vai crescendo durante a reunião, e se a aba
  * fechar no meio só se perde o trecho em andamento.
  *
@@ -54,6 +57,9 @@ function relogio(segundos: number): string {
 
 type Pendente = { audio: Blob; inicio: number };
 
+/** De onde vem o som dos outros: a aba do Meet, o computador inteiro ou só o microfone. */
+type ModoDeGravar = "meet" | "computador" | "microfone";
+
 function tipoDoAudio(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
   return ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find((t) =>
@@ -62,7 +68,7 @@ function tipoDoAudio(): string | undefined {
 }
 
 function useGravador(reuniaoId: string, aoTranscrever: () => void) {
-  const [gravando, setGravando] = useState<null | "meet" | "microfone">(null);
+  const [gravando, setGravando] = useState<null | ModoDeGravar>(null);
   const [segundos, setSegundos] = useState(0);
   const [enviando, setEnviando] = useState(0);
   const [falhas, setFalhas] = useState<Pendente[]>([]);
@@ -146,7 +152,7 @@ function useGravador(reuniaoId: string, aoTranscrever: () => void) {
     setGravando(null);
   }
 
-  async function iniciar(modo: "meet" | "microfone") {
+  async function iniciar(modo: ModoDeGravar) {
     setErro(null);
     if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setErro("Este navegador não grava áudio. Use o Chrome ou o Edge no computador.");
@@ -155,18 +161,27 @@ function useGravador(reuniaoId: string, aoTranscrever: () => void) {
 
     try {
       let tela: MediaStream | null = null;
-      if (modo === "meet") {
-        // Primeiro a aba do Meet: é a parte que a pessoa pode errar.
+      if (modo !== "microfone") {
+        // Primeiro o compartilhamento: é a parte que a pessoa pode errar.
         tela = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
+          // No modo computador, o Chrome já abre na aba "Tela inteira", a
+          // única que traz o som dos outros programas.
+          video: modo === "computador" ? ({ displaySurface: "monitor" } as MediaTrackConstraints) : true,
           audio: true,
-          // Dicas do Chrome: oferecer abas, com o som marcado, e não esta.
-          ...({ selfBrowserSurface: "exclude", systemAudio: "include", preferCurrentTab: false } as object),
+          // Dicas do Chrome: com o som marcado, e sem oferecer esta aba.
+          ...({
+            selfBrowserSurface: "exclude",
+            systemAudio: "include",
+            preferCurrentTab: false,
+            monitorTypeSurfaces: "include",
+          } as object),
         } as DisplayMediaStreamOptions);
         if (tela.getAudioTracks().length === 0) {
           tela.getTracks().forEach((t) => t.stop());
           setErro(
-            'A aba foi compartilhada sem o som. Clique de novo, escolha a aba do Meet e deixe marcado "Compartilhar áudio da guia".',
+            modo === "meet"
+              ? 'A aba foi compartilhada sem o som. Clique de novo, escolha a aba do Meet e deixe marcado "Compartilhar áudio da guia".'
+              : 'A tela foi compartilhada sem o som. Clique de novo, escolha "Tela inteira" e deixe marcado "Compartilhar áudio do sistema". Esse som só existe no Chrome ou Edge do Windows.',
           );
           return;
         }
@@ -303,7 +318,7 @@ export default function MeetingOnline({ reuniao }: { reuniao: ReuniaoCompleta })
 
   return (
     <section className="space-y-3">
-      <Cabecalho titulo="Reunião online" dica="Meet · convite pelo WhatsApp · gravação e transcrição" />
+      <Cabecalho titulo="Reunião online" dica="Meet ou WhatsApp · convite · gravação e transcrição" />
 
       {/* O link */}
       <div className="flex flex-wrap items-center gap-2">
@@ -315,7 +330,7 @@ export default function MeetingOnline({ reuniao }: { reuniao: ReuniaoCompleta })
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
-          placeholder="Cole aqui o link do Meet"
+          placeholder="Cole aqui o link do Meet ou da chamada do WhatsApp"
           className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-mini outline-none transition focus:border-brand-500"
         />
         {reuniao.link ? (
@@ -330,8 +345,11 @@ export default function MeetingOnline({ reuniao }: { reuniao: ReuniaoCompleta })
       </div>
       {!reuniao.link ? (
         <p className="text-mini text-slate-500">
-          Clique em &quot;Criar no Meet&quot;: o Google abre uma reunião nova. Copie o endereço dela (meet.google.com/…)
-          e cole no campo acima. Depois é só convidar pelo WhatsApp.
+          <strong className="font-medium text-slate-600">Pelo Meet:</strong> clique em &quot;Criar no Meet&quot;, copie o
+          endereço da reunião (meet.google.com/…) e cole no campo acima.{" "}
+          <strong className="font-medium text-slate-600">Pelo WhatsApp:</strong> no WhatsApp, vá em Ligações &gt; Criar
+          link de ligação, escolha vídeo ou voz, copie o link (call.whatsapp.com/…) e cole no campo acima. Depois é só
+          convidar.
         </p>
       ) : null}
 
@@ -369,7 +387,13 @@ export default function MeetingOnline({ reuniao }: { reuniao: ReuniaoCompleta })
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-1.5 text-corpo font-medium text-red-700">
               <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
-              Gravando {g.gravando === "meet" ? "você e o som do Meet" : "o microfone"} · {relogio(g.segundos)}
+              Gravando{" "}
+              {g.gravando === "meet"
+                ? "você e o som do Meet"
+                : g.gravando === "computador"
+                  ? "você e o som do computador"
+                  : "o microfone"}{" "}
+              · {relogio(g.segundos)}
             </span>
             <button type="button" onClick={g.parar} className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
               <Square size={12} fill="currentColor" /> Parar gravação
@@ -378,9 +402,14 @@ export default function MeetingOnline({ reuniao }: { reuniao: ReuniaoCompleta })
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {podeTela ? (
-              <button type="button" onClick={() => g.iniciar("meet")} className={botaoForte}>
-                <MonitorSpeaker size={13} /> Gravar com o som do Meet
-              </button>
+              <>
+                <button type="button" onClick={() => g.iniciar("meet")} className={botaoForte}>
+                  <MonitorSpeaker size={13} /> Gravar com o som do Meet
+                </button>
+                <button type="button" onClick={() => g.iniciar("computador")} className={botaoForte}>
+                  <Monitor size={13} /> Gravar com o som do computador (WhatsApp)
+                </button>
+              </>
             ) : null}
             <button type="button" onClick={() => g.iniciar("microfone")} className={botaoClaro}>
               <Mic size={13} /> Gravar só o microfone (presencial)
@@ -388,15 +417,28 @@ export default function MeetingOnline({ reuniao }: { reuniao: ReuniaoCompleta })
           </div>
         )}
 
-        {g.gravando === "meet" ? (
+        {g.gravando && g.gravando !== "microfone" ? (
           <p className="text-micro text-slate-600">
             Deixe esta aba aberta até o fim. A transcrição aparece aos poucos, a cada {SEGUNDOS_POR_TRECHO / 60} minutos.
           </p>
         ) : !g.gravando ? (
-          <p className="text-micro text-slate-600">
-            Com o Meet aberto em outra aba, clique em &quot;Gravar com o som do Meet&quot;, escolha a aba do Meet e deixe
-            marcado &quot;Compartilhar áudio da guia&quot;. Funciona no Chrome e no Edge. O áudio não fica guardado, só o texto.
-          </p>
+          <ul className="list-disc space-y-0.5 pl-4 text-micro text-slate-600">
+            <li>
+              <strong className="font-medium">Meet:</strong> com o Meet aberto em outra aba, clique em &quot;Gravar com o som
+              do Meet&quot;, escolha a aba do Meet e deixe marcado &quot;Compartilhar áudio da guia&quot;.
+            </li>
+            <li>
+              <strong className="font-medium">WhatsApp no computador:</strong> faça a chamada pelo WhatsApp do computador,
+              clique em &quot;Gravar com o som do computador&quot;, escolha &quot;Tela inteira&quot; e deixe marcado
+              &quot;Compartilhar áudio do sistema&quot; (só no Chrome ou Edge do Windows). Use fone de ouvido ou volume
+              baixo, para não gravar o som duas vezes.
+            </li>
+            <li>
+              <strong className="font-medium">WhatsApp no celular ou reunião presencial:</strong> deixe o celular no
+              viva-voz perto do computador e use &quot;Gravar só o microfone&quot;.
+            </li>
+            <li>O áudio não fica guardado, só o texto.</li>
+          </ul>
         ) : null}
 
         {g.enviando > 0 ? (
