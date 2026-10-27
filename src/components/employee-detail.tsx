@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import {
   addRecord,
+  definirAtivo,
   deleteEmployee,
   deleteRecord,
   type EquipeState,
@@ -270,6 +271,7 @@ export default function EmployeeDetail({
   const [novoRegistro, setNovoRegistro] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const desativado = pessoa.status === "DESLIGADO";
 
   const contagem = TIPOS.map((t) => ({
     ...t,
@@ -285,13 +287,31 @@ export default function EmployeeDetail({
               {pessoa.name}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              {[pessoa.role, pessoa.department, pessoa.unidade]
-                .filter(Boolean)
-                .join(" · ") || "Sem cargo informado"}
+              {pessoa.role ? (
+                pessoa.cargoId ? (
+                  <Link
+                    href={`/empresas/${companyId}/cargos?cargo=${pessoa.cargoId}`}
+                    className="text-brand-700 underline-offset-2 hover:underline"
+                    title="Ver a descrição do cargo"
+                  >
+                    {pessoa.role}
+                  </Link>
+                ) : (
+                  pessoa.role
+                )
+              ) : (
+                "Sem cargo informado"
+              )}
+              {[pessoa.department, pessoa.unidade].filter(Boolean).map((v) => ` · ${v}`)}
             </p>
+            {desativado ? (
+              <p className="mt-2 inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                Desativado: fora do PDI e da autoavaliação
+              </p>
+            ) : null}
             <p className="mt-1 text-xs text-slate-500">
               {[
-                pessoa.status,
+                desativado ? null : pessoa.status,
                 pessoa.admissao ? `admitido em ${pessoa.admissao}` : null,
                 pessoa.document,
                 pessoa.email,
@@ -302,6 +322,26 @@ export default function EmployeeDetail({
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={async () => {
+                if (
+                  !desativado &&
+                  !(await confirmar(
+                    `Desativar ${pessoa.name}? A pessoa sai do PDI e da autoavaliação e fica só na aba Desativados da equipe, com o histórico guardado.`,
+                  ))
+                )
+                  return;
+                startTransition(async () => {
+                  await definirAtivo(pessoa.id, desativado);
+                  router.refresh();
+                });
+              }}
+              className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+            >
+              {desativado ? "Reativar" : "Desativar"}
+            </button>
             <button
               type="button"
               onClick={() => setEditando(true)}

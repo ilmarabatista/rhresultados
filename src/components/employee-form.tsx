@@ -50,8 +50,12 @@ export default function EmployeeForm({
     if (state.ok && !state.autoavaliacao) onClose();
   }, [state, onClose]);
 
-  // Sem cargos na lista, o campo já abre para escrever o primeiro.
-  const [cargoNovo, setCargoNovo] = useState(cargos.length === 0);
+  // Sem cargos na lista, o campo já abre para escrever o primeiro. Quem tem
+  // cargo só em texto, fora da lista, também: salvar assim liga a pessoa ao
+  // cargo (criando-o em Cargos), em vez de apagar o que estava escrito.
+  const cargoSoEmTexto = colaborador?.role && !colaborador.cargoId ? colaborador.role : "";
+  const [cargoNovo, setCargoNovo] = useState(cargos.length === 0 || Boolean(cargoSoEmTexto));
+  const [cargoId, setCargoId] = useState(colaborador?.cargoId ?? "");
 
   if (state.ok && state.autoavaliacao) return <LinkPronto {...state.autoavaliacao} onClose={onClose} />;
 
@@ -88,12 +92,32 @@ export default function EmployeeForm({
 
             <Field
               label="Cargo"
-              hint={cargoNovo ? "Entra na lista de cargos da empresa." : "Da lista de cargos da empresa."}
+              hint={
+                cargoNovo ? (
+                  "Entra na lista de cargos da empresa."
+                ) : cargoId ? (
+                  <a
+                    href={`/empresas/${companyId}/cargos?cargo=${cargoId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand-700 underline-offset-2 hover:underline"
+                  >
+                    Ver a descrição deste cargo
+                  </a>
+                ) : (
+                  "Os cargos cadastrados em Cargos."
+                )
+              }
               className="sm:col-span-3"
             >
               {cargoNovo ? (
                 <div className="flex gap-2">
-                  <Input name="novoCargo" autoFocus={!colaborador} placeholder="Nome do cargo novo" />
+                  <Input
+                    name="novoCargo"
+                    autoFocus={!colaborador}
+                    defaultValue={cargoSoEmTexto}
+                    placeholder="Nome do cargo novo"
+                  />
                   {cargos.length > 0 ? (
                     <button
                       type="button"
@@ -107,9 +131,10 @@ export default function EmployeeForm({
               ) : (
                 <Select
                   name="cargoId"
-                  defaultValue={colaborador?.cargoId ?? ""}
+                  value={cargoId}
                   onChange={(e) => {
                     if (e.target.value === "__novo") setCargoNovo(true);
+                    else setCargoId(e.target.value);
                   }}
                 >
                   <option value="">Sem cargo</option>
@@ -159,7 +184,7 @@ export default function EmployeeForm({
               <Select name="status" defaultValue={colaborador?.status ?? "ATIVO"}>
                 <option value="ATIVO">Ativo</option>
                 <option value="AFASTADO">Afastado</option>
-                <option value="DESLIGADO">Desligado</option>
+                <option value="DESLIGADO">Desativado (desligado)</option>
               </Select>
             </Field>
 
