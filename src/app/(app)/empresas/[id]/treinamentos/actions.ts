@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao, respostasQueSomem } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido, horaValida } from "@/lib/agenda";
@@ -29,7 +30,8 @@ import { lerNivelDeCargo } from "@/lib/cargos";
  * presença, pauta, apresentação e agenda são os da reunião.
  */
 
-export type TreinoState = { error?: string; ok?: boolean; id?: string };
+/** `respostas`: o que se perde respondido por link; a tela pergunta e chama de novo. */
+export type TreinoState = { error?: string; ok?: boolean; id?: string; respostas?: string };
 
 const log = atividade("TREINAMENTO");
 
@@ -174,12 +176,14 @@ export async function renomearCargo(cargoId: string, nome: string): Promise<Trei
 }
 
 /** Exclui o cargo: quem o tinha fica sem cargo, e a matriz perde a coluna. */
-export async function excluirCargo(cargoId: string): Promise<TreinoState> {
+export async function excluirCargo(cargoId: string, apagarRespostas = false): Promise<TreinoState> {
   const session = await requireSession();
   const cargo = await prisma.cargo.findUnique({ where: { id: cargoId }, select: { companyId: true, nome: true } });
   if (!cargo) return { error: "Cargo não encontrado." };
+  const respostas = await respostasQueSomem({ cargoId });
+  if (respostas && !apagarRespostas) return { respostas };
 
-  await prisma.$transaction([
+  await apagarComPermissao([
     prisma.employee.updateMany({ where: { cargoId }, data: { cargoId: null, role: null } }),
     prisma.cargo.delete({ where: { id: cargoId } }),
   ]);

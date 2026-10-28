@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido } from "@/lib/agenda";
@@ -26,7 +27,8 @@ import {
  * metas que vão para o PDI.
  */
 
-export type MapeamentoState = { error?: string; ok?: boolean; id?: string };
+/** `respostas`: o que se perde respondido por link; a tela pergunta e chama de novo. */
+export type MapeamentoState = { error?: string; ok?: boolean; id?: string; respostas?: string };
 
 const log = atividade("MAPEAMENTO");
 
@@ -46,7 +48,7 @@ function erroDaIA(e: unknown): string {
 async function carregar(mapId: string) {
   return prisma.mapeamentoDeRotina.findUnique({
     where: { id: mapId },
-    select: { id: true, companyId: true, employeeId: true, dados: true, employee: { select: { name: true } } },
+    select: { id: true, companyId: true, employeeId: true, dados: true, respondidoEm: true, employee: { select: { name: true } } },
   });
 }
 
@@ -134,11 +136,12 @@ export async function salvarMapeamento(
   return { ok: true };
 }
 
-export async function excluirMapeamento(mapId: string): Promise<MapeamentoState> {
+export async function excluirMapeamento(mapId: string, apagarRespostas = false): Promise<MapeamentoState> {
   const session = await requireSession();
   const m = await carregar(mapId);
   if (!m) return { ok: true };
-  await prisma.mapeamentoDeRotina.delete({ where: { id: mapId } });
+  if (m.respondidoEm && !apagarRespostas) return { respostas: `o mapeamento que ${m.employee.name} enviou` };
+  await apagarComPermissao([prisma.mapeamentoDeRotina.delete({ where: { id: mapId } })]);
   await log(m.companyId, session.userId, "EXCLUIU", m.employeeId, `Excluiu um mapeamento de rotinas de ${m.employee.name}.`);
   refresh(m.companyId);
   return { ok: true };

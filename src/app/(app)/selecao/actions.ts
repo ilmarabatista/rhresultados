@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao, respostasQueSomem } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import { textoDoFormulario as texto, textoSeguro } from "@/lib/texto-seguro";
 import { atividade } from "@/lib/atividade";
@@ -27,7 +28,8 @@ import { assinarDossie } from "@/lib/dossie-link";
  *    retorno, que também é registrado.
  */
 
-export type SelecaoState = { error?: string; ok?: boolean; id?: string };
+/** `respostas`: o que se perde respondido por link; a tela pergunta e chama de novo. */
+export type SelecaoState = { error?: string; ok?: boolean; id?: string; respostas?: string };
 
 const registrar = atividade("SELECAO");
 
@@ -228,16 +230,20 @@ export async function editarVaga(id: string, campos: { title?: string; notes?: s
 }
 
 /** Exclui a vaga com os candidatos dela. Usado quando a vaga foi criada errada. */
-export async function excluirVaga(id: string): Promise<SelecaoState> {
+export async function excluirVaga(id: string, apagarRespostas = false): Promise<SelecaoState> {
   const session = await requireSession();
   const vaga = await prisma.jobOpening.findUnique({
     where: { id },
     select: { companyId: true, title: true, _count: { select: { candidates: true } } },
   });
   if (!vaga) return { error: "Vaga não encontrada." };
+  const respostas = await respostasQueSomem({ jobOpeningId: id });
+  if (respostas && !apagarRespostas) return { respostas };
 
-  await prisma.candidate.deleteMany({ where: { jobOpeningId: id } });
-  await prisma.jobOpening.delete({ where: { id } });
+  await apagarComPermissao([
+    prisma.candidate.deleteMany({ where: { jobOpeningId: id } }),
+    prisma.jobOpening.delete({ where: { id } }),
+  ]);
   await log(
     vaga.companyId,
     session.userId,

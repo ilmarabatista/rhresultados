@@ -34,3 +34,21 @@ Então testar no dev mexe em dados reais, e migrations nunca rodam sozinhas
 (o build da Vercel não roda `migrate`). Qualquer mudança em banco,
 migrations, secrets ou regra de negócio precisa do ok da Ilmara antes, como
 sempre.
+
+## Respostas por link nunca somem sem confirmação
+
+Regra da Ilmara (28/10/2026), depois que o questionário de cargo de uma
+colaboradora sumiu ao juntar dois cargos. Valem como resposta: questionário
+de cargo e autoavaliação respondidos, mapeamento de rotinas enviado, resposta
+da pesquisa de clima e ficha de solicitação preenchida.
+
+- Toda exclusão que leve resposta junto (do próprio envio, do cargo, da
+  pessoa, da pesquisa, da vaga ou da empresa) conta antes com
+  `respostasQueSomem` e devolve `respostas`; a tela pergunta com
+  `excluirComPermissao` e só então apaga, dentro de `apagarComPermissao`
+  (`src/lib/respostas-protegidas-dados.ts`).
+- No banco, o gatilho `protege_resposta` recusa qualquer outro caminho,
+  inclusive cascata. Não remova o gatilho nem contorne `apagarComPermissao`
+  para "fazer funcionar": se der o erro "Resposta enviada por link protegida",
+  o certo é mover as respostas ou pedir a confirmação.
+- Tabela nova que guarde resposta por link entra no gatilho e na contagem.

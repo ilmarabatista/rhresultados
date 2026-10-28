@@ -1,5 +1,6 @@
 "use client";
 
+import { excluirComPermissao } from "@/components/com-permissao";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
@@ -181,8 +182,8 @@ function LinhaDaVaga({ vaga, mostrarEmpresa }: { vaga: VagaNaLista; mostrarEmpre
   const excluir = () =>
     startTransition(async () => {
       if (!(await confirmar(`Excluir a vaga de ${vaga.titulo}, com os candidatos dela?`))) return;
-      const r = await excluirVaga(vaga.id);
-      if (r.error) avisar(r.error);
+      const r = await excluirComPermissao((apagar) => excluirVaga(vaga.id, apagar));
+      if (r?.error) avisar(r.error);
     });
 
   return (

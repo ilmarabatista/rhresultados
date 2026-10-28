@@ -1,5 +1,6 @@
 "use client";
 
+import { excluirComPermissao } from "@/components/com-permissao";
 import { useActionState, useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -485,7 +486,8 @@ export default function EmployeeDetail({
               return;
             // A ficha deixa de existir: ficar nela era cair num 404.
             startTransition(async () => {
-              await deleteEmployee(pessoa.id);
+              const r = await excluirComPermissao((apagar) => deleteEmployee(pessoa.id, apagar));
+              if (!r?.ok) return;
               router.push(`/empresas/${companyId}/equipe`);
             });
           }}

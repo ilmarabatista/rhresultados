@@ -1,5 +1,6 @@
 "use client";
 
+import { excluirComPermissao } from "@/components/com-permissao";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -397,7 +398,7 @@ function Questionarios({ cargo, detalhe }: { cargo: CargoNaLista; detalhe: Detal
                     aria-label={`Excluir o questionário de ${q.pessoa}`}
                     onClick={async () => {
                       if (await confirmar(`Excluir o questionário de ${q.pessoa}? As respostas somem.`))
-                        fazer(() => excluirQuestionario(q.id));
+                        fazer(async () => (await excluirComPermissao((apagar) => excluirQuestionario(q.id, apagar))) ?? {});
                     }}
                   >
                     <Trash2 size={14} />
@@ -640,7 +641,8 @@ function Cabecalho({ cargo, companyId, outros }: { cargo: CargoNaLista; companyI
               : `Excluir o cargo ${cargo.nome}, com a descrição, os questionários e o roteiro?`;
           if (!(await confirmar(aviso))) return;
           startTransition(async () => {
-            const r = await excluirCargo(cargo.id);
+            const r = await excluirComPermissao((apagar) => excluirCargo(cargo.id, apagar));
+            if (!r) return;
             if (r.error) avisar(r.error);
             else router.push(`/empresas/${companyId}/cargos`);
           });

@@ -1,5 +1,6 @@
 "use client";
 
+import { excluirComPermissao } from "@/components/com-permissao";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -471,7 +472,11 @@ function Cargos({ companyId, cargos }: { companyId: string; cargos: Cargo[] }) {
                   const aviso = c.pessoas
                     ? `Excluir o cargo ${c.nome}? ${c.pessoas} pessoa(s) ficam sem cargo.`
                     : `Excluir o cargo ${c.nome}?`;
-                  if (await confirmar(aviso)) startTransition(async () => avisar(await excluirCargo(c.id)));
+                  if (!(await confirmar(aviso))) return;
+                  startTransition(async () => {
+                    const r = await excluirComPermissao((apagar) => excluirCargo(c.id, apagar));
+                    if (r) avisar(r);
+                  });
                 }}
                 className="text-slate-500 opacity-0 hover:text-red-600 group-hover:opacity-100"
                 aria-label={`Excluir ${c.nome}`}

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido } from "@/lib/agenda";
@@ -25,7 +26,8 @@ import {
  * para a avaliação do PDI.
  */
 
-export type AutoavaliacaoState = { error?: string; ok?: boolean; id?: string; token?: string };
+/** `respostas`: o que se perde respondido por link; a tela pergunta e chama de novo. */
+export type AutoavaliacaoState = { error?: string; ok?: boolean; id?: string; token?: string; respostas?: string };
 
 const log = atividade("PDI");
 
@@ -296,12 +298,13 @@ async function carregarEnvio(autoId: string) {
   });
 }
 
-export async function excluirAutoavaliacao(autoId: string): Promise<AutoavaliacaoState> {
+export async function excluirAutoavaliacao(autoId: string, apagarRespostas = false): Promise<AutoavaliacaoState> {
   const session = await requireSession();
   const a = await carregarEnvio(autoId);
   if (!a) return { ok: true };
+  if (a.status === "RESPONDIDO" && !apagarRespostas) return { respostas: `a autoavaliação que ${a.employee.name} respondeu` };
   // A avaliação que saiu dela fica: o RH já pode ter dado as notas dele.
-  await prisma.autoavaliacao.delete({ where: { id: autoId } });
+  await apagarComPermissao([prisma.autoavaliacao.delete({ where: { id: autoId } })]);
   await log(a.employee.companyId, session.userId, "EXCLUIU", a.employeeId, `Excluiu a autoavaliação (${a.titulo}) de ${a.employee.name}.`);
   refresh(a.employee.companyId);
   return { ok: true };
