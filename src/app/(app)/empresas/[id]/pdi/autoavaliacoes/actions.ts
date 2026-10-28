@@ -17,7 +17,9 @@ import {
   lerRespostas,
   lerTipoDePergunta,
   notasDaAutoavaliacao,
+  calendarioDoPdi,
 } from "@/lib/autoavaliacao";
+import { gapsPrioritarios, metaSugerida } from "@/lib/pdi";
 
 /**
  * Autoavaliação do PDI: os modelos de cada função, com as perguntas que a
@@ -328,7 +330,16 @@ export async function levarParaAvaliacao(autoId: string): Promise<AutoavaliacaoS
   const a = await carregarEnvio(autoId);
   if (!a) return { error: "Autoavaliação não encontrada." };
   if (a.status !== "RESPONDIDO") return { error: "A pessoa ainda não respondeu." };
-  if (a.avaliacaoId) return { ok: true, id: a.avaliacaoId };
+  const id = await montarAvaliacao(a, session.userId);
+  refresh(a.employee.companyId);
+  return { ok: true, id };
+}
+
+type Envio = NonNullable<Awaited<ReturnType<typeof carregarEnvio>>>;
+
+/** Cria a avaliação da resposta, ou devolve a que já existe. */
+async function montarAvaliacao(a: Envio, userId: string): Promise<string> {
+  if (a.avaliacaoId) return a.avaliacaoId;
 
   const perguntas = lerPerguntas(a.perguntas);
   const respostas = lerRespostas(perguntas, a.respostas);
@@ -341,7 +352,7 @@ export async function levarParaAvaliacao(autoId: string): Promise<AutoavaliacaoS
       cargoId: a.employee.cargo?.id ?? null,
       cargoNome: a.employee.cargo?.nome ?? a.titulo,
       data: dayKeyToDate(a.respondidoEm ? dateToDayKey(a.respondidoEm) : todayKey()),
-      createdById: session.userId,
+      createdById: userId,
       ...abertos,
       notas: { create: notas.map((n, ordem) => ({ ...n, ordem })) },
     },
@@ -352,10 +363,67 @@ export async function levarParaAvaliacao(autoId: string): Promise<AutoavaliacaoS
   if (count === 0) {
     await prisma.avaliacaoDeCompetencias.delete({ where: { id: avaliacao.id } });
     const atual = await prisma.autoavaliacao.findUnique({ where: { id: a.id }, select: { avaliacaoId: true } });
-    return { ok: true, id: atual?.avaliacaoId ?? undefined };
+    return atual?.avaliacaoId ?? avaliacao.id;
   }
 
-  await log(a.employee.companyId, session.userId, "CRIOU", a.employeeId, `Montou a avaliação do PDI de ${a.employee.name} a partir da autoavaliação.`);
-  refresh(a.employee.companyId);
-  return { ok: true, id: avaliacao.id };
+  await log(a.employee.companyId, userId, "CRIOU", a.employeeId, `Montou a avaliação do PDI de ${a.employee.name} a partir da autoavaliação.`);
+  return avaliacao.id;
+}
+
+/**
+ * Cria de uma vez o PDI de 3 meses de quem já respondeu e ainda não tem PDI
+ * em andamento: monta a avaliação da resposta (se faltar) e o plano com os 3
+ * maiores gaps como metas, igual ao que a tela sugere para um por um. A
+ * conversa de acompanhamento fica para marcar em cada PDI.
+ */
+export async function criarPdisDasRespostas(companyId: string): Promise<AutoavaliacaoState & { criados?: number }> {
+  const session = await requireSession();
+  const equipe = await prisma.employee.findMany({
+    where: { companyId, status: { not: "DESLIGADO" } },
+    select: {
+      role: true,
+      cargo: { select: { nome: true } },
+      autoavaliacoes: { orderBy: { enviadoEm: "desc" }, take: 1, select: { id: true, status: true } },
+      plans: { where: { status: "EM_ANDAMENTO" }, select: { id: true }, take: 1 },
+    },
+  });
+  const ids = equipe
+    .filter((p) => !foraDoPdi(p.cargo?.nome ?? p.role) && p.plans.length === 0 && p.autoavaliacoes[0]?.status === "RESPONDIDO")
+    .map((p) => p.autoavaliacoes[0].id);
+  if (ids.length === 0) return { error: "Ninguém com resposta está sem PDI." };
+
+  const inicio = todayKey();
+  const { fim } = calendarioDoPdi(inicio);
+  let criados = 0;
+  for (const autoId of ids) {
+    const a = await carregarEnvio(autoId);
+    if (!a || a.status !== "RESPONDIDO") continue;
+    const avaliacaoId = await montarAvaliacao(a, session.userId);
+    // O plano que já saiu desta avaliação (mesmo encerrado) não se repete.
+    const jaTem = await prisma.developmentPlan.findFirst({ where: { avaliacaoId }, select: { id: true } });
+    if (jaTem) continue;
+    const notas = await prisma.notaDeCompetencia.findMany({ where: { avaliacaoId }, orderBy: { ordem: "asc" } });
+    const metas = gapsPrioritarios(notas).slice(0, 3);
+    const prazo = dayKeyToDate(fim);
+    const titulo = `PDI ${a.employee.name.split(/\s+/)[0]} — ${inicio.slice(0, 4)}`;
+    await prisma.developmentPlan.create({
+      data: {
+        employeeId: a.employeeId,
+        avaliacaoId,
+        title: titulo,
+        startDate: dayKeyToDate(inicio),
+        endDate: prazo,
+        metas: {
+          create: metas.map((n, ordem) => {
+            const s = metaSugerida(n);
+            return { notaId: n.id, competencia: n.nome, titulo: s.titulo, indicador: s.indicador, relevancia: s.relevancia, prazo, ordem };
+          }),
+        },
+      },
+    });
+    await log(companyId, session.userId, "CRIOU", a.employeeId, `Criou o PDI "${titulo}" de ${a.employee.name}, com ${metas.length} meta(s), no lote das autoavaliações.`);
+    criados += 1;
+  }
+  refresh(companyId);
+  return { ok: true, criados };
 }
