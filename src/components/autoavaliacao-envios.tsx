@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, MessageCircle } from "lucide-react";
 import {
+  criarPdisDasRespostas,
   gerarLinks,
   levarParaAvaliacao,
   type AutoavaliacaoState,
@@ -12,7 +13,7 @@ import {
 import { linkDoWhatsApp, mensagemDoLink, telefoneDoWhatsApp } from "@/lib/autoavaliacao";
 import { Etiqueta, Tabela, Vazio } from "./ui";
 import { copiarLink } from "./autoavaliacao-modelos";
-import { avisar } from "@/components/avisos";
+import { avisar, confirmar } from "@/components/avisos";
 import { linkPublico } from "@/lib/link-publico";
 import { lembreteDoLink } from "@/lib/cobranca";
 import CobrarTodos from "./cobrar-todos";
@@ -123,6 +124,23 @@ export default function AutoavaliacaoEnvios({
       else router.push(`/empresas/${companyId}/pdi/${p.id}${r.id ? `?avaliacao=${r.id}` : ""}#avaliacao`);
     });
 
+  // Quem respondeu e ainda não tem PDI em andamento.
+  const semPdi = pessoas.filter((p) => p.envio?.status === "RESPONDIDO" && !p.temPlano);
+  const criarTodos = async () => {
+    const ok = await confirmar(
+      `Criar o PDI de 3 meses de ${semPdi.length} pessoa(s)? Cada um começa hoje, com os 3 maiores gaps da autoavaliação como metas. Depois é só revisar cada PDI e marcar a conversa.`,
+    );
+    if (!ok) return;
+    startTransition(async () => {
+      const r = await criarPdisDasRespostas(companyId);
+      if (r.error) avisar(r.error);
+      else {
+        avisar(r.criados === 1 ? "1 PDI criado." : `${r.criados} PDIs criados.`);
+        router.refresh();
+      }
+    });
+  };
+
   const whatsapp = (p: PessoaNoEnvio) =>
     p.envio ? linkDoWhatsApp(p.telefone, mensagemDoLink(p.nome, linkPublico(`/autoavaliacao/${p.envio.token}`))) : "#";
 
@@ -183,6 +201,18 @@ export default function AutoavaliacaoEnvios({
           </label>
           <button type="button" className={botaoForte} disabled={prontosParaGerar.length === 0} onClick={() => gerar(prontosParaGerar)}>
             Gerar os links de todos ({prontosParaGerar.length})
+          </button>
+        </div>
+      ) : null}
+
+      {semPdi.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-brand-200 bg-brand-50/50 px-3 py-2 text-sm">
+          <span className="text-slate-700">
+            {semPdi.length} pessoa(s) já responderam e ainda estão sem PDI. Crie todos de uma vez: cada PDI dura 3 meses e
+            já vem com os 3 maiores gaps como metas.
+          </span>
+          <button type="button" className={`${botaoForte} ml-auto`} onClick={criarTodos}>
+            Criar os PDIs de todos ({semPdi.length})
           </button>
         </div>
       ) : null}
