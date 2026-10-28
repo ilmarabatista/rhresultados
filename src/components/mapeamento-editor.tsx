@@ -1,5 +1,6 @@
 "use client";
 
+import { excluirComPermissao } from "@/components/com-permissao";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -118,7 +119,8 @@ export default function MapeamentoEditor({
 
   async function excluir() {
     if (!(await confirmar(`Excluir este mapeamento de ${pessoa}?`, { sim: "Excluir" }))) return;
-    const r = await excluirMapeamento(mapId);
+    const r = await excluirComPermissao((apagar) => excluirMapeamento(mapId, apagar));
+    if (!r) return;
     if (r.error) return setErro(r.error);
     router.push(`/empresas/${companyId}/equipe/${employeeId}`);
   }

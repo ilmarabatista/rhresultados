@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao, respostasQueSomem } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido } from "@/lib/agenda";
@@ -32,7 +33,8 @@ import { lerPerguntaDoFormulario, perguntasPadrao } from "@/lib/clima-dados";
  * primeira pesquisa de uma empresa nasce das perguntas padrão da biblioteca.
  */
 
-export type ClimaState = { error?: string; ok?: boolean; id?: string };
+/** `respostas`: o que se perde respondido por link; a tela pergunta e chama de novo. */
+export type ClimaState = { error?: string; ok?: boolean; id?: string; respostas?: string };
 
 const log = atividade("CLIMA");
 
@@ -379,11 +381,13 @@ export async function mudarStatus(pesquisaId: string, para: string): Promise<Cli
   return { ok: true };
 }
 
-export async function excluirPesquisa(pesquisaId: string): Promise<ClimaState> {
+export async function excluirPesquisa(pesquisaId: string, apagarRespostas = false): Promise<ClimaState> {
   const session = await requireSession();
   const pesquisa = await daPesquisa(pesquisaId);
   if (!pesquisa) return { error: "Pesquisa não encontrada." };
-  await prisma.pesquisaDeClima.delete({ where: { id: pesquisaId } });
+  const respostas = await respostasQueSomem({ pesquisaId });
+  if (respostas && !apagarRespostas) return { respostas };
+  await apagarComPermissao([prisma.pesquisaDeClima.delete({ where: { id: pesquisaId } })]);
   await log(pesquisa.companyId, session.userId, "EXCLUIU", pesquisaId, `Excluiu a pesquisa de clima ${pesquisa.nome} (${pesquisa._count.respostas} respostas).`);
   refresh(pesquisa.companyId);
   return { ok: true };

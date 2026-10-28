@@ -1,5 +1,6 @@
 "use client";
 
+import { excluirComPermissao } from "@/components/com-permissao";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -293,7 +294,7 @@ export default function PdiAutoavaliacao({
                           const aviso = a.avaliacaoId
                             ? "Excluir esta autoavaliação? A avaliação montada com ela continua."
                             : "Excluir esta autoavaliação? As respostas somem e o link para de funcionar.";
-                          if (await confirmar(aviso)) fazer(() => excluirAutoavaliacao(a.id));
+                          if (await confirmar(aviso)) fazer(async () => (await excluirComPermissao((apagar) => excluirAutoavaliacao(a.id, apagar))) ?? {});
                         }}
                       >
                         <Trash2 size={14} />

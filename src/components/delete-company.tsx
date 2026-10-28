@@ -13,6 +13,8 @@ export type ImpactoExclusao = {
   vagas: number;
   filiais: number;
   atividades: number;
+  /** O que foi respondido por link e some junto. */
+  respostas: string | null;
 };
 
 function BotaoExcluir() {
@@ -52,6 +54,7 @@ export default function DeleteCompany({
     { label: "unidade(s)", n: impacto.filiais },
     { label: "registro(s) no fluxo de atividades", n: impacto.atividades },
   ].filter((i) => i.n > 0);
+  const respostas = impacto.respostas;
 
   return (
     <section className="mt-8 rounded-lg border border-red-200 bg-red-50/40 p-4">
@@ -61,6 +64,12 @@ export default function DeleteCompany({
         como desfazer, e o histórico não sobrevive em nenhum outro lugar do
         sistema.
       </p>
+
+      {respostas ? (
+        <p className="mt-3 text-xs font-semibold text-red-800">
+          Inclui {respostas} pelo link, que não têm como ser recuperadas.
+        </p>
+      ) : null}
 
       {itens.length > 0 ? (
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-red-800/80">

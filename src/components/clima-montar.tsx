@@ -1,5 +1,6 @@
 "use client";
 
+import { excluirComPermissao } from "@/components/com-permissao";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Pencil, Plus, Trash2 } from "lucide-react";
@@ -89,9 +90,9 @@ export function ClimaSituacao({ pesquisa }: { pesquisa: PesquisaParaMontar }) {
       : `Excluir ${pesquisa.nome}?`;
     if (!(await confirmar(texto, { sim: "Excluir" }))) return;
     start(async () => {
-      const r = await excluirPesquisa(pesquisa.id);
+      const r = await excluirComPermissao((apagar) => excluirPesquisa(pesquisa.id, apagar));
       avisarSeErro(r);
-      if (r.ok) router.push(`/empresas/${pesquisa.companyId}/clima`);
+      if (r?.ok) router.push(`/empresas/${pesquisa.companyId}/clima`);
     });
   }
 
