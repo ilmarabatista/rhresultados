@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido } from "@/lib/agenda";
@@ -26,7 +27,8 @@ import { rascunharDescricao, sugerirPerguntas } from "@/lib/ai-cargos";
  * de Treinamentos, que já cuidam das pessoas e da matriz.
  */
 
-export type CargoState = { error?: string; ok?: boolean; id?: string; token?: string };
+/** `respostas`: o que se perde respondido por link; a tela pergunta e chama de novo. */
+export type CargoState = { error?: string; ok?: boolean; id?: string; token?: string; respostas?: string };
 
 const log = atividade("CARGO");
 
@@ -202,14 +204,15 @@ export async function enviarQuestionario(_prev: CargoState, formData: FormData):
   return { ok: true, id: enviado.id, token };
 }
 
-export async function excluirQuestionario(questionarioId: string): Promise<CargoState> {
+export async function excluirQuestionario(questionarioId: string, apagarRespostas = false): Promise<CargoState> {
   const session = await requireSession();
   const q = await prisma.questionarioDeCargo.findUnique({
     where: { id: questionarioId },
-    select: { pessoa: true, cargo: { select: { companyId: true, nome: true } } },
+    select: { pessoa: true, status: true, cargo: { select: { companyId: true, nome: true } } },
   });
   if (!q) return { error: "Questionário não encontrado." };
-  await prisma.questionarioDeCargo.delete({ where: { id: questionarioId } });
+  if (q.status === "RESPONDIDO" && !apagarRespostas) return { respostas: `o questionário que ${q.pessoa} respondeu` };
+  await apagarComPermissao([prisma.questionarioDeCargo.delete({ where: { id: questionarioId } })]);
   await log(q.cargo.companyId, session.userId, "EXCLUIU", questionarioId, `Excluiu o questionário de ${q.pessoa} (${q.cargo.nome}).`);
   refresh(q.cargo.companyId);
   return { ok: true };

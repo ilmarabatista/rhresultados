@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao } from "@/lib/respostas-protegidas-dados";
 import { requireAdmin, requireSession } from "@/lib/session";
 import { lerValor } from "@/lib/gestao";
 
@@ -263,7 +264,8 @@ export async function deleteCompany(
   }
 
   try {
-    await prisma.company.delete({ where: { id } });
+    // Digitar o nome é a confirmação, inclusive das respostas por link que vão junto.
+    await apagarComPermissao([prisma.company.delete({ where: { id } })]);
   } catch {
     return { error: "Não foi possível excluir a empresa." };
   }

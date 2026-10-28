@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { respostasQueSomem } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import DeleteCompany from "@/components/delete-company";
 import BranchesManager from "@/components/branches-manager";
@@ -218,6 +219,7 @@ export default async function InformacoesPage({
             vagas: company._count.jobOpenings,
             filiais: company._count.branches,
             atividades: company._count.activities,
+            respostas: session.role === "ADMIN" ? await respostasQueSomem({ companyId: company.id }) : null,
           }}
         />
       ) : null}

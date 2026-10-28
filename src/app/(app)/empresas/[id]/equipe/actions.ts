@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { apagarComPermissao, respostasQueSomem } from "@/lib/respostas-protegidas-dados";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { cargoDoCadastro, gerarIntegracaoDe } from "@/lib/treinamentos-dados";
@@ -181,7 +182,8 @@ export async function definirAtivo(employeeId: string, ativo: boolean) {
   refresh(pessoa.companyId);
 }
 
-export async function deleteEmployee(employeeId: string) {
+/** Devolve `respostas` quando a pessoa tem respostas por link: a tela pergunta e chama de novo. */
+export async function deleteEmployee(employeeId: string, apagarRespostas = false): Promise<{ ok?: boolean; respostas?: string }> {
   const session = await requireSession();
 
   const pessoa = await prisma.employee.findUnique({
@@ -192,9 +194,11 @@ export async function deleteEmployee(employeeId: string) {
       _count: { select: { records: true, plans: true } },
     },
   });
-  if (!pessoa) return;
+  if (!pessoa) return { ok: true };
+  const respostas = await respostasQueSomem({ employeeId });
+  if (respostas && !apagarRespostas) return { respostas };
 
-  await prisma.employee.delete({ where: { id: employeeId } });
+  await apagarComPermissao([prisma.employee.delete({ where: { id: employeeId } })]);
 
   await log(
     pessoa.companyId,
@@ -205,6 +209,7 @@ export async function deleteEmployee(employeeId: string) {
   );
 
   refresh(pessoa.companyId);
+  return { ok: true };
 }
 
 // ------------------------------------------------- Registros da linha do tempo
