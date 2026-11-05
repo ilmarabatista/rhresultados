@@ -12,6 +12,7 @@ import {
 import { Aviso, Etiqueta, Numeros, Tabela, Vazio } from "@/components/ui";
 import PdiAbas from "@/components/pdi-abas";
 import { foraDoPdi } from "@/lib/prestadores";
+import FiltroCidade, { cidadesDaEquipe } from "@/components/filtro-cidade";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI — RH Resultados" };
@@ -26,7 +27,7 @@ export default async function PdiPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ aba?: string; cargo?: string }>;
+  searchParams: Promise<{ aba?: string; cargo?: string; cidade?: string }>;
 }) {
   await requireSession();
   const { id } = await params;
@@ -34,7 +35,7 @@ export default async function PdiPage({
   if (sp.aba === "cargos") redirect(`/empresas/${id}/cargos${sp.cargo ? `?cargo=${encodeURIComponent(sp.cargo)}` : ""}`);
   const hoje = todayKey();
 
-  const [pessoas, cargos] = await Promise.all([
+  const [pessoas, cargos, unidades] = await Promise.all([
     prisma.employee.findMany({
       where: { companyId: id, status: { not: "DESLIGADO" } },
       orderBy: { name: "asc" },
@@ -42,6 +43,8 @@ export default async function PdiPage({
         id: true,
         name: true,
         role: true,
+        branchId: true,
+        branch: { select: { name: true } },
         cargo: { select: { _count: { select: { competencias: true } } } },
         avaliacoes: {
           orderBy: { data: "desc" },
@@ -74,10 +77,17 @@ export default async function PdiPage({
         _count: { select: { competencias: true, colaboradores: { where: { status: { not: "DESLIGADO" } } } } },
       },
     }),
+    prisma.branch.findMany({
+      where: { companyId: id },
+      orderBy: [{ isHeadquarters: "desc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
   ]);
 
   // Dentistas e laboratório não têm PDI.
-  const linhas = pessoas.filter((p) => !foraDoPdi(p.role)).map((p) => {
+  const doPdi = pessoas.filter((p) => !foraDoPdi(p.role));
+  const { cidades, semCidade, atual: cidade, naCidade } = cidadesDaEquipe(unidades, doPdi, sp.cidade);
+  const linhas = doPdi.filter((p) => naCidade(p.branchId)).map((p) => {
     const avaliacao = p.avaliacoes[0] ?? null;
     const plano = p.plans[0] ?? null;
     const resumo = avaliacao ? resumoDaAvaliacao(avaliacao.notas) : null;
@@ -86,6 +96,7 @@ export default async function PdiPage({
       id: p.id,
       nome: p.name,
       cargo: p.role,
+      cidade: p.branch?.name ?? null,
       cargoDescrito: (p.cargo?._count.competencias ?? 0) > 0,
       avaliadaEm: avaliacao ? formatFullDate(avaliacao.data) : null,
       gaps: avaliacao ? gapsPrioritarios(avaliacao.notas).map((n) => n.nome) : [],
@@ -120,9 +131,17 @@ export default async function PdiPage({
         </p>
       </div>
 
-      <PdiAbas companyId={id} atual="equipe" cargosSemDescricao={cargosSemDescricao} />
+      <PdiAbas companyId={id} atual="equipe" cargosSemDescricao={cargosSemDescricao} cidade={cidade} />
 
         <div className="space-y-3">
+          <FiltroCidade
+            base={`/empresas/${id}/pdi`}
+            cidades={cidades}
+            atual={cidade}
+            total={doPdi.length}
+            semCidade={semCidade}
+          />
+
           <Numeros
             colunas={4}
             itens={[
@@ -158,9 +177,15 @@ export default async function PdiPage({
           ) : null}
 
           {linhas.length === 0 ? (
-            <Vazio>Ninguém na equipe ainda. Cadastre as pessoas na aba Equipe.</Vazio>
+            <Vazio>
+              {cidade
+                ? "Ninguém desta cidade no PDI."
+                : "Ninguém na equipe ainda. Cadastre as pessoas na aba Equipe."}
+            </Vazio>
           ) : (
-            <Tabela titulo="Equipe" direita={`${linhas.length} pessoas`} minLargura={860}>
+            <Tabela
+              titulo={cidade ? `Equipe · ${cidades.find((c) => c.id === cidade)?.nome ?? "sem cidade"}` : "Equipe"}
+              direita={`${linhas.length} pessoas`} minLargura={860}>
               <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.9fr)_5rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-micro font-medium uppercase tracking-wider text-slate-500">
                 <span>Pessoa</span>
                 <span>Avaliação</span>
@@ -181,6 +206,7 @@ export default async function PdiPage({
                     <span className="block truncate text-micro text-slate-500">
                       {l.cargo ?? "sem cargo"}
                       {l.cargo && !l.cargoDescrito ? " · cargo sem descrição" : ""}
+                      {!cidade && cidades.length > 1 ? ` · ${l.cidade ?? "sem cidade"}` : ""}
                     </span>
                   </div>
                   <div className="text-mini text-slate-600">
