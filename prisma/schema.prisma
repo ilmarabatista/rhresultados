@@ -123,6 +123,9 @@ model Company {
   perguntasDeClima PerguntaDeClima[]
   modelosDeAutoavaliacao ModeloDeAutoavaliacao[]
   mapeamentos            MapeamentoDeRotina[]
+  regrasDaEscala         RegrasDaEscala?
+  turnosDaEscala         TurnoDaEscala[]
+  diasDaEscala           DiaDaEscala[]
 
   @@index([name])
 }
@@ -435,6 +438,7 @@ model Employee {
   autoavaliacoes Autoavaliacao[]
   mapeamentos MapeamentoDeRotina[]
   exams       HealthExam[]
+  escala      DiaDaEscala[]
 
   @@index([companyId, name])
   @@index([branchId])
@@ -1892,4 +1896,72 @@ model AcaoDeClima {
   updatedAt DateTime @updatedAt
 
   @@index([pesquisaId])
+}
+
+// ------------------------------------------------------------ Escala
+
+/// Como a empresa monta a escala: a que horas abre e fecha em cada dia da
+/// semana e quantas pessoas, no mínimo, precisa ter em cada hora aberta.
+model RegrasDaEscala {
+  companyId String  @id
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Domingo (0) a sábado (6): [abre, fecha] em minutos desde a meia-noite,
+  /// ou null no dia em que não abre. Padrão: 08:00 às 22:00 todos os dias.
+  funcionamento Json
+  minimo        Int  @default(1)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Um turno da escala: "Abertura 08:00–16:20, 1h de intervalo".
+model TurnoDaEscala {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  nome      String
+  /// Minutos desde a meia-noite; o fim passa de 1440 quando vira a noite.
+  inicio    Int
+  fim       Int
+  intervalo Int    @default(60)
+  cor       String @default("azul")
+  ordem     Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  dias DiaDaEscala[]
+
+  @@index([companyId])
+}
+
+enum TipoDoDiaDaEscala {
+  TRABALHO
+  FOLGA
+  FERIAS
+  ATESTADO
+}
+
+/// O dia de uma pessoa na escala. O horário é copiado do turno, para a escala
+/// antiga não mudar quando o turno for editado ou excluído.
+model DiaDaEscala {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  data       DateTime @db.Date
+
+  tipo      TipoDoDiaDaEscala
+  turnoId   String?
+  turno     TurnoDaEscala?    @relation(fields: [turnoId], references: [id], onDelete: SetNull)
+  inicio    Int?
+  fim       Int?
+  intervalo Int               @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, data])
+  @@index([companyId, data])
 }
