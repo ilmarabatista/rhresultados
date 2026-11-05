@@ -288,6 +288,8 @@ const branchFormSchema = z.object({
   zipCode: opt,
   employeeCount: optInt,
   phone: opt,
+  cnpj: opt,
+  legalName: opt,
 });
 
 /** Cria ou atualiza uma unidade da empresa. */
@@ -310,13 +312,18 @@ export async function saveBranch(
     zipCode: formData.get("zipCode"),
     employeeCount: formData.get("employeeCount"),
     phone: formData.get("phone"),
+    cnpj: formData.get("cnpj"),
+    legalName: formData.get("legalName"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const { companyId, branchId, ...dados } = parsed.data;
+  const { companyId, branchId, ...resto } = parsed.data;
+  const cnpjDaUnidade = (resto.cnpj ?? "").replace(/\D/g, "");
+  if (cnpjDaUnidade && cnpjDaUnidade.length !== 14) return { error: "Confira o CNPJ da unidade: são 14 números." };
+  const dados = { ...resto, cnpj: cnpjDaUnidade || null };
 
   if (branchId) {
     // Só a unidade desta empresa: o id vem da tela, e não pode mexer na de outro cliente.
