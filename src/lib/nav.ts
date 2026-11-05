@@ -106,5 +106,6 @@ export const FICHA_TABS: FichaTab[] = [
   { label: "Treinamentos", slug: "treinamentos" },
   { label: "PDI", slug: "pdi" },
   { label: "Clima", slug: "clima" },
+  { label: "Escala", slug: "escala" },
   { label: "Ponto", slug: "ponto" },
 ];
