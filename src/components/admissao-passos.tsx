@@ -215,7 +215,7 @@ export default function AdmissaoPassos(p: Props) {
           </label>
           <label className="block min-w-[10rem] flex-1">
             <span className="block text-micro text-slate-500">Local</span>
-            <Input name="exameLocal" defaultValue={p.consulta.local} placeholder="Endereço da clínica" className="!px-2 !py-1 !text-xs" />
+            <Input name="exameLocal" defaultValue={p.consulta.local} placeholder={`Vazio: consultório do ${MEDICO_DO_TRABALHO.nome}`} className="!px-2 !py-1 !text-xs" />
           </label>
           <SmallSubmitButton>{p.consulta.data ? "Salvar" : "Marcar"}</SmallSubmitButton>
         </form>
