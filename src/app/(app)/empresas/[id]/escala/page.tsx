@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/session";
 import { dateToDayKey, dayKeyToDate, todayKey } from "@/lib/dates";
 import { lerFuncionamento, segundaDaSemana, somarDias } from "@/lib/escala";
 import { grupoDoCargo } from "@/lib/prestadores";
-import { Filtros, TituloDaSecao } from "@/components/ui";
+import { Aviso, Filtros, TituloDaSecao } from "@/components/ui";
 import EscalaTela from "@/components/escala-tela";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +28,27 @@ export default async function EscalaPage({
   const semanaPedida = /^\d{4}-\d{2}-\d{2}$/.test(sp.semana ?? "") ? sp.semana! : todayKey();
   const segunda = segundaDaSemana(semanaPedida);
   const comPrestadores = sp.todos === "1";
+
+  // Enquanto as tabelas da escala não existem no banco (migration por aplicar),
+  // a aba avisa em vez de quebrar.
+  const tabelasProntas = await prisma.turnoDaEscala
+    .count({ where: { companyId: id } })
+    .then(() => true)
+    .catch((e: { code?: string }) => {
+      if (e?.code === "P2021") return false;
+      throw e;
+    });
+  if (!tabelasProntas) {
+    return (
+      <main className="space-y-3">
+        <TituloDaSecao antes="Escala da" destaque="equipe" />
+        <Aviso tom="informacao" rotulo="Quase pronto">
+          A escala ainda não foi ligada no banco de dados. Assim que a atualização do banco for aplicada, esta aba
+          passa a funcionar.
+        </Aviso>
+      </main>
+    );
+  }
 
   const [empresa, regras, turnos, unidades, pessoas] = await Promise.all([
     prisma.company.findUnique({ where: { id }, select: { name: true } }),
