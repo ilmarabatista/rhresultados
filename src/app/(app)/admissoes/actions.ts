@@ -254,7 +254,7 @@ export async function salvarConsulta(_: AdmissaoState, formData: FormData): Prom
 export async function marcarNaoSeAplicaRH(id: string, chave: string, marcar: boolean): Promise<AdmissaoState> {
   await requireSession();
   const doc = documentoDaChave(chave);
-  if (!doc || doc.obrigatorio) return { error: "Este documento é obrigatório." };
+  if (!doc || doc.extra) return { error: "Documento não encontrado." };
   const a = await prisma.admissao.findUnique({ where: { id }, select: { companyId: true, naoSeAplica: true } });
   if (!a) return { error: "Admissão não encontrada." };
   const lista = a.naoSeAplica.filter((c) => c !== chave);

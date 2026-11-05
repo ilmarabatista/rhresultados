@@ -48,7 +48,7 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
       instrucoes={[
         "Depois do exame admissional, tire a foto do atestado (ASO) que o médico entregou e mande no primeiro item.",
         "Para cada documento, toque em Tirar foto. Se o documento tem frente e verso, mande as duas fotos no mesmo item.",
-        "Se um documento não é para você (por exemplo, não tem filhos ou não precisa de reservista), toque em Não se aplica.",
+        "Se algum documento não for o seu caso, toque em Não se aplica.",
         "Fotografe em lugar claro, com o documento inteiro aparecendo e sem reflexo.",
         "Pode mandar aos poucos: o que você mandou fica guardado. Quando terminar, toque em Terminei.",
       ]}

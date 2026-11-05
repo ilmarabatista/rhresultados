@@ -46,7 +46,7 @@ function Documento({
   const [enviando, setEnviando] = useState<string | null>(null);
   const pode = modo.quem === "rh" || modo.aberto;
   const chegou = arquivos.length > 0;
-  const situacao = chegou ? "ENVIADO" : !doc.obrigatorio && naoAplica ? "NAO_SE_APLICA" : doc.extra ? "EXTRA" : "FALTA";
+  const situacao = chegou ? "ENVIADO" : naoAplica ? "NAO_SE_APLICA" : doc.extra ? "EXTRA" : "FALTA";
   const visual = SITUACAO[situacao];
 
   async function trocarNaoSeAplica(marcar: boolean) {
@@ -119,7 +119,7 @@ function Documento({
             Desfazer
           </button>
         ) : pode ? (
-          <div className="flex shrink-0 flex-wrap gap-1.5">
+          <div className="flex min-w-0 flex-wrap gap-1.5">
             <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => enviar(e.target.files)} />
             <input ref={galeria} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => enviar(e.target.files)} />
             {modo.quem === "funcionario" ? (
@@ -130,7 +130,7 @@ function Documento({
             <button type="button" disabled={!!enviando} onClick={() => galeria.current?.click()} className={`${botao} border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>
               <Upload size={14} /> {modo.quem === "funcionario" ? "Escolher arquivo" : "Anexar"}
             </button>
-            {!doc.obrigatorio && !doc.extra && !chegou ? (
+            {!doc.extra && !chegou ? (
               <button type="button" onClick={() => trocarNaoSeAplica(true)} className={`${botao} border-slate-300 bg-white text-slate-600 hover:bg-slate-50`}>
                 <Ban size={14} /> Não se aplica
               </button>

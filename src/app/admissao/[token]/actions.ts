@@ -88,7 +88,7 @@ export async function marcarNaoSeAplica(token: string, chave: string, marcar: bo
   const a = await abrir(token);
   if (!a) return { error: "Este link não recebe mais documentos. Fale com o RH." };
   const doc = documentoDaChave(chave);
-  if (!doc || doc.obrigatorio) return { error: "Este documento é obrigatório." };
+  if (!doc || doc.extra) return { error: "Documento não encontrado." };
   const lista = a.naoSeAplica.filter((c) => c !== chave);
   await prisma.admissao.update({ where: { id: a.id }, data: { naoSeAplica: marcar ? [...lista, chave] : lista } });
   refresh(a.id, token);

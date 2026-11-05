@@ -16,8 +16,6 @@ export type DocumentoAdmissional = {
   nome: string;
   /** O que mostrar ao funcionário para ele saber o que mandar. */
   dica: string;
-  /** Obrigatório não tem "Não se aplica": todo mundo precisa mandar. */
-  obrigatorio: boolean;
   /** "Outros documentos" é extra: não conta como faltando. */
   extra?: boolean;
 };
@@ -27,28 +25,29 @@ export type DocumentoAdmissional = {
  * porque é o que libera a contratação.
  */
 export const DOCUMENTOS_ADMISSIONAIS: DocumentoAdmissional[] = [
-  { chave: "ASO", nome: "Atestado de saúde ocupacional (ASO)", dica: "Foto do atestado admissional que o médico entregou, com a assinatura dele.", obrigatorio: true },
-  { chave: "RG", nome: "RG ou CNH", dica: "Frente e verso. Se for a CNH digital, pode ser o PDF do aplicativo.", obrigatorio: true },
-  { chave: "CPF", nome: "CPF", dica: "Se o número do CPF já está no RG ou na CNH, marque Não se aplica.", obrigatorio: false },
-  { chave: "CTPS", nome: "Carteira de trabalho digital", dica: "Print da tela do aplicativo Carteira de Trabalho Digital, com o número e a série.", obrigatorio: true },
-  { chave: "PIS", nome: "PIS / NIS", dica: "Cartão ou documento com o número do PIS. Se nunca trabalhou de carteira, marque Não se aplica.", obrigatorio: false },
-  { chave: "TITULO", nome: "Título de eleitor", dica: "Pode ser o print do aplicativo e-Título.", obrigatorio: true },
-  { chave: "RESERVISTA", nome: "Certificado de reservista", dica: "Só para homens de 18 a 45 anos. Para os outros, marque Não se aplica.", obrigatorio: false },
-  { chave: "RESIDENCIA", nome: "Comprovante de residência", dica: "Conta de luz, água ou internet dos últimos 3 meses.", obrigatorio: true },
-  { chave: "ESCOLARIDADE", nome: "Comprovante de escolaridade", dica: "Diploma, certificado ou declaração da escola.", obrigatorio: true },
-  { chave: "CERTIDAO", nome: "Certidão de nascimento ou casamento", dica: "A de casamento, se você for casado(a).", obrigatorio: true },
-  { chave: "FOTO", nome: "Foto 3x4", dica: "Pode ser uma foto de rosto, de frente, com fundo claro.", obrigatorio: true },
-  { chave: "BANCO", nome: "Dados bancários", dica: "Cartão ou print do aplicativo do banco com agência e conta.", obrigatorio: false },
-  { chave: "FILHOS", nome: "Certidão e CPF dos filhos", dica: "Só para filhos menores de 14 anos. Sem filhos nessa idade, marque Não se aplica.", obrigatorio: false },
-  { chave: "VACINA", nome: "Cartão de vacina dos filhos", dica: "Só para filhos menores de 7 anos. Sem filhos nessa idade, marque Não se aplica.", obrigatorio: false },
-  { chave: "OUTRO", nome: "Outros documentos", dica: "Qualquer outro documento que o RH pediu.", obrigatorio: false, extra: true },
+  { chave: "ASO", nome: "Atestado de saúde ocupacional (ASO)", dica: "Foto do atestado admissional que o médico entregou, com a assinatura dele." },
+  { chave: "RG", nome: "RG ou CNH", dica: "Frente e verso. Se for a CNH digital, pode ser o PDF do aplicativo." },
+  { chave: "CPF", nome: "CPF", dica: "Frente e verso, se for o cartão." },
+  { chave: "CTPS", nome: "Carteira de trabalho digital", dica: "Print da tela do aplicativo Carteira de Trabalho Digital, com o número e a série." },
+  { chave: "PIS", nome: "PIS / NIS", dica: "Cartão ou documento com o número do PIS." },
+  { chave: "TITULO", nome: "Título de eleitor", dica: "Pode ser o print do aplicativo e-Título." },
+  { chave: "RESERVISTA", nome: "Certificado de reservista", dica: "Frente e verso." },
+  { chave: "RESIDENCIA", nome: "Comprovante de residência", dica: "Conta de luz, água ou internet dos últimos 3 meses." },
+  { chave: "ESCOLARIDADE", nome: "Comprovante de escolaridade", dica: "Diploma, certificado ou declaração da escola." },
+  { chave: "CERTIDAO", nome: "Certidão de nascimento ou casamento", dica: "A de casamento, se você for casado(a)." },
+  { chave: "FOTO", nome: "Foto 3x4", dica: "Pode ser uma foto de rosto, de frente, com fundo claro." },
+  { chave: "BANCO", nome: "Dados bancários", dica: "Cartão ou print do aplicativo do banco com agência e conta." },
+  { chave: "FILHOS", nome: "Certidão e CPF dos filhos", dica: "A certidão de nascimento e o CPF de cada filho." },
+  { chave: "VACINA", nome: "Cartão de vacina dos filhos", dica: "A página com as vacinas e o nome de cada filho." },
+  { chave: "OUTRO", nome: "Outros documentos", dica: "Qualquer outro documento que o RH pediu.", extra: true },
 ];
 
 export type SituacaoDoDocumento = "ENVIADO" | "NAO_SE_APLICA" | "FALTA";
 
 export function situacaoDoDocumento(doc: DocumentoAdmissional, tipos: string[], naoSeAplica: string[]): SituacaoDoDocumento {
   if (tipos.includes(doc.chave)) return "ENVIADO";
-  if (!doc.obrigatorio && naoSeAplica.includes(doc.chave)) return "NAO_SE_APLICA";
+  // Quem decide o que não se aplica é a pessoa ou o RH, em qualquer documento.
+  if (naoSeAplica.includes(doc.chave)) return "NAO_SE_APLICA";
   return "FALTA";
 }
 
