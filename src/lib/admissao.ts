@@ -118,10 +118,15 @@ export type DadosIniciais = {
   razaoSocial?: string | null;
   cnpj: string;
   nome: string;
-  cpf: string;
-  dataNascimento: Date | string;
-  funcao: string;
+  cpf: string | null;
+  dataNascimento: Date | string | null;
+  funcao: string | null;
 };
+
+/** O que ainda falta dos dados que o médico pede. */
+export function dadosQueFaltam(d: { cpf: string | null; dataNascimento: Date | string | null; funcao: string | null }): string[] {
+  return [!d.cpf && "CPF", !d.dataNascimento && "data de nascimento", !d.funcao && "função"].filter(Boolean) as string[];
+}
 
 /** A mensagem que vai ao médico do trabalho pedindo o exame admissional. */
 export function mensagemAoMedico(d: DadosIniciais): string {
@@ -131,18 +136,49 @@ export function mensagemAoMedico(d: DadosIniciais): string {
     `Empresa: ${d.razaoSocial || d.empresa}`,
     `CNPJ: ${formatarCnpj(d.cnpj)}`,
     `Nome: ${d.nome}`,
-    `CPF: ${formatarCpf(d.cpf)}`,
+    `CPF: ${d.cpf ? formatarCpf(d.cpf) : ""}`,
     `Data de nascimento: ${dataBR(d.dataNascimento)}`,
-    `Função: ${d.funcao}`,
+    `Função: ${d.funcao ?? ""}`,
     "",
     "Obrigada!",
   ].join("\n");
 }
 
-/** A mensagem com o link para o funcionário mandar os documentos. */
-export function mensagemAoFuncionario(nome: string, empresa: string, link: string): string {
-  const primeiro = nome.trim().split(/\s+/)[0] ?? "";
-  return `Olá, ${primeiro}! Para assinarmos a sua carteira na ${empresa}, mande por este link a foto do atestado admissional (ASO) e dos seus documentos. Dá para tirar as fotos pelo celular mesmo: ${link}`;
+function primeiroNome(nome: string) {
+  return nome.trim().split(/\s+/)[0] ?? "";
+}
+
+/** A mensagem com o link para o funcionário responder CPF, nascimento e função. */
+export function mensagemDosDados(nome: string, empresa: string, link: string): string {
+  return `Olá, ${primeiroNome(nome)}! Para começarmos a sua admissão na ${empresa}, responda por este link o seu CPF, a sua data de nascimento e a sua função. É rapidinho: ${link}`;
+}
+
+export type Consulta = { data: Date | string | null; hora: string | null; local: string | null };
+
+const DIAS = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+
+/** "quinta-feira, 06/11/2026, às 08:00, no Centro Médico X, com o Dr. Eduardo" */
+export function textoDaConsulta(c: Consulta): string | null {
+  if (!c.data) return null;
+  const d = typeof c.data === "string" ? new Date(c.data) : c.data;
+  if (Number.isNaN(d.getTime())) return null;
+  return [
+    `${DIAS[d.getUTCDay()]}, ${dataBR(d)}`,
+    c.hora ? `às ${c.hora}` : null,
+    c.local ? `em ${c.local}` : null,
+    `com o ${MEDICO_DO_TRABALHO.nome}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** A mensagem com o link dos documentos e, se já tem, a consulta marcada. */
+export function mensagemAoFuncionario(nome: string, empresa: string, link: string, consulta?: Consulta): string {
+  const quando = consulta ? textoDaConsulta(consulta) : null;
+  const exame = quando
+    ? `o seu exame admissional está marcado para ${quando}. Leve um documento com foto. Depois do exame, mande a foto do atestado (ASO) e dos seus documentos por este link`
+    : "mande por este link a foto do atestado admissional (ASO), depois do exame, e dos seus documentos";
+  return `Olá, ${primeiroNome(nome)}! Para assinarmos a sua carteira na ${empresa}: ${exame}. Dá para tirar as fotos pelo celular mesmo: ${link}`;
 }
 
 export function whatsapp(telefone: string | null | undefined, mensagem: string): string {
@@ -153,16 +189,22 @@ export function whatsapp(telefone: string | null | undefined, mensagem: string):
 
 // ----------------------------------------------------------------- etapas
 
-export type EtapaDaAdmissao = "MEDICO" | "ASO" | "DOCUMENTOS" | "PACOTE" | "PRONTA";
+export type EtapaDaAdmissao = "DADOS" | "MEDICO" | "CONSULTA" | "ASO" | "DOCUMENTOS" | "PACOTE" | "PRONTA";
 
 /** Em que pé está: o próximo passo que falta. */
 export function etapaDaAdmissao(a: {
+  cpf: string | null;
+  dataNascimento: Date | null;
+  funcao: string | null;
+  exameData: Date | null;
   enviadoAoMedicoEm: Date | null;
   documentosEnviadosEm: Date | null;
   pacoteGeradoEm: Date | null;
   tipos: string[];
 }): EtapaDaAdmissao {
+  if (dadosQueFaltam(a).length > 0) return "DADOS";
   if (!a.enviadoAoMedicoEm) return "MEDICO";
+  if (!a.tipos.includes("ASO") && !a.exameData) return "CONSULTA";
   if (!a.tipos.includes("ASO")) return "ASO";
   const faltam = DOCUMENTOS_ADMISSIONAIS.some((d) => d.obrigatorio && !a.tipos.includes(d.chave));
   if (faltam && !a.documentosEnviadosEm) return "DOCUMENTOS";
@@ -171,7 +213,9 @@ export function etapaDaAdmissao(a: {
 }
 
 export const ROTULO_DA_ETAPA: Record<EtapaDaAdmissao, string> = {
+  DADOS: "Esperando os dados",
   MEDICO: "Mandar ao médico",
+  CONSULTA: "Marcar a consulta",
   ASO: "Esperando o ASO",
   DOCUMENTOS: "Esperando documentos",
   PACOTE: "Pronta para a contabilidade",

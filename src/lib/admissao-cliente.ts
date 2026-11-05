@@ -53,9 +53,12 @@ type DadosDoPacote = {
   cnpj: string;
   razaoSocial: string | null;
   branch: { name: string } | null;
-  cpf: string;
-  dataNascimento: string;
-  funcao: string;
+  cpf: string | null;
+  dataNascimento: string | null;
+  funcao: string | null;
+  exameData: string | null;
+  exameHora: string | null;
+  exameLocal: string | null;
   telefone: string | null;
   dataAdmissao: string | null;
   observacoes: string | null;
@@ -114,12 +117,15 @@ async function pdfDosDados(d: DadosDoPacote, incluidos: string[]): Promise<Uint8
     ...(d.branch ? ([["Unidade", d.branch.name]] as [string, string][]) : []),
     ["CNPJ", formatarCnpj(d.cnpj)],
     ["Nome do funcionário", d.nome],
-    ["CPF", formatarCpf(d.cpf)],
+    ["CPF", d.cpf ? formatarCpf(d.cpf) : ""],
     ["Data de nascimento", dataBR(d.dataNascimento)],
-    ["Função", d.funcao],
+    ["Função", d.funcao ?? ""],
   ];
   if (d.dataAdmissao) campos.push(["Data de admissão", dataBR(d.dataAdmissao)]);
   if (d.telefone) campos.push(["Telefone", d.telefone]);
+  if (d.exameData) {
+    campos.push(["Exame admissional", [dataBR(d.exameData), d.exameHora].filter(Boolean).join(" às ")]);
+  }
 
   for (const [rotulo, valor] of campos) {
     page.drawText(latin(rotulo), { x: MARGEM, y, size: 9, font: normal, color: cinza });

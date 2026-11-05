@@ -127,14 +127,19 @@ export default function AdmissaoForm({
         <Field label="Nome do funcionário" className="sm:col-span-2">
           <Input name="nome" defaultValue={valores?.nome} required maxLength={150} autoComplete="off" />
         </Field>
+        {!editando ? (
+          <p className="text-xs text-slate-500 sm:col-span-2">
+            CPF, nascimento e função: preencha se já souber, ou deixe em branco para o funcionário responder pelo link dos dados.
+          </p>
+        ) : null}
         <Field label="CPF">
-          <Input name="cpf" defaultValue={valores ? formatarCpf(valores.cpf) : ""} inputMode="numeric" placeholder="000.000.000-00" required />
+          <Input name="cpf" defaultValue={valores?.cpf ? formatarCpf(valores.cpf) : ""} inputMode="numeric" placeholder="000.000.000-00" />
         </Field>
         <Field label="Data de nascimento">
-          <Input name="dataNascimento" type="date" defaultValue={valores?.dataNascimento} required />
+          <Input name="dataNascimento" type="date" defaultValue={valores?.dataNascimento} />
         </Field>
         <Field label="Função">
-          <Input name="funcao" defaultValue={valores?.funcao} list="cargos-da-empresa" required maxLength={120} autoComplete="off" />
+          <Input name="funcao" defaultValue={valores?.funcao} list="cargos-da-empresa" maxLength={120} autoComplete="off" />
           <datalist id="cargos-da-empresa">
             {(empresa?.cargos ?? []).map((c) => (
               <option key={c} value={c} />

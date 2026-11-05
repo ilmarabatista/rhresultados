@@ -8,7 +8,7 @@ import { Etiqueta, Tabela, Vazio } from "@/components/ui";
 type Linha = {
   id: string;
   nome: string;
-  funcao: string;
+  funcao: string | null;
   empresa: { id: string; name: string };
   createdAt: Date;
   etapa: EtapaDaAdmissao;
@@ -16,7 +16,9 @@ type Linha = {
 };
 
 const TOM: Record<EtapaDaAdmissao, "neutro" | "azul" | "bom" | "atencao"> = {
+  DADOS: "azul",
   MEDICO: "atencao",
+  CONSULTA: "atencao",
   ASO: "azul",
   DOCUMENTOS: "azul",
   PACOTE: "atencao",
@@ -37,7 +39,7 @@ export default function AdmissoesLista({ lista, mostrarEmpresa }: { lista: Linha
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-slate-800">{a.nome}</span>
                 <span className="block truncate text-xs text-slate-500">
-                  {a.funcao}
+                  {a.funcao ?? "função a responder"}
                   {mostrarEmpresa ? ` · ${a.empresa.name}` : ""}
                 </span>
               </span>

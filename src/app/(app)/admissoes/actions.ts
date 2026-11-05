@@ -46,18 +46,17 @@ function lerDados(formData: FormData) {
 
   if (cnpj.length !== 14) return { error: "Confira o CNPJ: são 14 números." } as const;
   if (!nome) return { error: "Escreva o nome do funcionário." } as const;
-  if (!cpfValido(cpf)) return { error: "Confira o CPF: os números não batem." } as const;
-  if (!dataNascimento) return { error: "Escolha a data de nascimento." } as const;
-  if (!funcao) return { error: "Escreva a função." } as const;
+  // CPF, nascimento e função podem ficar para o funcionário responder pelo link.
+  if (cpf && !cpfValido(cpf)) return { error: "Confira o CPF: os números não batem." } as const;
 
   return {
     dados: {
       cnpj,
       razaoSocial: texto(formData, "razaoSocial", 200) || null,
       nome,
-      cpf,
+      cpf: cpf || null,
       dataNascimento,
-      funcao,
+      funcao: funcao || null,
       telefone: soNumeros(String(formData.get("telefone") ?? "")).slice(0, 13) || null,
       dataAdmissao: dia(formData, "dataAdmissao"),
       observacoes: texto(formData, "observacoes", 2000) || null,
@@ -94,7 +93,7 @@ export async function criarAdmissao(_: AdmissaoState, formData: FormData): Promi
       .catch(() => null);
   }
 
-  await log(companyId, session.userId, "CRIOU", a.id, `Abriu a admissão de ${lido.dados.nome} (${lido.dados.funcao}).`);
+  await log(companyId, session.userId, "CRIOU", a.id, `Abriu a admissão de ${lido.dados.nome}${lido.dados.funcao ? ` (${lido.dados.funcao})` : ""}.`);
   refresh(companyId);
   redirect(`/admissoes/${a.id}`);
 }
@@ -116,14 +115,15 @@ export async function editarAdmissao(_: AdmissaoState, formData: FormData): Prom
   return { ok: true };
 }
 
-/** Marca que a mensagem saiu: ao médico ou, com o link, ao funcionário. */
-export async function marcarEnvio(id: string, para: "medico" | "funcionario"): Promise<AdmissaoState> {
+/** Marca que a mensagem saiu: o link dos dados, ao médico ou o link dos documentos. */
+export async function marcarEnvio(id: string, para: "dados" | "medico" | "funcionario"): Promise<AdmissaoState> {
   await requireSession();
   const a = await prisma.admissao.findUnique({ where: { id }, select: { companyId: true } });
   if (!a) return { error: "Admissão não encontrada." };
+  const agora = new Date();
   await prisma.admissao.update({
     where: { id },
-    data: para === "medico" ? { enviadoAoMedicoEm: new Date() } : { linkEnviadoEm: new Date() },
+    data: para === "dados" ? { linkDadosEnviadoEm: agora } : para === "medico" ? { enviadoAoMedicoEm: agora } : { linkEnviadoEm: agora },
   });
   refresh(a.companyId, id);
   return { ok: true };
@@ -182,7 +182,7 @@ export async function criarNaEquipe(id: string): Promise<AdmissaoState> {
   if (a.employeeId) return { error: "A ficha na Equipe já foi criada." };
 
   const cargo = await prisma.cargo.findFirst({
-    where: { companyId: a.companyId, nome: { equals: a.funcao, mode: "insensitive" } },
+    where: { companyId: a.companyId, nome: { equals: a.funcao ?? "", mode: "insensitive" } },
     select: { id: true, nome: true },
   });
 
@@ -191,7 +191,7 @@ export async function criarNaEquipe(id: string): Promise<AdmissaoState> {
       companyId: a.companyId,
       name: a.nome,
       document: a.cpf,
-      role: cargo?.nome ?? a.funcao,
+      role: cargo?.nome ?? a.funcao ?? null,
       cargoId: cargo?.id ?? null,
       phone: a.telefone,
       birthDate: a.dataNascimento,
@@ -227,6 +227,25 @@ export async function reabrirLink(id: string): Promise<AdmissaoState> {
   const a = await prisma.admissao.findUnique({ where: { id }, select: { companyId: true } });
   if (!a) return { error: "Admissão não encontrada." };
   await prisma.admissao.update({ where: { id }, data: { pacoteGeradoEm: null, documentosEnviadosEm: null } });
+  refresh(a.companyId, id);
+  return { ok: true };
+}
+
+/** A consulta do exame admissional, marcada com o médico do trabalho. */
+export async function salvarConsulta(_: AdmissaoState, formData: FormData): Promise<AdmissaoState> {
+  const session = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  const a = await prisma.admissao.findUnique({ where: { id }, select: { companyId: true, nome: true } });
+  if (!a) return { error: "Admissão não encontrada." };
+  const exameData = dia(formData, "exameData");
+  const hora = String(formData.get("exameHora") ?? "").trim();
+  if (!exameData) return { error: "Escolha o dia da consulta." };
+  if (hora && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) return { error: "Confira a hora da consulta." };
+  await prisma.admissao.update({
+    where: { id },
+    data: { exameData, exameHora: hora || null, exameLocal: texto(formData, "exameLocal", 200) || null },
+  });
+  await log(a.companyId, session.userId, "EDITOU", id, `Marcou a consulta do exame admissional de ${a.nome}.`);
   refresh(a.companyId, id);
   return { ok: true };
 }

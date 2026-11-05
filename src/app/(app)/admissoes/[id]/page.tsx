@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { paraCampoDeData } from "@/lib/dates";
-import { DOCUMENTOS_ADMISSIONAIS, dataBR, formatarCnpj, formatarCpf } from "@/lib/admissao";
+import { DOCUMENTOS_ADMISSIONAIS, dadosQueFaltam, dataBR, formatarCnpj, formatarCpf } from "@/lib/admissao";
 import { empresasDaAdmissao } from "@/lib/admissao-dados";
 import AdmissaoPassos from "@/components/admissao-passos";
 import AdmissaoDocumentos from "@/components/admissao-documentos";
@@ -44,7 +44,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
         </Link>
         <h1 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">{a.nome}</h1>
         <p className="text-xs text-slate-500">
-          {a.funcao} ·{" "}
+          {a.funcao ?? "Função a responder"} ·{" "}
           <Link href={`/empresas/${a.company.id}/admissoes`} className="hover:text-brand-700">
             {a.company.name}
           </Link>
@@ -59,6 +59,10 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
               token={a.token}
               dados={{ empresa: a.company.name, razaoSocial: a.razaoSocial, cnpj: a.cnpj, nome: a.nome, cpf: a.cpf, dataNascimento: a.dataNascimento, funcao: a.funcao }}
               telefone={a.telefone}
+              faltamDados={dadosQueFaltam(a)}
+              linkDadosEnviadoEm={iso(a.linkDadosEnviadoEm)}
+              dadosPreenchidosEm={iso(a.dadosPreenchidosEm)}
+              consulta={{ data: paraCampoDeData(a.exameData), hora: a.exameHora ?? "", local: a.exameLocal ?? "" }}
               enviadoAoMedicoEm={iso(a.enviadoAoMedicoEm)}
               linkEnviadoEm={iso(a.linkEnviadoEm)}
               documentosEnviadosEm={iso(a.documentosEnviadosEm)}
@@ -88,11 +92,11 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
               <dt className="text-slate-500">CNPJ</dt>
               <dd className="text-slate-800">{formatarCnpj(a.cnpj)}</dd>
               <dt className="text-slate-500">CPF</dt>
-              <dd className="text-slate-800">{formatarCpf(a.cpf)}</dd>
+              <dd className="text-slate-800">{a.cpf ? formatarCpf(a.cpf) : "a responder"}</dd>
               <dt className="text-slate-500">Nascimento</dt>
-              <dd className="text-slate-800">{dataBR(a.dataNascimento)}</dd>
+              <dd className="text-slate-800">{dataBR(a.dataNascimento) || "a responder"}</dd>
               <dt className="text-slate-500">Função</dt>
-              <dd className="text-slate-800">{a.funcao}</dd>
+              <dd className="text-slate-800">{a.funcao ?? "a responder"}</dd>
               {a.dataAdmissao ? (
                 <>
                   <dt className="text-slate-500">Começa em</dt>
@@ -118,9 +122,9 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
                     cnpj: a.cnpj,
                     razaoSocial: a.razaoSocial ?? "",
                     nome: a.nome,
-                    cpf: a.cpf,
+                    cpf: a.cpf ?? "",
                     dataNascimento: paraCampoDeData(a.dataNascimento),
-                    funcao: a.funcao,
+                    funcao: a.funcao ?? "",
                     telefone: a.telefone ?? "",
                     dataAdmissao: paraCampoDeData(a.dataAdmissao),
                     observacoes: a.observacoes ?? "",

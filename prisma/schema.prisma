@@ -1926,9 +1926,11 @@ model Admissao {
   cnpj           String
   razaoSocial    String?
   nome           String
-  cpf            String
-  dataNascimento DateTime
-  funcao         String
+  /// CPF, nascimento e função: o RH preenche ou o funcionário responde pelo
+  /// link dos dados. Vazios até alguém preencher.
+  cpf            String?
+  dataNascimento DateTime?
+  funcao         String?
   /// WhatsApp do funcionário, para mandar o link.
   telefone       String?
   /// Dia previsto para começar, se já se sabe.
@@ -1938,7 +1940,19 @@ model Admissao {
   /// O link que o funcionário abre para mandar os documentos.
   token String @unique
 
-  enviadoAoMedicoEm      DateTime?
+  /// O link dos dados (CPF, nascimento, função) e quando o funcionário respondeu.
+  linkDadosEnviadoEm DateTime?
+  dadosPreenchidosEm DateTime?
+
+  enviadoAoMedicoEm DateTime?
+
+  /// A consulta do exame admissional, marcada com o médico do trabalho.
+  /// Dia em UTC 00:00 e a hora como texto, como na agenda.
+  exameData  DateTime?
+  exameHora  String?
+  exameLocal String?
+
+  /// O link dos documentos.
   linkEnviadoEm          DateTime?
   /// Quando o funcionário tocou em "Terminei".
   documentosEnviadosEm   DateTime?

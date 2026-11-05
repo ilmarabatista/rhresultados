@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AvisoAoCandidato, PaginaDoCandidato } from "@/components/public-candidate-page";
 import AdmissaoDocumentos from "@/components/admissao-documentos";
 import AdmissaoTerminar from "@/components/admissao-terminar";
-import { DOCUMENTOS_ADMISSIONAIS } from "@/lib/admissao";
+import { DOCUMENTOS_ADMISSIONAIS, textoDaConsulta } from "@/lib/admissao";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -20,6 +20,9 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
       nome: true,
       pacoteGeradoEm: true,
       documentosEnviadosEm: true,
+      exameData: true,
+      exameHora: true,
+      exameLocal: true,
       company: { select: { name: true } },
       documentos: { orderBy: { criadoEm: "asc" }, select: { id: true, tipo: true, nome: true, mime: true, enviadoPor: true } },
     },
@@ -32,6 +35,7 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
     return <AvisoAoCandidato titulo="Documentos recebidos" texto="O RH já recebeu os seus documentos e mandou para a contabilidade. Obrigado!" />;
   }
 
+  const consulta = textoDaConsulta({ data: a.exameData, hora: a.exameHora, local: a.exameLocal });
   const tipos = new Set(a.documentos.map((d) => d.tipo));
   const faltando = DOCUMENTOS_ADMISSIONAIS.filter((d) => d.obrigatorio && !tipos.has(d.chave)).map((d) => d.nome);
 
@@ -47,6 +51,13 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
         "Pode mandar aos poucos: o que você mandou fica guardado. Quando terminar, toque em Terminei.",
       ]}
     >
+      {consulta ? (
+        <section className="mb-4 rounded-lg border border-brand-200 bg-brand-50 p-4">
+          <p className="text-micro font-semibold uppercase tracking-wider text-brand-700">Seu exame admissional</p>
+          <p className="mt-1 text-sm font-medium text-slate-800">{consulta.charAt(0).toUpperCase() + consulta.slice(1)}.</p>
+          <p className="mt-1 text-xs text-slate-600">Leve um documento com foto. Depois do exame, mande aqui a foto do atestado (ASO).</p>
+        </section>
+      ) : null}
       <AdmissaoDocumentos
         modo={{ quem: "funcionario", token, aberto: true }}
         arquivos={a.documentos.map((d) => ({ id: d.id, tipo: d.tipo, nome: d.nome, mime: d.mime, doFuncionario: d.enviadoPor === "FUNCIONARIO" }))}

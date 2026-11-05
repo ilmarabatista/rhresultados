@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { guardarArquivo } from "@/lib/admissao-arquivo";
+import { cpfValido, soNumeros } from "@/lib/admissao";
+import { diaValido } from "@/lib/agenda";
+import { dayKeyToDate } from "@/lib/dates";
+import { textoSeguro } from "@/lib/texto-seguro";
 
 /**
  * Os documentos da admissão mandados pelo link. Não há sessão: o token é a
@@ -51,5 +55,30 @@ export async function terminarEnvio(token: string): Promise<DocumentoPublicoStat
   if (!a) return { error: "Este link não recebe mais documentos. Fale com o RH." };
   await prisma.admissao.update({ where: { id: a.id }, data: { documentosEnviadosEm: new Date() } });
   refresh(a.id, token);
+  return { ok: true };
+}
+
+/** O funcionário responde CPF, nascimento e função pelo link dos dados. */
+export async function responderDados(_: DocumentoPublicoState, formData: FormData): Promise<DocumentoPublicoState> {
+  const token = String(formData.get("token") ?? "");
+  const a = await abrir(token);
+  if (!a) return { error: "Este link não recebe mais respostas. Fale com o RH." };
+
+  const cpf = soNumeros(String(formData.get("cpf") ?? ""));
+  const nascimento = String(formData.get("dataNascimento") ?? "").trim();
+  const funcao = textoSeguro(String(formData.get("funcao") ?? "").trim()).slice(0, 120);
+  if (!cpfValido(cpf)) return { error: "Confira o CPF: os números não batem." };
+  if (!diaValido(nascimento)) return { error: "Escolha a sua data de nascimento." };
+  const dataNascimento = dayKeyToDate(nascimento);
+  const ano = dataNascimento.getUTCFullYear();
+  if (ano < 1930 || ano > new Date().getFullYear() - 14) return { error: "Confira o ano de nascimento." };
+  if (!funcao) return { error: "Escreva a sua função." };
+
+  await prisma.admissao.update({
+    where: { id: a.id },
+    data: { cpf, dataNascimento, funcao, dadosPreenchidosEm: new Date() },
+  });
+  refresh(a.id, token);
+  revalidatePath(`/admissao/${token}/dados`);
   return { ok: true };
 }
