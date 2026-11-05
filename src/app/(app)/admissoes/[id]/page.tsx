@@ -21,14 +21,15 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
   const a = await prisma.admissao.findUnique({
     where: { id },
     include: {
-      company: { select: { id: true, name: true, legalName: true } },
+      company: { select: { id: true, name: true } },
+      branch: { select: { name: true } },
       documentos: { orderBy: { criadoEm: "asc" }, select: { id: true, tipo: true, nome: true, mime: true, enviadoPor: true } },
     },
   });
   if (!a) notFound();
   const empresas = await empresasDaAdmissao();
   if (!empresas.some((e) => e.id === a.companyId)) {
-    empresas.push({ id: a.company.id, nome: a.company.name, cnpj: a.cnpj, cargos: [] });
+    empresas.push({ id: a.company.id, nome: a.company.name, cnpj: a.cnpj, razaoSocial: a.razaoSocial, unidades: [], cargos: [] });
   }
 
   const tipos = new Set(a.documentos.map((d) => d.tipo));
@@ -56,7 +57,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
             <AdmissaoPassos
               id={a.id}
               token={a.token}
-              dados={{ empresa: a.company.name, razaoSocial: a.company.legalName, cnpj: a.cnpj, nome: a.nome, cpf: a.cpf, dataNascimento: a.dataNascimento, funcao: a.funcao }}
+              dados={{ empresa: a.company.name, razaoSocial: a.razaoSocial, cnpj: a.cnpj, nome: a.nome, cpf: a.cpf, dataNascimento: a.dataNascimento, funcao: a.funcao }}
               telefone={a.telefone}
               enviadoAoMedicoEm={iso(a.enviadoAoMedicoEm)}
               linkEnviadoEm={iso(a.linkEnviadoEm)}
@@ -72,6 +73,18 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
 
           <Painel titulo="Dados iniciais">
             <dl className="grid grid-cols-[8rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+              {a.branch ? (
+                <>
+                  <dt className="text-slate-500">Unidade</dt>
+                  <dd className="text-slate-800">{a.branch.name}</dd>
+                </>
+              ) : null}
+              {a.razaoSocial ? (
+                <>
+                  <dt className="text-slate-500">Razão social</dt>
+                  <dd className="text-slate-800">{a.razaoSocial}</dd>
+                </>
+              ) : null}
               <dt className="text-slate-500">CNPJ</dt>
               <dd className="text-slate-800">{formatarCnpj(a.cnpj)}</dd>
               <dt className="text-slate-500">CPF</dt>
@@ -101,7 +114,9 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
                   valores={{
                     id: a.id,
                     companyId: a.companyId,
+                    branchId: a.branchId ?? "",
                     cnpj: a.cnpj,
+                    razaoSocial: a.razaoSocial ?? "",
                     nome: a.nome,
                     cpf: a.cpf,
                     dataNascimento: paraCampoDeData(a.dataNascimento),

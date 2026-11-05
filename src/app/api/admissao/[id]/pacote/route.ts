@@ -17,6 +17,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     select: {
       nome: true,
       cnpj: true,
+      razaoSocial: true,
+      branch: { select: { name: true } },
       cpf: true,
       dataNascimento: true,
       funcao: true,

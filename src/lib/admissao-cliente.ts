@@ -51,6 +51,8 @@ export async function prepararArquivo(arquivo: File): Promise<File> {
 type DadosDoPacote = {
   nome: string;
   cnpj: string;
+  razaoSocial: string | null;
+  branch: { name: string } | null;
   cpf: string;
   dataNascimento: string;
   funcao: string;
@@ -103,11 +105,13 @@ async function pdfDosDados(d: DadosDoPacote, incluidos: string[]): Promise<Uint8
   y -= 26;
   page.drawText(latin("Admissão de funcionário"), { x: MARGEM, y, size: 18, font: negrito, color: rgb(0.1, 0.1, 0.12) });
   y -= 18;
-  page.drawText(latin(d.company.legalName || d.company.name), { x: MARGEM, y, size: 10, font: normal, color: cinza });
+  const razao = d.razaoSocial || d.company.legalName || d.company.name;
+  page.drawText(latin(razao), { x: MARGEM, y, size: 10, font: normal, color: cinza });
   y -= 28;
 
   const campos: [string, string][] = [
-    ["Empresa", d.company.legalName || d.company.name],
+    ["Empresa", razao],
+    ...(d.branch ? ([["Unidade", d.branch.name]] as [string, string][]) : []),
     ["CNPJ", formatarCnpj(d.cnpj)],
     ["Nome do funcionário", d.nome],
     ["CPF", formatarCpf(d.cpf)],

@@ -162,6 +162,8 @@ export default async function InformacoesPage({
           zipCode: b.zipCode,
           employeeCount: b.employeeCount,
           phone: b.phone,
+          cnpj: b.cnpj,
+          legalName: b.legalName,
         }))}
       />
 

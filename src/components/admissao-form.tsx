@@ -11,12 +11,23 @@ import { formatarCnpj, formatarCpf } from "@/lib/admissao";
  * funcionário e o dia em que ele começa.
  */
 
-export type EmpresaDaAdmissao = { id: string; nome: string; cnpj: string | null; cargos: string[] };
+export type UnidadeDaAdmissao = { id: string; nome: string; cnpj: string | null; razaoSocial: string | null };
+
+export type EmpresaDaAdmissao = {
+  id: string;
+  nome: string;
+  cnpj: string | null;
+  razaoSocial: string | null;
+  unidades: UnidadeDaAdmissao[];
+  cargos: string[];
+};
 
 export type ValoresDaAdmissao = {
   id: string;
   companyId: string;
+  branchId: string;
   cnpj: string;
+  razaoSocial: string;
   nome: string;
   cpf: string;
   dataNascimento: string;
@@ -46,18 +57,37 @@ export default function AdmissaoForm({
 
   const [empresaId, setEmpresaId] = useState(valores?.companyId ?? empresaInicial ?? "");
   const empresa = empresas.find((e) => e.id === empresaId);
+  const [unidadeId, setUnidadeId] = useState(valores?.branchId ?? "");
   const [cnpj, setCnpj] = useState(valores ? formatarCnpj(valores.cnpj) : empresa?.cnpj ? formatarCnpj(empresa.cnpj) : "");
+  const [razao, setRazao] = useState(valores?.razaoSocial ?? empresa?.razaoSocial ?? "");
+
+  /** O CNPJ e a razão social vêm da unidade quando ela tem os dela; senão, da empresa. */
+  function preencher(e: EmpresaDaAdmissao | undefined, uId: string) {
+    const u = e?.unidades.find((x) => x.id === uId);
+    const doc = u?.cnpj || e?.cnpj || "";
+    setCnpj(doc ? formatarCnpj(doc) : "");
+    setRazao((u?.cnpj ? u.razaoSocial : null) || e?.razaoSocial || "");
+  }
 
   function trocarEmpresa(id: string) {
     setEmpresaId(id);
-    const e = empresas.find((x) => x.id === id);
-    setCnpj(e?.cnpj ? formatarCnpj(e.cnpj) : "");
+    setUnidadeId("");
+    preencher(empresas.find((x) => x.id === id), "");
   }
+
+  function trocarUnidade(id: string) {
+    setUnidadeId(id);
+    preencher(empresa, id);
+  }
+
+  const unidadeEscolhida = empresa?.unidades.find((u) => u.id === unidadeId);
+  const semCnpj = !editando && empresa && !(unidadeEscolhida ? unidadeEscolhida.cnpj || empresa.cnpj : empresa.cnpj);
 
   return (
     <form action={action} className="space-y-3">
       {valores ? <input type="hidden" name="id" value={valores.id} /> : null}
       <input type="hidden" name="companyId" value={empresaId} />
+      <input type="hidden" name="branchId" value={unidadeId} />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Empresa">
@@ -70,8 +100,29 @@ export default function AdmissaoForm({
             ))}
           </Select>
         </Field>
-        <Field label="CNPJ da empresa" hint={empresa && !empresa.cnpj && !editando ? "A empresa está sem CNPJ no cadastro: o que você digitar aqui fica salvo nela." : undefined}>
+        {empresa && empresa.unidades.length > 0 ? (
+          <Field label="Unidade" hint="Cada unidade com CNPJ próprio traz o dela.">
+            <Select value={unidadeId} onChange={(e) => trocarUnidade(e.target.value)}>
+              <option value="">Sem unidade (CNPJ da empresa)</option>
+              {empresa.unidades.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nome}
+                  {u.cnpj ? "" : " (sem CNPJ próprio)"}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : (
+          <div className="hidden sm:block" />
+        )}
+        <Field
+          label="CNPJ"
+          hint={semCnpj ? `Sem CNPJ no cadastro: o que você digitar aqui fica salvo ${unidadeEscolhida ? "na unidade" : "na empresa"}.` : undefined}
+        >
           <Input name="cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} inputMode="numeric" placeholder="00.000.000/0000-00" required />
+        </Field>
+        <Field label="Razão social">
+          <Input name="razaoSocial" value={razao} onChange={(e) => setRazao(e.target.value)} maxLength={200} autoComplete="off" />
         </Field>
         <Field label="Nome do funcionário" className="sm:col-span-2">
           <Input name="nome" defaultValue={valores?.nome} required maxLength={150} autoComplete="off" />

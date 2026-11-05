@@ -146,7 +146,12 @@ model Branch {
   employeeCount Int?
   phone         String?
 
+  /// Unidade com CNPJ próprio (a Oral-C tem um por cidade). Vazio, vale o da empresa.
+  cnpj      String?
+  legalName String?
+
   employees Employee[]
+  admissoes Admissao[]
 
   createdAt        DateTime          @default(now())
   encontrosDePlano EncontroDoPlano[]
@@ -1909,12 +1914,17 @@ model Admissao {
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
+  /// A unidade da contratação: o CNPJ e a razão social vêm dela quando ela tem.
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
   /// A ficha da Equipe criada a partir daqui, quando o RH cria.
   employeeId String?
   employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
 
   /// Copiado da empresa na criação; fica aqui porque é o que foi ao médico.
   cnpj           String
+  razaoSocial    String?
   nome           String
   cpf            String
   dataNascimento DateTime

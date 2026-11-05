@@ -53,6 +53,7 @@ function lerDados(formData: FormData) {
   return {
     dados: {
       cnpj,
+      razaoSocial: texto(formData, "razaoSocial", 200) || null,
       nome,
       cpf,
       dataNascimento,
@@ -67,20 +68,30 @@ function lerDados(formData: FormData) {
 export async function criarAdmissao(_: AdmissaoState, formData: FormData): Promise<AdmissaoState> {
   const session = await requireSession();
   const companyId = String(formData.get("companyId") ?? "");
-  const empresa = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true, cnpj: true } });
+  const empresa = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true, cnpj: true, legalName: true } });
   if (!empresa) return { error: "Escolha a empresa." };
+  const branchId = String(formData.get("branchId") ?? "");
+  const unidade = branchId
+    ? await prisma.branch.findFirst({ where: { id: branchId, companyId }, select: { id: true, cnpj: true, legalName: true } })
+    : null;
 
   const lido = lerDados(formData);
   if ("error" in lido) return { error: lido.error };
 
   const a = await prisma.admissao.create({
-    data: { ...lido.dados, companyId, token: randomBytes(18).toString("base64url"), criadoPor: session.name },
+    data: { ...lido.dados, companyId, branchId: unidade?.id ?? null, token: randomBytes(18).toString("base64url"), criadoPor: session.name },
     select: { id: true },
   });
 
-  // A empresa sem CNPJ no cadastro fica com o que foi digitado aqui.
-  if (!empresa.cnpj) {
-    await prisma.company.update({ where: { id: companyId }, data: { cnpj: lido.dados.cnpj } }).catch(() => null);
+  // Unidade ou empresa sem CNPJ no cadastro fica com o que foi digitado aqui.
+  if (unidade && !unidade.cnpj && lido.dados.cnpj !== empresa.cnpj) {
+    await prisma.branch
+      .update({ where: { id: unidade.id }, data: { cnpj: lido.dados.cnpj, legalName: unidade.legalName ?? lido.dados.razaoSocial } })
+      .catch(() => null);
+  } else if (!unidade && !empresa.cnpj) {
+    await prisma.company
+      .update({ where: { id: companyId }, data: { cnpj: lido.dados.cnpj, legalName: empresa.legalName ?? lido.dados.razaoSocial } })
+      .catch(() => null);
   }
 
   await log(companyId, session.userId, "CRIOU", a.id, `Abriu a admissão de ${lido.dados.nome} (${lido.dados.funcao}).`);
@@ -97,7 +108,9 @@ export async function editarAdmissao(_: AdmissaoState, formData: FormData): Prom
   const lido = lerDados(formData);
   if ("error" in lido) return { error: lido.error };
 
-  await prisma.admissao.update({ where: { id }, data: lido.dados });
+  const branchId = String(formData.get("branchId") ?? "");
+  const unidade = branchId ? await prisma.branch.findFirst({ where: { id: branchId, companyId: a.companyId }, select: { id: true } }) : null;
+  await prisma.admissao.update({ where: { id }, data: { ...lido.dados, branchId: unidade?.id ?? null } });
   await log(a.companyId, session.userId, "EDITOU", id, `Editou os dados da admissão de ${lido.dados.nome}.`);
   refresh(a.companyId, id);
   return { ok: true };

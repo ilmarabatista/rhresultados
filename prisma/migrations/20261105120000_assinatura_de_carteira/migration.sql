@@ -1,12 +1,17 @@
 -- Assinatura de carteira: a admissão e os documentos que o funcionário manda pelo link.
--- Só cria tabelas novas; não mexe em nenhuma existente.
+-- Cria duas tabelas novas. Na tabela de unidades (Branch) só acrescenta duas
+-- colunas vazias, CNPJ e razão social, porque a Oral-C tem um CNPJ por cidade.
+
+ALTER TABLE "Branch" ADD COLUMN "cnpj" TEXT, ADD COLUMN "legalName" TEXT;
 
 -- CreateTable
 CREATE TABLE "Admissao" (
     "id" TEXT NOT NULL,
     "companyId" TEXT NOT NULL,
+    "branchId" TEXT,
     "employeeId" TEXT,
     "cnpj" TEXT NOT NULL,
+    "razaoSocial" TEXT,
     "nome" TEXT NOT NULL,
     "cpf" TEXT NOT NULL,
     "dataNascimento" TIMESTAMP(3) NOT NULL,
@@ -52,6 +57,9 @@ CREATE INDEX "DocumentoDaAdmissao_admissaoId_tipo_idx" ON "DocumentoDaAdmissao"(
 
 -- AddForeignKey
 ALTER TABLE "Admissao" ADD CONSTRAINT "Admissao_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Admissao" ADD CONSTRAINT "Admissao_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Admissao" ADD CONSTRAINT "Admissao_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE;
