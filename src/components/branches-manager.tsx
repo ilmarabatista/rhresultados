@@ -23,6 +23,8 @@ export type UnidadeItem = {
   zipCode: string | null;
   employeeCount: number | null;
   phone: string | null;
+  cnpj: string | null;
+  legalName: string | null;
 };
 
 function enderecoDe(u: UnidadeItem) {
@@ -99,6 +101,12 @@ function FormularioUnidade({
             </Field>
             <Field label="Telefone" className="sm:col-span-2">
               <Input name="phone" defaultValue={unidade?.phone ?? ""} />
+            </Field>
+            <Field label="CNPJ da unidade" className="sm:col-span-2">
+              <Input name="cnpj" defaultValue={unidade?.cnpj ?? ""} inputMode="numeric" placeholder="Se for diferente da empresa" />
+            </Field>
+            <Field label="Razão social da unidade" className="sm:col-span-4">
+              <Input name="legalName" defaultValue={unidade?.legalName ?? ""} />
             </Field>
             <Field label="CEP" className="sm:col-span-2">
               <Input name="zipCode" defaultValue={unidade?.zipCode ?? ""} />
@@ -250,6 +258,12 @@ function CardUnidade({
       <p className="mt-1 text-xs leading-relaxed text-slate-500">
         {enderecoDe(unidade)}
       </p>
+      {unidade.cnpj ? (
+        <p className="mt-1 text-micro text-slate-500">
+          CNPJ {unidade.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}
+          {unidade.legalName ? ` · ${unidade.legalName}` : ""}
+        </p>
+      ) : null}
       {unidade.employeeCount || unidade.phone ? (
         <p className="mt-1 text-micro text-slate-500">
           {[

@@ -126,6 +126,7 @@ model Company {
   regrasDaEscala         RegrasDaEscala?
   turnosDaEscala         TurnoDaEscala[]
   diasDaEscala           DiaDaEscala[]
+  admissoes              Admissao[]
 
   @@index([name])
 }
@@ -148,7 +149,12 @@ model Branch {
   employeeCount Int?
   phone         String?
 
+  /// Unidade com CNPJ próprio (a Oral-C tem um por cidade). Vazio, vale o da empresa.
+  cnpj      String?
+  legalName String?
+
   employees Employee[]
+  admissoes Admissao[]
 
   createdAt        DateTime          @default(now())
   encontrosDePlano EncontroDoPlano[]
@@ -439,6 +445,7 @@ model Employee {
   mapeamentos MapeamentoDeRotina[]
   exams       HealthExam[]
   escala      DiaDaEscala[]
+  admissoes   Admissao[]
 
   @@index([companyId, name])
   @@index([branchId])
@@ -1964,4 +1971,96 @@ model DiaDaEscala {
 
   @@unique([employeeId, data])
   @@index([companyId, data])
+}
+
+// ------------------------------------------------- Assinatura de carteira
+
+/// A admissão de um funcionário, do pedido do exame à pasta da contabilidade.
+///
+/// O RH preenche os dados iniciais (os que o médico do trabalho pede), manda
+/// ao médico pelo WhatsApp, e o funcionário, pelo link, envia a foto do
+/// atestado admissional (ASO) e os outros documentos. No fim sai um pacote
+/// para a contabilidade: um PDF com os dados e um PDF por documento.
+model Admissao {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// A unidade da contratação: o CNPJ e a razão social vêm dela quando ela tem.
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  /// A ficha da Equipe criada a partir daqui, quando o RH cria.
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  /// Copiado da empresa na criação; fica aqui porque é o que foi ao médico.
+  cnpj           String
+  razaoSocial    String?
+  nome           String
+  /// CPF, nascimento e função: o RH preenche ou o funcionário responde pelo
+  /// link dos dados. Vazios até alguém preencher.
+  cpf            String?
+  dataNascimento DateTime?
+  funcao         String?
+  /// WhatsApp do funcionário, para mandar o link.
+  telefone       String?
+  /// Dia previsto para começar, se já se sabe.
+  dataAdmissao   DateTime?
+  observacoes    String?   @db.Text
+
+  /// O link que o funcionário abre para mandar os documentos.
+  token String @unique
+
+  /// O link dos dados (CPF, nascimento, função) e quando o funcionário respondeu.
+  linkDadosEnviadoEm DateTime?
+  dadosPreenchidosEm DateTime?
+
+  enviadoAoMedicoEm DateTime?
+
+  /// A consulta do exame admissional, marcada com o médico do trabalho.
+  /// Dia em UTC 00:00 e a hora como texto, como na agenda.
+  exameData  DateTime?
+  exameHora  String?
+  exameLocal String?
+
+  /// Documentos marcados "Não se aplica" (filhos, reservista...), pelas chaves.
+  naoSeAplica String[] @default([])
+
+  /// O link dos documentos.
+  linkEnviadoEm          DateTime?
+  /// Quando o funcionário tocou em "Terminei".
+  documentosEnviadosEm   DateTime?
+  /// Quando o RH baixou o pacote para a contabilidade (o último).
+  pacoteGeradoEm       DateTime?
+
+  criadoPor String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documentos DocumentoDaAdmissao[]
+
+  @@index([companyId, createdAt])
+}
+
+/// Um arquivo da admissão: foto (JPEG/PNG) ou PDF. Um documento pode ter
+/// vários arquivos (frente e verso), que viram um PDF só no pacote.
+model DocumentoDaAdmissao {
+  id         String   @id @default(cuid())
+  admissaoId String
+  admissao   Admissao @relation(fields: [admissaoId], references: [id], onDelete: Cascade)
+
+  /// A chave do documento na lista de src/lib/admissao.ts (ASO, RG, ...).
+  tipo       String
+  nome       String
+  /// image/jpeg, image/png ou application/pdf, conferido pelos bytes.
+  mime       String
+  tamanho    Int
+  dados      Bytes
+  /// FUNCIONARIO (pelo link) ou o nome de quem anexou no RH.
+  enviadoPor String
+
+  criadoEm DateTime @default(now())
+
+  @@index([admissaoId, tipo])
 }
