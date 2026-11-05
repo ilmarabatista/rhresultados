@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { paraCampoDeData } from "@/lib/dates";
-import { DOCUMENTOS_ADMISSIONAIS, dadosQueFaltam, dataBR, formatarCnpj, formatarCpf } from "@/lib/admissao";
+import { DOCUMENTOS_ADMISSIONAIS, dadosQueFaltam, dataBR, documentosQueFaltam, formatarCnpj, formatarCpf } from "@/lib/admissao";
 import { empresasDaAdmissao } from "@/lib/admissao-dados";
 import AdmissaoPassos from "@/components/admissao-passos";
 import AdmissaoDocumentos from "@/components/admissao-documentos";
@@ -33,7 +33,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
   }
 
   const tipos = new Set(a.documentos.map((d) => d.tipo));
-  const faltando = DOCUMENTOS_ADMISSIONAIS.filter((d) => d.obrigatorio && !tipos.has(d.chave)).map((d) => d.nome);
+  const faltando = documentosQueFaltam([...tipos], a.naoSeAplica).map((d) => d.nome);
   const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
   return (
@@ -138,6 +138,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ id: s
         <Painel titulo="Documentos" descricao="O que o funcionário mandou pelo link. Você também pode anexar daqui.">
           <AdmissaoDocumentos
             modo={{ quem: "rh", admissaoId: a.id }}
+            naoSeAplica={a.naoSeAplica}
             arquivos={a.documentos.map((d) => ({ id: d.id, tipo: d.tipo, nome: d.nome, mime: d.mime, doFuncionario: d.enviadoPor === "FUNCIONARIO" }))}
           />
         </Painel>

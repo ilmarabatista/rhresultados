@@ -1952,6 +1952,9 @@ model Admissao {
   exameHora  String?
   exameLocal String?
 
+  /// Documentos marcados "Não se aplica" (filhos, reservista...), pelas chaves.
+  naoSeAplica String[] @default([])
+
   /// O link dos documentos.
   linkEnviadoEm          DateTime?
   /// Quando o funcionário tocou em "Terminei".

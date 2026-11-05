@@ -26,6 +26,7 @@ CREATE TABLE "Admissao" (
     "exameData" TIMESTAMP(3),
     "exameHora" TEXT,
     "exameLocal" TEXT,
+    "naoSeAplica" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "linkEnviadoEm" TIMESTAMP(3),
     "documentosEnviadosEm" TIMESTAMP(3),
     "pacoteGeradoEm" TIMESTAMP(3),

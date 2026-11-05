@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AvisoAoCandidato, PaginaDoCandidato } from "@/components/public-candidate-page";
 import AdmissaoDocumentos from "@/components/admissao-documentos";
 import AdmissaoTerminar from "@/components/admissao-terminar";
-import { DOCUMENTOS_ADMISSIONAIS, textoDaConsulta } from "@/lib/admissao";
+import { documentosQueFaltam, textoDaConsulta } from "@/lib/admissao";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -23,6 +23,7 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
       exameData: true,
       exameHora: true,
       exameLocal: true,
+      naoSeAplica: true,
       company: { select: { name: true } },
       documentos: { orderBy: { criadoEm: "asc" }, select: { id: true, tipo: true, nome: true, mime: true, enviadoPor: true } },
     },
@@ -37,7 +38,7 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
 
   const consulta = textoDaConsulta({ data: a.exameData, hora: a.exameHora, local: a.exameLocal });
   const tipos = new Set(a.documentos.map((d) => d.tipo));
-  const faltando = DOCUMENTOS_ADMISSIONAIS.filter((d) => d.obrigatorio && !tipos.has(d.chave)).map((d) => d.nome);
+  const faltando = documentosQueFaltam([...tipos], a.naoSeAplica).map((d) => d.nome);
 
   return (
     <PaginaDoCandidato
@@ -47,6 +48,7 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
       instrucoes={[
         "Depois do exame admissional, tire a foto do atestado (ASO) que o médico entregou e mande no primeiro item.",
         "Para cada documento, toque em Tirar foto. Se o documento tem frente e verso, mande as duas fotos no mesmo item.",
+        "Se um documento não é para você (por exemplo, não tem filhos ou não precisa de reservista), toque em Não se aplica.",
         "Fotografe em lugar claro, com o documento inteiro aparecendo e sem reflexo.",
         "Pode mandar aos poucos: o que você mandou fica guardado. Quando terminar, toque em Terminei.",
       ]}
@@ -60,6 +62,7 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
       ) : null}
       <AdmissaoDocumentos
         modo={{ quem: "funcionario", token, aberto: true }}
+        naoSeAplica={a.naoSeAplica}
         arquivos={a.documentos.map((d) => ({ id: d.id, tipo: d.tipo, nome: d.nome, mime: d.mime, doFuncionario: d.enviadoPor === "FUNCIONARIO" }))}
       />
       <AdmissaoTerminar token={token} faltando={faltando} terminado={!!a.documentosEnviadosEm} />

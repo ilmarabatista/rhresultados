@@ -29,6 +29,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       exameData: true,
       exameHora: true,
       exameLocal: true,
+      naoSeAplica: true,
       company: { select: { name: true, legalName: true } },
       documentos: { orderBy: { criadoEm: "asc" }, select: { id: true, tipo: true, mime: true, nome: true } },
     },

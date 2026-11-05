@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ROTULO_DA_ETAPA, DOCUMENTOS_ADMISSIONAIS, type EtapaDaAdmissao } from "@/lib/admissao";
+import { ROTULO_DA_ETAPA, type EtapaDaAdmissao } from "@/lib/admissao";
 import { formatFullDate } from "@/lib/dates";
 import { Etiqueta, Tabela, Vazio } from "@/components/ui";
 
@@ -12,7 +12,7 @@ type Linha = {
   empresa: { id: string; name: string };
   createdAt: Date;
   etapa: EtapaDaAdmissao;
-  recebidos: number;
+  documentos: { prontos: number; total: number };
 };
 
 const TOM: Record<EtapaDaAdmissao, "neutro" | "azul" | "bom" | "atencao"> = {
@@ -44,7 +44,7 @@ export default function AdmissoesLista({ lista, mostrarEmpresa }: { lista: Linha
                 </span>
               </span>
               <span className="text-xs tabular-nums text-slate-500">
-                {a.recebidos}/{DOCUMENTOS_ADMISSIONAIS.length} documentos
+                {a.documentos.prontos}/{a.documentos.total} documentos
               </span>
               <Etiqueta tom={TOM[a.etapa]}>{ROTULO_DA_ETAPA[a.etapa]}</Etiqueta>
               <span className="w-24 text-right text-xs text-slate-500">{formatFullDate(a.createdAt)}</span>

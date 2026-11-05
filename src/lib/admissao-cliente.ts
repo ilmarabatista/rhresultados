@@ -59,6 +59,7 @@ type DadosDoPacote = {
   exameData: string | null;
   exameHora: string | null;
   exameLocal: string | null;
+  naoSeAplica: string[];
   telefone: string | null;
   dataAdmissao: string | null;
   observacoes: string | null;
@@ -150,6 +151,17 @@ async function pdfDosDados(d: DadosDoPacote, incluidos: string[]): Promise<Uint8
     page.drawText(latin(nome), { x: MARGEM, y, size: 10, font: normal });
     y -= 15;
   });
+
+  const naoSeAplicam = DOCUMENTOS_ADMISSIONAIS.filter((x) => d.naoSeAplica.includes(x.chave) && !d.documentos.some((a) => a.tipo === x.chave));
+  if (naoSeAplicam.length > 0) {
+    y -= 12;
+    page.drawText(latin("Não se aplicam a este funcionário"), { x: MARGEM, y, size: 11, font: negrito, color: azul });
+    y -= 18;
+    for (const l of linhas(latin(naoSeAplicam.map((x) => x.nome).join(", ")), normal, 10, A4[0] - 2 * MARGEM)) {
+      page.drawText(l, { x: MARGEM, y, size: 10, font: normal });
+      y -= 14;
+    }
+  }
 
   return pdf.save();
 }

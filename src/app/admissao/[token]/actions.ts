@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { guardarArquivo } from "@/lib/admissao-arquivo";
-import { cpfValido, soNumeros } from "@/lib/admissao";
+import { cpfValido, documentoDaChave, soNumeros } from "@/lib/admissao";
 import { diaValido } from "@/lib/agenda";
 import { dayKeyToDate } from "@/lib/dates";
 import { textoSeguro } from "@/lib/texto-seguro";
@@ -18,7 +18,7 @@ export type DocumentoPublicoState = { error?: string; ok?: boolean };
 
 async function abrir(token: string) {
   if (!token) return null;
-  const a = await prisma.admissao.findUnique({ where: { token }, select: { id: true, pacoteGeradoEm: true } });
+  const a = await prisma.admissao.findUnique({ where: { token }, select: { id: true, pacoteGeradoEm: true, naoSeAplica: true } });
   if (!a || a.pacoteGeradoEm) return null;
   return a;
 }
@@ -80,5 +80,17 @@ export async function responderDados(_: DocumentoPublicoState, formData: FormDat
   });
   refresh(a.id, token);
   revalidatePath(`/admissao/${token}/dados`);
+  return { ok: true };
+}
+
+/** O funcionário marca (ou desmarca) "Não se aplica": não tem filhos, não é reservista... */
+export async function marcarNaoSeAplica(token: string, chave: string, marcar: boolean): Promise<DocumentoPublicoState> {
+  const a = await abrir(token);
+  if (!a) return { error: "Este link não recebe mais documentos. Fale com o RH." };
+  const doc = documentoDaChave(chave);
+  if (!doc || doc.obrigatorio) return { error: "Este documento é obrigatório." };
+  const lista = a.naoSeAplica.filter((c) => c !== chave);
+  await prisma.admissao.update({ where: { id: a.id }, data: { naoSeAplica: marcar ? [...lista, chave] : lista } });
+  refresh(a.id, token);
   return { ok: true };
 }

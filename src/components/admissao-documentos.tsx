@@ -2,11 +2,11 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, FileText, Trash2, Upload } from "lucide-react";
+import { Ban, Camera, Check, FileText, Trash2, Upload } from "lucide-react";
 import { DOCUMENTOS_ADMISSIONAIS, type DocumentoAdmissional } from "@/lib/admissao";
 import { prepararArquivo } from "@/lib/admissao-cliente";
-import { anexarArquivo, excluirArquivo } from "@/app/(app)/admissoes/actions";
-import { enviarDocumento, removerDocumento } from "@/app/admissao/[token]/actions";
+import { anexarArquivo, excluirArquivo, marcarNaoSeAplicaRH } from "@/app/(app)/admissoes/actions";
+import { enviarDocumento, marcarNaoSeAplica, removerDocumento } from "@/app/admissao/[token]/actions";
 import { avisar, confirmar } from "@/components/avisos";
 
 /**
@@ -22,13 +22,39 @@ function urlDoArquivo(id: string, modo: Modo) {
   return `/api/admissao/arquivo/${id}${modo.quem === "funcionario" ? `?t=${encodeURIComponent(modo.token)}` : ""}`;
 }
 
-function Documento({ doc, arquivos, modo }: { doc: DocumentoAdmissional; arquivos: ArquivoNaTela[]; modo: Modo }) {
+const SITUACAO = {
+  ENVIADO: { rotulo: "Enviado", cor: "bg-emerald-50 text-emerald-700", borda: "border-emerald-200" },
+  NAO_SE_APLICA: { rotulo: "Não se aplica", cor: "bg-slate-100 text-slate-600", borda: "border-slate-200 bg-slate-50" },
+  FALTA: { rotulo: "Falta", cor: "bg-amber-50 text-amber-800", borda: "border-amber-200" },
+  EXTRA: { rotulo: "Se precisar", cor: "bg-slate-100 text-slate-500", borda: "border-slate-200" },
+} as const;
+
+function Documento({
+  doc,
+  arquivos,
+  modo,
+  naoAplica,
+}: {
+  doc: DocumentoAdmissional;
+  arquivos: ArquivoNaTela[];
+  modo: Modo;
+  naoAplica: boolean;
+}) {
   const router = useRouter();
   const camera = useRef<HTMLInputElement>(null);
   const galeria = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState<string | null>(null);
   const pode = modo.quem === "rh" || modo.aberto;
   const chegou = arquivos.length > 0;
+  const situacao = chegou ? "ENVIADO" : !doc.obrigatorio && naoAplica ? "NAO_SE_APLICA" : doc.extra ? "EXTRA" : "FALTA";
+  const visual = SITUACAO[situacao];
+
+  async function trocarNaoSeAplica(marcar: boolean) {
+    const r =
+      modo.quem === "rh" ? await marcarNaoSeAplicaRH(modo.admissaoId, doc.chave, marcar) : await marcarNaoSeAplica(modo.token, doc.chave, marcar);
+    if (r.error) avisar(r.error);
+    router.refresh();
+  }
 
   async function enviar(lista: FileList | null) {
     if (!lista || lista.length === 0) return;
@@ -77,18 +103,22 @@ function Documento({ doc, arquivos, modo }: { doc: DocumentoAdmissional; arquivo
     "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition disabled:opacity-60";
 
   return (
-    <li className={`rounded-lg border bg-white p-3 ${chegou ? "border-emerald-200" : "border-slate-200"}`}>
+    <li className={`rounded-lg border bg-white p-3 ${visual.borda}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+          <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-800">
             {chegou ? <Check size={15} className="shrink-0 text-emerald-600" /> : null}
-            {doc.nome}
-            {!doc.obrigatorio ? <span className="text-micro font-normal text-slate-500">(se tiver)</span> : null}
+            <span className={situacao === "NAO_SE_APLICA" ? "text-slate-500 line-through decoration-slate-300" : ""}>{doc.nome}</span>
+            <span className={`rounded px-1.5 py-0.5 text-micro font-medium ${visual.cor}`}>{visual.rotulo}</span>
           </p>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{doc.dica}</p>
         </div>
 
-        {pode ? (
+        {pode && situacao === "NAO_SE_APLICA" ? (
+          <button type="button" onClick={() => trocarNaoSeAplica(false)} className={`${botao} border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>
+            Desfazer
+          </button>
+        ) : pode ? (
           <div className="flex shrink-0 flex-wrap gap-1.5">
             <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => enviar(e.target.files)} />
             <input ref={galeria} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => enviar(e.target.files)} />
@@ -100,6 +130,11 @@ function Documento({ doc, arquivos, modo }: { doc: DocumentoAdmissional; arquivo
             <button type="button" disabled={!!enviando} onClick={() => galeria.current?.click()} className={`${botao} border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>
               <Upload size={14} /> {modo.quem === "funcionario" ? "Escolher arquivo" : "Anexar"}
             </button>
+            {!doc.obrigatorio && !doc.extra && !chegou ? (
+              <button type="button" onClick={() => trocarNaoSeAplica(true)} className={`${botao} border-slate-300 bg-white text-slate-600 hover:bg-slate-50`}>
+                <Ban size={14} /> Não se aplica
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -139,11 +174,25 @@ function Documento({ doc, arquivos, modo }: { doc: DocumentoAdmissional; arquivo
   );
 }
 
-export default function AdmissaoDocumentos({ arquivos, modo }: { arquivos: ArquivoNaTela[]; modo: Modo }) {
+export default function AdmissaoDocumentos({
+  arquivos,
+  modo,
+  naoSeAplica,
+}: {
+  arquivos: ArquivoNaTela[];
+  modo: Modo;
+  naoSeAplica: string[];
+}) {
   return (
     <ul className="space-y-2">
       {DOCUMENTOS_ADMISSIONAIS.map((doc) => (
-        <Documento key={doc.chave} doc={doc} arquivos={arquivos.filter((a) => a.tipo === doc.chave)} modo={modo} />
+        <Documento
+          key={doc.chave}
+          doc={doc}
+          arquivos={arquivos.filter((a) => a.tipo === doc.chave)}
+          modo={modo}
+          naoAplica={naoSeAplica.includes(doc.chave)}
+        />
       ))}
     </ul>
   );

@@ -16,7 +16,10 @@ export type DocumentoAdmissional = {
   nome: string;
   /** O que mostrar ao funcionário para ele saber o que mandar. */
   dica: string;
+  /** Obrigatório não tem "Não se aplica": todo mundo precisa mandar. */
   obrigatorio: boolean;
+  /** "Outros documentos" é extra: não conta como faltando. */
+  extra?: boolean;
 };
 
 /**
@@ -26,20 +29,39 @@ export type DocumentoAdmissional = {
 export const DOCUMENTOS_ADMISSIONAIS: DocumentoAdmissional[] = [
   { chave: "ASO", nome: "Atestado de saúde ocupacional (ASO)", dica: "Foto do atestado admissional que o médico entregou, com a assinatura dele.", obrigatorio: true },
   { chave: "RG", nome: "RG ou CNH", dica: "Frente e verso. Se for a CNH digital, pode ser o PDF do aplicativo.", obrigatorio: true },
-  { chave: "CPF", nome: "CPF", dica: "Só se o número do CPF não estiver no RG ou na CNH.", obrigatorio: false },
+  { chave: "CPF", nome: "CPF", dica: "Se o número do CPF já está no RG ou na CNH, marque Não se aplica.", obrigatorio: false },
   { chave: "CTPS", nome: "Carteira de trabalho digital", dica: "Print da tela do aplicativo Carteira de Trabalho Digital, com o número e a série.", obrigatorio: true },
-  { chave: "PIS", nome: "PIS / NIS", dica: "Cartão ou documento com o número do PIS, se você tiver.", obrigatorio: false },
+  { chave: "PIS", nome: "PIS / NIS", dica: "Cartão ou documento com o número do PIS. Se nunca trabalhou de carteira, marque Não se aplica.", obrigatorio: false },
   { chave: "TITULO", nome: "Título de eleitor", dica: "Pode ser o print do aplicativo e-Título.", obrigatorio: true },
-  { chave: "RESERVISTA", nome: "Certificado de reservista", dica: "Só para homens de 18 a 45 anos.", obrigatorio: false },
+  { chave: "RESERVISTA", nome: "Certificado de reservista", dica: "Só para homens de 18 a 45 anos. Para os outros, marque Não se aplica.", obrigatorio: false },
   { chave: "RESIDENCIA", nome: "Comprovante de residência", dica: "Conta de luz, água ou internet dos últimos 3 meses.", obrigatorio: true },
   { chave: "ESCOLARIDADE", nome: "Comprovante de escolaridade", dica: "Diploma, certificado ou declaração da escola.", obrigatorio: true },
   { chave: "CERTIDAO", nome: "Certidão de nascimento ou casamento", dica: "A de casamento, se você for casado(a).", obrigatorio: true },
   { chave: "FOTO", nome: "Foto 3x4", dica: "Pode ser uma foto de rosto, de frente, com fundo claro.", obrigatorio: true },
   { chave: "BANCO", nome: "Dados bancários", dica: "Cartão ou print do aplicativo do banco com agência e conta.", obrigatorio: false },
-  { chave: "FILHOS", nome: "Certidão e CPF dos filhos", dica: "Só para filhos menores de 14 anos.", obrigatorio: false },
-  { chave: "VACINA", nome: "Cartão de vacina dos filhos", dica: "Só para filhos menores de 7 anos.", obrigatorio: false },
-  { chave: "OUTRO", nome: "Outros documentos", dica: "Qualquer outro documento que o RH pediu.", obrigatorio: false },
+  { chave: "FILHOS", nome: "Certidão e CPF dos filhos", dica: "Só para filhos menores de 14 anos. Sem filhos nessa idade, marque Não se aplica.", obrigatorio: false },
+  { chave: "VACINA", nome: "Cartão de vacina dos filhos", dica: "Só para filhos menores de 7 anos. Sem filhos nessa idade, marque Não se aplica.", obrigatorio: false },
+  { chave: "OUTRO", nome: "Outros documentos", dica: "Qualquer outro documento que o RH pediu.", obrigatorio: false, extra: true },
 ];
+
+export type SituacaoDoDocumento = "ENVIADO" | "NAO_SE_APLICA" | "FALTA";
+
+export function situacaoDoDocumento(doc: DocumentoAdmissional, tipos: string[], naoSeAplica: string[]): SituacaoDoDocumento {
+  if (tipos.includes(doc.chave)) return "ENVIADO";
+  if (!doc.obrigatorio && naoSeAplica.includes(doc.chave)) return "NAO_SE_APLICA";
+  return "FALTA";
+}
+
+/** Os documentos que nem chegaram nem foram marcados "Não se aplica". */
+export function documentosQueFaltam(tipos: string[], naoSeAplica: string[]): DocumentoAdmissional[] {
+  return DOCUMENTOS_ADMISSIONAIS.filter((d) => !d.extra && situacaoDoDocumento(d, tipos, naoSeAplica) === "FALTA");
+}
+
+/** Quantos estão resolvidos (enviados ou "Não se aplica") de quantos contam. */
+export function contagemDosDocumentos(tipos: string[], naoSeAplica: string[]) {
+  const contam = DOCUMENTOS_ADMISSIONAIS.filter((d) => !d.extra);
+  return { prontos: contam.length - documentosQueFaltam(tipos, naoSeAplica).length, total: contam.length };
+}
 
 export function documentoDaChave(chave: string): DocumentoAdmissional | undefined {
   return DOCUMENTOS_ADMISSIONAIS.find((d) => d.chave === chave);
@@ -201,12 +223,13 @@ export function etapaDaAdmissao(a: {
   documentosEnviadosEm: Date | null;
   pacoteGeradoEm: Date | null;
   tipos: string[];
+  naoSeAplica: string[];
 }): EtapaDaAdmissao {
   if (dadosQueFaltam(a).length > 0) return "DADOS";
   if (!a.enviadoAoMedicoEm) return "MEDICO";
   if (!a.tipos.includes("ASO") && !a.exameData) return "CONSULTA";
   if (!a.tipos.includes("ASO")) return "ASO";
-  const faltam = DOCUMENTOS_ADMISSIONAIS.some((d) => d.obrigatorio && !a.tipos.includes(d.chave));
+  const faltam = documentosQueFaltam(a.tipos, a.naoSeAplica).length > 0;
   if (faltam && !a.documentosEnviadosEm) return "DOCUMENTOS";
   if (!a.pacoteGeradoEm) return "PACOTE";
   return "PRONTA";

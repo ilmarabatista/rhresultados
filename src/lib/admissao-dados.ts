@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "./prisma";
-import { DOCUMENTOS_ADMISSIONAIS, etapaDaAdmissao } from "./admissao";
+import { contagemDosDocumentos, etapaDaAdmissao } from "./admissao";
 import type { EmpresaDaAdmissao } from "@/components/admissao-form";
 
 /** As empresas para escolher na admissão, com o CNPJ e os cargos de cada uma. */
@@ -43,6 +43,7 @@ export async function listaDeAdmissoes(companyId?: string) {
       enviadoAoMedicoEm: true,
       documentosEnviadosEm: true,
       pacoteGeradoEm: true,
+      naoSeAplica: true,
       company: { select: { id: true, name: true } },
       documentos: { select: { tipo: true }, distinct: ["tipo"] },
     },
@@ -56,7 +57,7 @@ export async function listaDeAdmissoes(companyId?: string) {
       empresa: a.company,
       createdAt: a.createdAt,
       etapa: etapaDaAdmissao({ ...a, tipos }),
-      recebidos: DOCUMENTOS_ADMISSIONAIS.filter((d) => tipos.includes(d.chave)).length,
+      documentos: contagemDosDocumentos(tipos, a.naoSeAplica),
     };
   });
 }
