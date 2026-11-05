@@ -9,7 +9,14 @@
  */
 
 /** O médico do trabalho que recebe os dados para o exame admissional. */
-export const MEDICO_DO_TRABALHO = { nome: "Dr. Eduardo", telefone: "83996801400" };
+export const MEDICO_DO_TRABALHO = {
+  nome: "Dr. Eduardo",
+  telefone: "83996801400",
+  /** Como chegar ao consultório, do jeito que a Ilmara passa aos funcionários. */
+  comoChegar:
+    "Entre na rua do posto Dois Irmãos e siga em frente. Depois da escola Antônio Cândido, é a quarta casa do lado esquerdo, número 395.",
+  mapa: "https://maps.google.com/maps?q=-6.490975379943848%2C-37.44379806518555&z=17&hl=pt-BR",
+};
 
 export type DocumentoAdmissional = {
   chave: string;
@@ -199,7 +206,10 @@ export function mensagemAoFuncionario(nome: string, empresa: string, link: strin
   const exame = quando
     ? `o seu exame admissional está marcado para ${quando}. Leve um documento com foto. Depois do exame, mande a foto do atestado (ASO) e dos seus documentos por este link`
     : "mande por este link a foto do atestado admissional (ASO), depois do exame, e dos seus documentos";
-  return `Olá, ${primeiroNome(nome)}! Para assinarmos a sua carteira na ${empresa}: ${exame}. Dá para tirar as fotos pelo celular mesmo: ${link}`;
+  const texto = `Olá, ${primeiroNome(nome)}! Para assinarmos a sua carteira na ${empresa}: ${exame}. Dá para tirar as fotos pelo celular mesmo: ${link}`;
+  // Sem outro local anotado, o exame é no consultório do médico: vai como chegar.
+  if (!quando || consulta?.local?.trim()) return texto;
+  return `${texto}\n\nComo chegar ao consultório do ${MEDICO_DO_TRABALHO.nome}: ${MEDICO_DO_TRABALHO.comoChegar}\nMapa: ${MEDICO_DO_TRABALHO.mapa}`;
 }
 
 export function whatsapp(telefone: string | null | undefined, mensagem: string): string {

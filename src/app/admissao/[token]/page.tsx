@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AvisoAoCandidato, PaginaDoCandidato } from "@/components/public-candidate-page";
 import AdmissaoDocumentos from "@/components/admissao-documentos";
 import AdmissaoTerminar from "@/components/admissao-terminar";
-import { documentosQueFaltam, textoDaConsulta } from "@/lib/admissao";
+import { MEDICO_DO_TRABALHO, documentosQueFaltam, textoDaConsulta } from "@/lib/admissao";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -57,6 +57,14 @@ export default async function AdmissaoPublicaPage({ params }: { params: Promise<
         <section className="mb-4 rounded-lg border border-brand-200 bg-brand-50 p-4">
           <p className="text-micro font-semibold uppercase tracking-wider text-brand-700">Seu exame admissional</p>
           <p className="mt-1 text-sm font-medium text-slate-800">{consulta.charAt(0).toUpperCase() + consulta.slice(1)}.</p>
+          {!a.exameLocal?.trim() ? (
+            <p className="mt-2 text-sm text-slate-700">
+              <span className="font-medium">Como chegar:</span> {MEDICO_DO_TRABALHO.comoChegar}{" "}
+              <a href={MEDICO_DO_TRABALHO.mapa} target="_blank" rel="noreferrer" className="font-medium text-brand-700 underline">
+                Abrir no mapa
+              </a>
+            </p>
+          ) : null}
           <p className="mt-1 text-xs text-slate-600">Leve um documento com foto. Depois do exame, mande aqui a foto do atestado (ASO).</p>
         </section>
       ) : null}
