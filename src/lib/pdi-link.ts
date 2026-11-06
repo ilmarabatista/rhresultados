@@ -36,3 +36,31 @@ export async function lerLinkDoPdi(token: string): Promise<string | null> {
     return null;
   }
 }
+
+// ------------------------------------------------------------ gerente
+
+const PUBLICO_DA_EQUIPE = "pdi-equipe";
+
+/**
+ * O link da gerente: o que foi combinado no PDI de cada pessoa da empresa,
+ * ou só de uma cidade. Mostra sempre o estado do dia em que é aberto.
+ */
+export async function assinarPdiDaEquipe(companyId: string, cidade: string | null): Promise<string> {
+  return new SignJWT(cidade ? { cidade } : {})
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(companyId)
+    .setAudience(PUBLICO_DA_EQUIPE)
+    .setIssuedAt()
+    .setExpirationTime(`${DIAS_DO_LINK_DO_PDI}d`)
+    .sign(segredo());
+}
+
+export async function lerLinkDoPdiDaEquipe(token: string): Promise<{ companyId: string; cidade: string | null } | null> {
+  try {
+    const { payload } = await jwtVerify(token, segredo(), { audience: PUBLICO_DA_EQUIPE, algorithms: ["HS256"] });
+    if (typeof payload.sub !== "string") return null;
+    return { companyId: payload.sub, cidade: typeof payload.cidade === "string" ? payload.cidade : null };
+  } catch {
+    return null;
+  }
+}
