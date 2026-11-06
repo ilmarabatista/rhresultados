@@ -8,15 +8,16 @@ export default function PdiAbas({
   cidade = null,
 }: {
   companyId: string;
-  atual: "equipe" | "autoavaliacoes";
+  atual: "equipe" | "autoavaliacoes" | "treinamentos";
   cargosSemDescricao?: number;
-  /** A cidade escolhida, que segue junto ao trocar entre Equipe e Autoavaliações. */
+  /** A cidade escolhida, que segue junto ao trocar entre as abas do PDI. */
   cidade?: string | null;
 }) {
   const q = cidade ? `?cidade=${encodeURIComponent(cidade)}` : "";
   const abas = [
     { slug: "equipe", rotulo: "Equipe", href: `/empresas/${companyId}/pdi${q}` },
     { slug: "autoavaliacoes", rotulo: "Autoavaliações", href: `/empresas/${companyId}/pdi/autoavaliacoes${q}` },
+    { slug: "treinamentos", rotulo: "PDI, setor e reunião geral", href: `/empresas/${companyId}/pdi/treinamentos${q}` },
     { slug: "cargos", rotulo: "Descrições de cargo", href: `/empresas/${companyId}/cargos` },
   ] as const;
   return (
