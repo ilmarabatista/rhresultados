@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { atividade } from "@/lib/atividade";
 import { diaValido, horaValida } from "@/lib/agenda";
-import { dayKeyToDate, todayKey } from "@/lib/dates";
+import { dateToDayKey, dayKeyToDate, todayKey } from "@/lib/dates";
 import { textoDoFormulario } from "@/lib/texto-seguro";
 import { assinarPdi } from "@/lib/pdi-link";
 import {
@@ -15,9 +15,9 @@ import {
   lerStatusDaMeta,
   lerTipoDeAcao,
   lerTipoDeCompetencia,
-  metaSugerida,
   statusPeloProgresso,
 } from "@/lib/pdi";
+import { metaDoGap, type AcaoSugerida } from "@/lib/meta-do-gap";
 
 /**
  * PDI: descrição de cargo com competências, avaliação dos gaps feita junto
@@ -280,9 +280,48 @@ export async function excluirAvaliacao(avaliacaoId: string): Promise<PdiState> {
 
 // ------------------------------------------------------------------ plano
 
+/** As ações sugeridas no formato do banco, na ordem em que vieram. */
+function acoesParaGravar(planId: string, acoes: AcaoSugerida[]) {
+  if (acoes.length === 0) return undefined;
+  return {
+    create: acoes.map((a, order) => ({
+      planId,
+      tipo: a.tipo,
+      title: a.titulo,
+      responsavel: a.responsavel,
+      dueDate: a.prazo ? dayKeyToDate(a.prazo) : null,
+      order,
+    })),
+  };
+}
+
+/** Grava a meta sugerida para o gap, com as ações. */
+async function criarMetaDoGap(
+  planId: string,
+  n: { id: string; nome: string; tipo: string; esperado: number; pessoa: number | null; avaliador: number | null; acordado: number | null },
+  datas: { inicio: string | null; fim: string | null },
+  ordem: number,
+) {
+  const m = metaDoGap(n, datas);
+  await prisma.metaDoPdi.create({
+    data: {
+      planId,
+      notaId: n.id,
+      competencia: m.competencia,
+      titulo: m.titulo,
+      indicador: m.indicador,
+      recursos: m.recursos,
+      relevancia: m.relevancia,
+      prazo: m.prazo ? dayKeyToDate(m.prazo) : null,
+      ordem,
+      acoes: acoesParaGravar(planId, m.acoes),
+    },
+  });
+}
+
 /**
- * Cria o plano. Os gaps escolhidos da avaliação já viram metas, com o
- * específico, o mensurável e o relevante sugeridos para ela ajustar.
+ * Cria o plano. Os gaps escolhidos da avaliação já viram metas prontas (as
+ * cinco letras do SMART e as ações com responsável e prazo) para ela ajustar.
  */
 export async function criarPlano(_prev: PdiState, formData: FormData): Promise<PdiState> {
   const session = await requireSession();
@@ -307,30 +346,14 @@ export async function criarPlano(_prev: PdiState, formData: FormData): Promise<P
     : [];
 
   const plano = await prisma.developmentPlan.create({
-    data: {
-      employeeId,
-      avaliacaoId,
-      title,
-      objective: texto(formData.get("objective")),
-      startDate: inicio,
-      endDate: fim,
-      metas: {
-        create: notas.map((n, ordem) => {
-          const s = metaSugerida(n);
-          return {
-            notaId: n.id,
-            competencia: n.nome,
-            titulo: s.titulo,
-            indicador: s.indicador,
-            relevancia: s.relevancia,
-            prazo: fim,
-            ordem,
-          };
-        }),
-      },
-    },
+    data: { employeeId, avaliacaoId, title, objective: texto(formData.get("objective")), startDate: inicio, endDate: fim },
     select: { id: true },
   });
+  // Cada gap vira a meta inteira: SMART preenchido e as ações do 70-20-10.
+  const datas = { inicio: inicio ? dateToDayKey(inicio) : null, fim: fim ? dateToDayKey(fim) : null };
+  for (const [ordem, n] of notas.entries()) {
+    await criarMetaDoGap(plano.id, n, datas, ordem);
+  }
 
   await log(pessoa.companyId, session.userId, "CRIOU", employeeId, `Criou o PDI "${title}" de ${pessoa.name}, com ${notas.length} meta(s).`);
 
@@ -356,6 +379,8 @@ async function carregarPlano(planId: string) {
       status: true,
       visitId: true,
       employeeId: true,
+      startDate: true,
+      endDate: true,
       employee: { select: { companyId: true, name: true } },
     },
   });
@@ -428,7 +453,7 @@ export async function salvarMeta(_prev: PdiState, formData: FormData): Promise<P
   const nota = notaId
     ? await prisma.notaDeCompetencia.findFirst({
         where: { id: notaId, avaliacao: { employeeId: plano.employeeId } },
-        select: { id: true, nome: true },
+        select: { id: true, nome: true, tipo: true, esperado: true, pessoa: true, avaliador: true, acordado: true },
       })
     : null;
 
@@ -447,7 +472,22 @@ export async function salvarMeta(_prev: PdiState, formData: FormData): Promise<P
     if (count === 0) return { error: "Meta não encontrada." };
   } else {
     const ordem = await prisma.metaDoPdi.count({ where: { planId: plano.id } });
-    await prisma.metaDoPdi.create({ data: { ...dados, planId: plano.id, ordem } });
+    // Meta nova de um gap: as ações sugeridas entram junto, se ela deixou marcado.
+    const acoes =
+      nota && formData.get("criarAcoes") === "1"
+        ? metaDoGap(nota, {
+            inicio: plano.startDate ? dateToDayKey(plano.startDate) : todayKey(),
+            fim: dados.prazo ? dateToDayKey(dados.prazo) : plano.endDate ? dateToDayKey(plano.endDate) : null,
+          }).acoes
+        : [];
+    await prisma.metaDoPdi.create({
+      data: {
+        ...dados,
+        planId: plano.id,
+        ordem,
+        acoes: acoesParaGravar(plano.id, acoes),
+      },
+    });
   }
   refresh(plano.employee.companyId);
   return { ok: true };
