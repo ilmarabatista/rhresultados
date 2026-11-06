@@ -7,7 +7,8 @@ import { atividade } from "@/lib/atividade";
 import { diaValido, horaValida } from "@/lib/agenda";
 import { dayKeyToDate, todayKey } from "@/lib/dates";
 import { textoDoFormulario } from "@/lib/texto-seguro";
-import { assinarPdi } from "@/lib/pdi-link";
+import { assinarPdi, assinarPdiDaEquipe } from "@/lib/pdi-link";
+import { SEM_CIDADE } from "@/components/filtro-cidade";
 import {
   lerNivel,
   lerProgresso,
@@ -742,4 +743,23 @@ export async function linkDoPdiParaOColaborador(
   const p = plano.employee;
   if (enviando) await log(p.companyId, session.userId, "EDITOU", p.id, `Mandou o PDI combinado para ${p.name} pelo WhatsApp.`);
   return { ok: true, token: await assinarPdi(planoId), telefone: p.phone, nome: p.name };
+}
+
+/**
+ * O link para a gerente com o que foi combinado com cada pessoa (só leitura,
+ * abre sem login, vale 120 dias). Com cidade, só as pessoas daquela unidade.
+ */
+export async function linkDoPdiParaAGerente(
+  companyId: string,
+  cidade: string | null,
+  enviando = false,
+): Promise<PdiState & { token?: string }> {
+  const session = await requireSession();
+  const empresa = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!empresa) return { error: "Empresa não encontrada." };
+  const unidade = cidade && cidade !== SEM_CIDADE ? await prisma.branch.findFirst({ where: { id: cidade, companyId }, select: { name: true } }) : null;
+  if (enviando) {
+    await log(companyId, session.userId, "EDITOU", companyId, `Mandou à gerência os combinados do PDI${unidade ? ` de ${unidade.name}` : ""}.`);
+  }
+  return { ok: true, token: await assinarPdiDaEquipe(companyId, cidade) };
 }
