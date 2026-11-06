@@ -416,8 +416,8 @@ function NovoPlano({
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Novo PDI</h3>
           <p className="text-xs text-slate-500">
-            Cada gap marcado vira uma meta, já com a frase específica, o indicador e a relevância sugeridos. Depois é
-            ajustar e incluir as ações.
+            Cada gap marcado vira uma meta pronta: as cinco letras do SMART e as ações (prática, troca e estudo) com
+            responsável e prazo. Depois é só ajustar o que quiser.
           </p>
         </div>
         <input type="hidden" name="employeeId" value={employeeId} />

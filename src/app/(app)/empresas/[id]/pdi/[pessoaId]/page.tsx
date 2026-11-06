@@ -14,6 +14,7 @@ import EnviarPdi from "@/components/enviar-pdi";
 import { lerDados, metasDoMapeamento } from "@/lib/mapeamento";
 import { lerPerguntas, lerRespostas } from "@/lib/autoavaliacao";
 import { semAcento } from "@/lib/text";
+import { metaDoGap } from "@/lib/meta-do-gap";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI — RH Resultados" };
@@ -199,12 +200,15 @@ export default async function PdiDaPessoaPage({
 
   // Os gaps que a meta pode trabalhar: os da avaliação do plano, ou a mais recente.
   const avaliacaoDoPlano = avaliacoes.find((a) => a.id === plano?.avaliacaoId) ?? avaliacoes[0] ?? null;
+  // Cada gap já leva a meta pronta, para o formulário preencher ao escolher.
+  const datasDoPlano = { inicio: plano?.startDate || hoje, fim: plano?.endDate || null };
   const gaps = (avaliacaoDoPlano?.notas ?? []).map((n) => {
     const g = gap(n);
     return {
       id: n.id,
       nome: n.nome,
       detalhe: g != null && g > 0 ? `(${nivelFinal(n)} → ${n.esperado})` : g != null ? "(sem gap)" : "(sem nota)",
+      sugestao: metaDoGap(n, datasDoPlano),
     };
   });
 
