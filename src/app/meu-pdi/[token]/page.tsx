@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { lerLinkDoPdi } from "@/lib/pdi-link";
 import { dateToDayKey, dayKeyToDate, formatFullDate, todayKey } from "@/lib/dates";
-import { lerStatusDaMeta, progressoDoPlano, ROTULO_DA_META } from "@/lib/pdi";
+import { progressoDoPlano } from "@/lib/pdi";
 import { calendarioDoPdi } from "@/lib/autoavaliacao";
 import { AvisoAoCandidato, PaginaDoCandidato } from "@/components/public-candidate-page";
 import PrintButton from "@/components/print-button";
+import { BarraDeAndamento, CombinadosDasConversas, MetaCombinada, SELECT_DO_COMBINADO, CAIXA } from "@/components/pdi-combinado";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -31,26 +32,7 @@ export default async function MeuPdiPage({ params }: { params: Promise<{ token: 
           status: true,
           proximaConversa: true,
           employee: { select: { name: true, role: true, company: { select: { name: true } } } },
-          metas: {
-            where: { status: { not: "CANCELADA" } },
-            orderBy: { ordem: "asc" },
-            select: {
-              id: true,
-              titulo: true,
-              competencia: true,
-              indicador: true,
-              recursos: true,
-              relevancia: true,
-              prazo: true,
-              status: true,
-              progresso: true,
-              acoes: {
-                orderBy: { order: "asc" },
-                select: { id: true, title: true, done: true, responsavel: true, dueDate: true },
-              },
-            },
-          },
-          conversas: { orderBy: { data: "asc" }, select: { id: true, data: true, combinados: true } },
+          ...SELECT_DO_COMBINADO,
         },
       })
     : null;
@@ -75,7 +57,7 @@ export default async function MeuPdiPage({ params }: { params: Promise<{ token: 
       ? `${plano.startDate ? formatFullDate(plano.startDate) : "—"} a ${plano.endDate ? formatFullDate(plano.endDate) : "—"}`
       : null;
 
-  const secao = "rounded-lg border border-slate-200 bg-white p-4 shadow-sm break-inside-avoid";
+  const secao = CAIXA;
   const tituloDaSecao = "mb-2 text-sm font-semibold text-slate-900";
 
   return (
@@ -97,13 +79,7 @@ export default async function MeuPdiPage({ params }: { params: Promise<{ token: 
           ) : null}
           {plano.metas.length > 0 ? (
             <div className="mt-3">
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>Andamento do plano</span>
-                <span>{progresso}%</span>
-              </div>
-              <div className="mt-1 h-2 rounded-full bg-slate-100">
-                <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${progresso}%` }} />
-              </div>
+              <BarraDeAndamento progresso={progresso} />
             </div>
           ) : null}
         </section>
@@ -113,57 +89,7 @@ export default async function MeuPdiPage({ params }: { params: Promise<{ token: 
             <h2 className="px-1 text-sm font-semibold text-slate-900">Minhas metas</h2>
             {plano.metas.map((m, i) => (
               <div key={m.id} className={secao}>
-                <p className="text-sm font-semibold text-slate-900">
-                  {i + 1}. {m.titulo}
-                </p>
-                {m.competencia ? <p className="text-xs text-slate-500">{m.competencia}</p> : null}
-                <dl className="mt-2 space-y-1 text-sm text-slate-700">
-                  {m.relevancia ? (
-                    <div>
-                      <dt className="inline font-medium">Por que importa: </dt>
-                      <dd className="inline">{m.relevancia}</dd>
-                    </div>
-                  ) : null}
-                  {m.indicador ? (
-                    <div>
-                      <dt className="inline font-medium">Como vamos saber que deu certo: </dt>
-                      <dd className="inline">{m.indicador}</dd>
-                    </div>
-                  ) : null}
-                  {m.recursos ? (
-                    <div>
-                      <dt className="inline font-medium">Apoio que você vai ter: </dt>
-                      <dd className="inline">{m.recursos}</dd>
-                    </div>
-                  ) : null}
-                  <div>
-                    <dt className="inline font-medium">Prazo: </dt>
-                    <dd className="inline">
-                      {m.prazo ? formatFullDate(m.prazo) : "—"} · {ROTULO_DA_META[lerStatusDaMeta(m.status)]}
-                    </dd>
-                  </div>
-                </dl>
-                {m.acoes.length > 0 ? (
-                  <>
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-slate-500">O que vou fazer</p>
-                    <ul className="mt-1 space-y-1 text-sm text-slate-700">
-                      {m.acoes.map((a) => (
-                        <li key={a.id} className="flex gap-2">
-                          <span className={a.done ? "text-emerald-600" : "text-slate-400"}>{a.done ? "☑" : "☐"}</span>
-                          <span>
-                            {a.title}
-                            {a.responsavel || a.dueDate ? (
-                              <span className="text-slate-500">
-                                {a.responsavel ? ` · com ${a.responsavel}` : ""}
-                                {a.dueDate ? ` · até ${formatFullDate(a.dueDate)}` : ""}
-                              </span>
-                            ) : null}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : null}
+                <MetaCombinada m={m} n={i + 1} pessoa="eu" />
               </div>
             ))}
           </section>
@@ -176,14 +102,7 @@ export default async function MeuPdiPage({ params }: { params: Promise<{ token: 
         {combinados.length > 0 ? (
           <section className={secao}>
             <h2 className={tituloDaSecao}>O que combinamos nas conversas</h2>
-            <ul className="space-y-2 text-sm text-slate-700">
-              {combinados.map((c) => (
-                <li key={c.id}>
-                  <span className="font-medium">{formatFullDate(c.data)}:</span>{" "}
-                  <span className="whitespace-pre-wrap">{c.combinados}</span>
-                </li>
-              ))}
-            </ul>
+            <CombinadosDasConversas conversas={plano.conversas} />
           </section>
         ) : null}
 

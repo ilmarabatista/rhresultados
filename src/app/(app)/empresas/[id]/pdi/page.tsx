@@ -13,6 +13,7 @@ import { Aviso, Etiqueta, Numeros, Tabela, Vazio } from "@/components/ui";
 import PdiAbas from "@/components/pdi-abas";
 import { foraDoPdi } from "@/lib/prestadores";
 import FiltroCidade, { cidadesDaEquipe } from "@/components/filtro-cidade";
+import { EnviarPdiAGerente } from "@/components/enviar-pdi";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "PDI — RH Resultados" };
@@ -141,6 +142,18 @@ export default async function PdiPage({
             total={doPdi.length}
             semCidade={semCidade}
           />
+
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="mr-1 text-slate-500">
+              Combinados de cada um{cidade ? ` (${cidades.find((c) => c.id === cidade)?.nome ?? "sem cidade"})` : ""} para a
+              gerente:
+            </span>
+            <EnviarPdiAGerente
+              companyId={id}
+              cidade={cidade}
+              onde={cidade ? (cidades.find((c) => c.id === cidade)?.nome ?? null) : null}
+            />
+          </div>
 
           <Numeros
             colunas={4}
