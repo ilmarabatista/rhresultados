@@ -10,6 +10,7 @@ import PdiPlano from "@/components/pdi-plano";
 import PdiAcompanhamento from "@/components/pdi-acompanhamento";
 import PdiAutoavaliacao from "@/components/pdi-autoavaliacao";
 import PdiMapeamento from "@/components/pdi-mapeamento";
+import EnviarPdi from "@/components/enviar-pdi";
 import { lerDados, metasDoMapeamento } from "@/lib/mapeamento";
 import { lerPerguntas, lerRespostas } from "@/lib/autoavaliacao";
 import { semAcento } from "@/lib/text";
@@ -255,6 +256,7 @@ export default async function PdiDaPessoaPage({
         >
           PDI para a conversa 1 a 1
         </Link>
+        {plano ? <EnviarPdi planoId={plano.id} /> : null}
       </div>
 
       <header>
