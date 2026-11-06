@@ -7,6 +7,7 @@ import { atividade } from "@/lib/atividade";
 import { diaValido, horaValida } from "@/lib/agenda";
 import { dayKeyToDate, todayKey } from "@/lib/dates";
 import { textoDoFormulario } from "@/lib/texto-seguro";
+import { assinarPdi } from "@/lib/pdi-link";
 import {
   lerNivel,
   lerProgresso,
@@ -720,4 +721,25 @@ export async function excluirConversa(conversaId: string): Promise<PdiState> {
   );
   refresh(c.plan.employee.companyId);
   return { ok: true };
+}
+
+// ------------------------------------------------- enviar ao colaborador
+
+/**
+ * O link do PDI para o colaborador (só leitura, abre sem login, vale 120
+ * dias), com o telefone dele para abrir a conversa no WhatsApp.
+ */
+export async function linkDoPdiParaOColaborador(
+  planoId: string,
+  enviando = false,
+): Promise<PdiState & { token?: string; telefone?: string | null; nome?: string }> {
+  const session = await requireSession();
+  const plano = await prisma.developmentPlan.findUnique({
+    where: { id: planoId },
+    select: { employee: { select: { id: true, name: true, phone: true, companyId: true } } },
+  });
+  if (!plano) return { error: "Plano não encontrado." };
+  const p = plano.employee;
+  if (enviando) await log(p.companyId, session.userId, "EDITOU", p.id, `Mandou o PDI combinado para ${p.name} pelo WhatsApp.`);
+  return { ok: true, token: await assinarPdi(planoId), telefone: p.phone, nome: p.name };
 }
