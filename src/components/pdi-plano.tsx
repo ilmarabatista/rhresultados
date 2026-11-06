@@ -33,6 +33,7 @@ import {
   TIPOS_DE_ACAO,
   TOM_DA_META,
 } from "@/lib/pdi";
+import type { MetaDoGap } from "@/lib/meta-do-gap";
 import { Field, FormError, Input, Select, SubmitButton, Textarea } from "./form";
 import { Aviso, Etiqueta } from "./ui";
 import { avisar, confirmar } from "@/components/avisos";
@@ -91,6 +92,9 @@ export type PlanoDaTela = {
   acoesSoltas: { id: string; title: string; done: boolean }[];
 };
 
+/** Um item da avaliação que a meta pode trabalhar, com a meta já sugerida. */
+export type GapDaTela = { id: string; nome: string; detalhe: string; sugestao: MetaDoGap };
+
 const botaoClaro =
   "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50 disabled:opacity-60";
 
@@ -141,7 +145,7 @@ function FormularioDeMeta({
 }: {
   plano: PlanoDaTela;
   meta: MetaDaTela | null;
-  gaps: { id: string; nome: string; detalhe: string }[];
+  gaps: GapDaTela[];
   onClose: () => void;
 }) {
   const [state, action] = useActionState<PdiState, FormData>(salvarMeta, {});
@@ -153,7 +157,29 @@ function FormularioDeMeta({
     relevancia: meta?.relevancia ?? "",
     prazo: meta?.prazo ?? plano.endDate,
   });
+  const [notaId, setNotaId] = useState(meta?.notaId ?? "");
+  const escolhido = gaps.find((g) => g.id === notaId) ?? null;
+  const [criarAcoes, setCriarAcoes] = useState(true);
   const smart = checarSmart(campos);
+
+  /** Preenche as cinco letras com a meta sugerida para o gap. */
+  function usarSugestao(g: GapDaTela) {
+    setCampos({
+      titulo: g.sugestao.titulo,
+      indicador: g.sugestao.indicador,
+      recursos: g.sugestao.recursos,
+      relevancia: g.sugestao.relevancia,
+      prazo: g.sugestao.prazo ?? plano.endDate,
+    });
+  }
+
+  function escolherGap(id: string) {
+    setNotaId(id);
+    const g = gaps.find((x) => x.id === id);
+    // Meta nova: escolher o gap já monta a meta. Na edição, só pelo botão.
+    if (g && !meta) usarSugestao(g);
+  }
+
   const muda = (k: keyof typeof campos) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setCampos((c) => ({ ...c, [k]: e.target.value }));
 
@@ -171,8 +197,11 @@ function FormularioDeMeta({
         <input type="hidden" name="planId" value={plano.id} />
         {meta ? <input type="hidden" name="metaId" value={meta.id} /> : null}
 
-        <Field label="Competência (gap)" hint="O gap da avaliação que esta meta trabalha.">
-          <Select name="notaId" defaultValue={meta?.notaId ?? ""}>
+        <Field
+          label="Competência (gap)"
+          hint={meta ? "O gap da avaliação que esta meta trabalha." : "Escolha o gap e a meta se monta sozinha. Depois é só ajustar."}
+        >
+          <Select name="notaId" value={notaId} onChange={(e) => escolherGap(e.target.value)}>
             <option value="">— nenhuma / outra —</option>
             {gaps.map((g) => (
               <option key={g.id} value={g.id}>
@@ -181,7 +210,12 @@ function FormularioDeMeta({
             ))}
           </Select>
         </Field>
-        {!meta?.notaId ? (
+        {meta && escolhido ? (
+          <button type="button" onClick={() => usarSugestao(escolhido)} className="text-xs text-brand-700 hover:underline">
+            Refazer a meta pela sugestão deste gap
+          </button>
+        ) : null}
+        {!notaId ? (
           <Field label="Ou escreva a competência">
             <Input name="competencia" defaultValue={meta?.competencia ?? ""} placeholder="Opcional" />
           </Field>
@@ -217,6 +251,36 @@ function FormularioDeMeta({
             </div>
           );
         })}
+
+        {!meta && escolhido && escolhido.sugestao.acoes.length > 0 ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input
+                type="checkbox"
+                name="criarAcoes"
+                value="1"
+                checked={criarAcoes}
+                onChange={(e) => setCriarAcoes(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 accent-brand-600"
+              />
+              Criar também as ações sugeridas
+            </label>
+            {criarAcoes ? (
+              <ul className="mt-2 space-y-1 text-micro text-slate-600">
+                {escolhido.sugestao.acoes.map((a) => (
+                  <li key={a.titulo}>
+                    <span className="font-medium text-slate-700">{ROTULO_DA_ACAO[a.tipo].replace(/\s*\(.*\)/, "")}:</span> {a.titulo}{" "}
+                    <span className="text-slate-500">
+                      · {a.responsavel}
+                      {a.prazo ? ` · até ${a.prazo.split("-").reverse().join("/")}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <p className="mt-1.5 text-micro text-slate-500">Dá para editar ou excluir cada ação depois.</p>
+          </div>
+        ) : null}
 
         <FormError message={state.error} />
         <div className="flex items-center justify-end gap-2">
@@ -628,7 +692,7 @@ export default function PdiPlano({
 }: {
   planos: PlanoDaTela[];
   escolhido: string | null;
-  gaps: { id: string; nome: string; detalhe: string }[];
+  gaps: GapDaTela[];
   treinamentos: { id: string; nome: string }[];
   hoje: string;
 }) {
