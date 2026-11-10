@@ -1,7 +1,8 @@
 import "server-only";
 import { prisma } from "./prisma";
 import { addDaysUTC, dateToDayKey, dayKeyToDate, todayKey } from "./dates";
-import { diaDaBatida, minutoNoDia } from "./calculo";
+import { diaDaBatida, diaDaSemana, horarioDaPessoa, horarioValido, minutoNoDia } from "./calculo";
+import { horarioDaEmpresa } from "./dados";
 
 /** A jornada em que o colaborador está agora e as batidas válidas dela. */
 export async function jornadaAtual(colaboradorId: string, agora = new Date()) {
@@ -12,6 +13,13 @@ export async function jornadaAtual(colaboradorId: string, agora = new Date()) {
     orderBy: { momento: "asc" },
     select: { id: true, nsr: true, dia: true, momento: true, origem: true },
   });
+  const pessoa = await prisma.colaborador.findUnique({
+    where: { id: colaboradorId },
+    select: { horario: true, empresa: { select: { horario: true } } },
+  });
+  const horario = pessoa
+    ? horarioDaPessoa(horarioDaEmpresa(pessoa.empresa), horarioValido(pessoa.horario) ? pessoa.horario : null)
+    : null;
   const deOntem = marcacoes.filter((m) => dateToDayKey(m.dia) === ontem);
   const deHoje = marcacoes.filter((m) => dateToDayKey(m.dia) === hoje);
   const dia = diaDaBatida({
@@ -20,6 +28,7 @@ export async function jornadaAtual(colaboradorId: string, agora = new Date()) {
     batidasDeOntem: deOntem.map((m) => m.momento),
     batidasDeHoje: deHoje.length,
     agora,
+    horarioDeOntem: horario?.[diaDaSemana(ontem)] ?? [],
   });
   const batidas = (dia === hoje ? deHoje : deOntem).map((m) => ({
     id: m.id,
