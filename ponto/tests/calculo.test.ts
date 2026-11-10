@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   calcularDia,
   calcularDias,
+  diaDaBatida,
+  instanteNoDia,
   cargaSemanal,
   HORARIO_PADRAO,
   horarioEscrito,
@@ -173,4 +175,29 @@ test("meses do colaborador vão do mais novo ao primeiro, com limite", () => {
   assert.deepEqual(mesesAte("2026-10-22", "2026-10-27"), ["2026-10"]);
   assert.deepEqual(mesesAte("2025-12-01", "2026-02-01"), ["2026-02", "2026-01", "2025-12"]);
   assert.equal(mesesAte("2020-01-01", "2026-10-27", 12).length, 12);
+});
+
+// 08/11 com 3 batidas válidas (a última às 18:03) e a batida seguinte em 09/11.
+const ONTEM = "2026-11-08";
+const HOJE = "2026-11-09";
+const abertaOntem = [instanteNoDia(ONTEM, h("08:03")), instanteNoDia(ONTEM, h("12:12")), instanteNoDia(ONTEM, h("18:03"))];
+const diurno: [number, number][] = [[480, 720], [840, 1080]];
+
+test("diaDaBatida: 08:17 do dia seguinte é a entrada de hoje para quem sai às 18h", () => {
+  const agora = instanteNoDia(HOJE, h("08:17"));
+  const dia = diaDaBatida({ hoje: HOJE, ontem: ONTEM, batidasDeOntem: abertaOntem, batidasDeHoje: 0, agora, horarioDeOntem: diurno });
+  assert.equal(dia, HOJE);
+});
+
+test("diaDaBatida: até as 6h da manhã ainda fecha a jornada de ontem", () => {
+  const agora = instanteNoDia(HOJE, h("05:30"));
+  const dia = diaDaBatida({ hoje: HOJE, ontem: ONTEM, batidasDeOntem: abertaOntem, batidasDeHoje: 0, agora, horarioDeOntem: diurno });
+  assert.equal(dia, ONTEM);
+});
+
+test("diaDaBatida: turno da noite (22:00–06:00) sai às 06:10 e fica no dia de ontem", () => {
+  const entrada = [instanteNoDia(ONTEM, h("22:00"))];
+  const agora = instanteNoDia(HOJE, h("06:10"));
+  const dia = diaDaBatida({ hoje: HOJE, ontem: ONTEM, batidasDeOntem: entrada, batidasDeHoje: 0, agora, horarioDeOntem: [[1320, 1800]] });
+  assert.equal(dia, ONTEM);
 });
