@@ -67,6 +67,8 @@ const ZERA_A_JORNADA: TipoOcorrencia[] = ["FERIADO", "FOLGA", "FERIAS"];
 const ABONA_O_DIA: TipoOcorrencia[] = ["ABONO", "ATESTADO"];
 
 export const LIMITE_EXTRA_DIARIO = 120;
+/** Quanto vale no banco de horas cada hora trabalhada num feriado. */
+export const FATOR_DO_FERIADO_NO_BANCO = 2;
 export const DESCANSO_ENTRE_JORNADAS = 11 * 60;
 
 // ------------------------------------------------------------------ horas
@@ -203,7 +205,7 @@ export type DiaCalculado = {
   previsto: number;
   trabalhado: number;
   abonado: number;
-  /** Extras − débito, já com a tolerância aplicada: é o que vai para o banco de horas. */
+  /** Extras − débito, já com a tolerância aplicada: é o que vai para o banco de horas (feriado em dobro). */
   saldo: number;
   /** Tempo trabalhado fora do horário padrão. */
   extras: number;
@@ -296,7 +298,9 @@ export function calcularDia(entrada: DiaParaCalcular, regras: RegrasPonto): DiaC
   const extras100 = emDobro ? extras : 0;
   const extras50 = emDobro ? 0 : extras;
   const debito = faltaBruta;
-  const saldo = extras - debito;
+  // No banco de horas, a hora trabalhada no feriado entra em dobro: 4h no feriado são 8h para compensar.
+  const fatorDoBanco = regras.regime === "BANCO_DE_HORAS" && ocorrencia === "FERIADO" ? FATOR_DO_FERIADO_NO_BANCO : 1;
+  const saldo = extras * fatorDoBanco - debito;
 
   if (extras > LIMITE_EXTRA_DIARIO && !emDobro) alertas.push("Mais de 2h extras no dia");
 

@@ -75,6 +75,16 @@ test("domingo e feriado trabalhados pagam em dobro", () => {
   assert.equal(feriado.extras100, 240);
 });
 
+test("feriado trabalhado entra em dobro no banco de horas", () => {
+  const feriado = calcularDia({ dia: SEG, batidas: [h("08:00"), h("12:00")], ocorrencia: "FERIADO" }, regras);
+  assert.equal(feriado.extras, 240);
+  assert.equal(feriado.saldo, 480);
+  const semanal = calcularDia({ dia: SEG, batidas: [h("08:00"), h("12:00")], ocorrencia: "FERIADO" }, { ...regras, porSemana: true });
+  assert.equal(semanal.saldo, 480);
+  // Domingo sem horário continua 1 por 1 no banco.
+  assert.equal(calcularDia({ dia: "2026-10-18", batidas: [h("08:00"), h("12:00")] }, regras).saldo, 240);
+});
+
 test("falta, abono e marcação ímpar", () => {
   const falta = calcularDia({ dia: SEG, batidas: [] }, regras);
   assert.equal(falta.falta, true);

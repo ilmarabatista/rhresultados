@@ -105,7 +105,7 @@ export function ConfigForm({ companyId, config }: { companyId: string; config: R
           {(
             [
               ["HORAS_EXTRAS", "Horas extras", "Paga em folha: 50% em dia útil, 100% em domingo e feriado. O que falta é desconto."],
-              ["BANCO_DE_HORAS", "Banco de horas", "A hora a mais vira crédito, a que falta vira débito, e o colaborador compensa com folga."],
+              ["BANCO_DE_HORAS", "Banco de horas", "A hora a mais vira crédito (no feriado, em dobro), a que falta vira débito, e o colaborador compensa com folga."],
             ] as const
           ).map(([valor, titulo, texto]) => (
             <label
