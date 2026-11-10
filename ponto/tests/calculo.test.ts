@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   calcularDia,
   calcularDias,
+  diaDaBatida,
+  instanteNoDia,
   cargaSemanal,
   HORARIO_PADRAO,
   horarioEscrito,
@@ -153,4 +155,29 @@ test("banco por semana: semana de 42h dá 2h de crédito, com feriado tirando o 
   assert.equal(semanas[0].totais.trabalhado, 34 * 60);
   assert.equal(semanas[0].totais.saldo, 120);
   assert.equal(semanas[1].inicio, "2026-10-25");
+});
+
+// 08/11 com 3 batidas válidas (a última às 18:03) e a batida seguinte em 09/11.
+const ONTEM = "2026-11-08";
+const HOJE = "2026-11-09";
+const abertaOntem = [instanteNoDia(ONTEM, h("08:03")), instanteNoDia(ONTEM, h("12:12")), instanteNoDia(ONTEM, h("18:03"))];
+const diurno: [number, number][] = [[480, 720], [840, 1080]];
+
+test("diaDaBatida: 08:17 do dia seguinte é a entrada de hoje para quem sai às 18h", () => {
+  const agora = instanteNoDia(HOJE, h("08:17"));
+  const dia = diaDaBatida({ hoje: HOJE, ontem: ONTEM, batidasDeOntem: abertaOntem, batidasDeHoje: 0, agora, horarioDeOntem: diurno });
+  assert.equal(dia, HOJE);
+});
+
+test("diaDaBatida: até as 6h da manhã ainda fecha a jornada de ontem", () => {
+  const agora = instanteNoDia(HOJE, h("05:30"));
+  const dia = diaDaBatida({ hoje: HOJE, ontem: ONTEM, batidasDeOntem: abertaOntem, batidasDeHoje: 0, agora, horarioDeOntem: diurno });
+  assert.equal(dia, ONTEM);
+});
+
+test("diaDaBatida: turno da noite (22:00–06:00) sai às 06:10 e fica no dia de ontem", () => {
+  const entrada = [instanteNoDia(ONTEM, h("22:00"))];
+  const agora = instanteNoDia(HOJE, h("06:10"));
+  const dia = diaDaBatida({ hoje: HOJE, ontem: ONTEM, batidasDeOntem: entrada, batidasDeHoje: 0, agora, horarioDeOntem: [[1320, 1800]] });
+  assert.equal(dia, ONTEM);
 });

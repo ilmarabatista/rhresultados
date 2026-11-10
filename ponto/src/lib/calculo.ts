@@ -418,8 +418,12 @@ export function proximaBatida(quantasNoDia: number): "Entrada" | "Saída" {
 /**
  * A que dia de trabalho pertence uma batida agora.
  *
- * Se ontem ficou com a jornada aberta (número ímpar de batidas) e a última
- * foi há menos de 16h, esta batida é a saída de ontem — é o turno da noite.
+ * Se ontem ficou com a jornada aberta (número ímpar de batidas), a última foi
+ * há menos de 16h e ainda estamos perto do fim previsto da jornada de ontem,
+ * esta batida é a saída de ontem: é o turno da noite. "Perto" é até 6h depois
+ * do fim previsto, contando no mínimo a meia-noite. Para quem sai às 18h, a
+ * saída esquecida vale até as 6h da manhã; uma batida às 8h já é a entrada de
+ * hoje, e não a saída de ontem com a noite inteira no meio.
  * Fora isso, é do dia de hoje.
  */
 export function diaDaBatida({
@@ -428,20 +432,28 @@ export function diaDaBatida({
   batidasDeOntem,
   batidasDeHoje,
   agora,
+  horarioDeOntem = [],
 }: {
   hoje: string;
   ontem: string;
   batidasDeOntem: Date[];
   batidasDeHoje: number;
   agora: Date;
+  /** Os trechos previstos para ontem, para saber até quando a saída de ontem faz sentido. */
+  horarioDeOntem?: Periodo[];
 }): string {
   if (batidasDeHoje > 0) return hoje;
   if (batidasDeOntem.length % 2 === 1) {
     const ultima = Math.max(...batidasDeOntem.map((b) => b.getTime()));
-    if (agora.getTime() - ultima < 16 * 3_600_000) return ontem;
+    const fimPrevisto = horarioDeOntem.reduce((m, [, f]) => Math.max(m, f), 0);
+    const limite = Math.max(fimPrevisto, 1440) + MARGEM_SAIDA_DE_ONTEM;
+    if (agora.getTime() - ultima < 16 * 3_600_000 && minutoNoDia(agora, ontem) <= limite) return ontem;
   }
   return hoje;
 }
+
+/** Quanto depois do fim previsto de ontem uma batida ainda pode fechar a jornada de ontem. */
+const MARGEM_SAIDA_DE_ONTEM = 6 * 60;
 
 /** O horário da pessoa, quando tem um próprio; senão o da empresa. */
 export function horarioDaPessoa(daEmpresa: Horario, daPessoa: Horario | null | undefined): Horario {
